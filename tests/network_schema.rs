@@ -4,6 +4,10 @@ use nw_network::{
     is_replicated_state_type_index, name_for_type_index, non_replicated_state_type_indices,
     type_by_type_index, unknown_type_indices,
 };
+use serde_json::Value;
+
+const NETWORK_SCHEMA_JSON: &str =
+    include_str!("../crates/nw-network-types/codegen/network-schema.json");
 
 #[test]
 fn generated_schema_resolves_known_state_and_message_types() {
@@ -62,4 +66,33 @@ fn generated_schema_reports_unknown_type_indices_for_capture_validation() {
         non_replicated_state_type_indices([28, 67, 164, u32::MAX]),
         vec![67, 164]
     );
+}
+
+#[test]
+fn checked_in_schema_carries_confidence_ranked_serialize_evidence() {
+    let schema: Value = serde_json::from_str(NETWORK_SCHEMA_JSON).expect("network schema JSON");
+    assert_eq!(schema["summary"]["serializeTypeCount"], 12);
+    assert_eq!(schema["summary"]["serializeDependencyCount"], 6);
+
+    let null_type = type_by_schema_name(&schema, "NullType").expect("NullType schema entry");
+    assert!(null_type["serialize"].is_null());
+
+    let query_shape =
+        type_by_schema_name(&schema, "QueryShapePoint").expect("QueryShapePoint schema entry");
+    assert_eq!(query_shape["serialize"]["name"], "QueryShapePoint");
+    let serialize_evidence = query_shape["evidence"]
+        .as_array()
+        .expect("evidence array")
+        .iter()
+        .find(|evidence| evidence["kind"] == "serialize-context")
+        .expect("serialize evidence");
+    assert_eq!(serialize_evidence["source"], "serializeContext:name");
+    assert_eq!(serialize_evidence["confidence"], "inferred");
+}
+
+fn type_by_schema_name<'a>(schema: &'a Value, name: &str) -> Option<&'a Value> {
+    schema["types"]
+        .as_array()?
+        .iter()
+        .find(|network_type| network_type["name"] == name)
 }

@@ -27,6 +27,7 @@ nw-network-derive = { path = "crates/nw-network-derive" }
 
 [dev-dependencies]
 criterion = "0.8.2"
+serde_json = "1"
 
 [[bench]]
 name = "replicated_state"
