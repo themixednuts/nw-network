@@ -1,0 +1,16 @@
+[package]
+name = "nw-network-derive"
+version = "0.1.0"
+edition = "2024"
+description = "Derive macros for nw-network."
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/themixednuts/nw-network"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+darling = "0.23"
+proc-macro2 = "1"
+quote = "1"
+syn = { version = "2", features = ["full", "derive", "extra-traits"] }

@@ -1,0 +1,64 @@
+{
+  "roots": [
+    {
+      "root": "HomePoint",
+      "reason": "player-home state data"
+    },
+    {
+      "root": "HomePointList",
+      "reason": "player-home state data"
+    },
+    {
+      "root": "CharacterAttributeType",
+      "reason": "attribute state data"
+    },
+    {
+      "root": "GeneralCooldownType",
+      "reason": "cooldown state data"
+    },
+    {
+      "root": "GatheringStatus",
+      "reason": "gathering state data"
+    },
+    {
+      "root": "PaperdollSlotAlias",
+      "reason": "inventory and combat state data"
+    },
+    {
+      "root": "ReplicationCategory",
+      "reason": "metadata state data"
+    },
+    {
+      "root": "TimePoint",
+      "reason": "game time data"
+    },
+    {
+      "root": "WallClockTimePoint",
+      "reason": "wall-clock time data"
+    },
+    {
+      "root": "GDEID",
+      "reason": "game-data entity identifier"
+    },
+    {
+      "root": "RemoteServerGDERef",
+      "reason": "remote game-data reference"
+    },
+    {
+      "root": "RemoteTypelessServerFacetRef",
+      "reason": "game-mode state data"
+    },
+    {
+      "root": "RemoteServerFacetRef<GameModeParticipantComponentServerFacet >",
+      "reason": "game-mode participant state data"
+    },
+    {
+      "root": "GameModeParticipantStatus",
+      "reason": "game-mode participant state data"
+    },
+    {
+      "root": "AfflictionData",
+      "reason": "game-mode affliction state data"
+    }
+  ]
+}
