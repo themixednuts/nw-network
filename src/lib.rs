@@ -9,6 +9,11 @@ pub mod source {
 
     pub use nw_network_types::types::*;
 }
+pub mod network_schema {
+    //! Generated network type descriptors and lookup helpers.
+
+    pub use nw_network_types::network_schema::*;
+}
 pub mod states;
 pub mod types;
 
@@ -23,6 +28,11 @@ pub use hub::{
     ReplicationControl, ReplicationControlData, ReplicationPerformanceData, SequenceNumber,
     StateBundleBuilder, StateFragmentHeaderSpan, StateFragmentIter, StateFragmentTypeId,
     StateFragmentView, StateRecordHeader, StateRecordWriter, TypeIndex,
+};
+pub use network_schema::{
+    NetworkFieldConfidence, NetworkFieldDescriptor, NetworkTypeDescriptor, NetworkTypeKind,
+    fields_for_type_index, is_known_type_index, name_for_type_index, type_by_type_id,
+    type_by_type_index, unknown_type_indices,
 };
 pub use nw_network_derive::{
     AzRtti, ChunkMarshaler, FixedReplicatedStateFields, Marshaler, ReplicatedState, TypeRegistry,

@@ -8,27 +8,30 @@ use std::{
 use anyhow::{Context, Result, bail};
 use nw_resources::EmbeddedResource;
 use nw_serialize_codegen::{
-    CodegenContext, RustCodegenPlanner, RustSourceEmitter, SerializeCodegenRootMode,
-    SerializeCodegenRootSelection, SerializeContextCompileInputs, SerializeContextCompiler,
-    SerializeContextDocument, complete_known_missing_reflected_bodies, module_descriptor_capture,
-    module_descriptors_root, module_name_from_resource_name, resolve_codegen_root_type_ids,
+    CodegenContext, NetworkRustEmitter, NetworkSchema, RustCodegenPlanner, RustSourceEmitter,
+    RustStandaloneProjectFile, SerializeCodegenRootMode, SerializeCodegenRootSelection,
+    SerializeContextCompileInputs, SerializeContextCompiler, SerializeContextDocument,
+    complete_known_missing_reflected_bodies, module_descriptor_capture, module_descriptors_root,
+    module_name_from_resource_name, resolve_codegen_root_type_ids,
 };
 use serde::Deserialize;
 use serde_json::Value;
 
-const CODEGEN_VERSION: &str = "nw-network-v1.1";
+const CODEGEN_VERSION: &str = "nw-network-v1.2";
 
 fn main() -> Result<()> {
     let manifest_dir =
         PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").context("CARGO_MANIFEST_DIR")?);
     let build_script = manifest_dir.join("build.rs");
     let selection_file = manifest_dir.join("codegen/selection.json");
+    let network_schema_file = manifest_dir.join("codegen/network-schema.json");
     let context = CodegenContext::automatic();
 
     rerun_if_changed(&build_script);
     rerun_if_changed(&selection_file);
+    rerun_if_changed(&network_schema_file);
 
-    let input_hash = input_hash(&build_script, &selection_file)?;
+    let input_hash = input_hash(&build_script, &selection_file, &network_schema_file)?;
     let out_dir = PathBuf::from(env::var_os("OUT_DIR").context("OUT_DIR")?);
     let output_root = out_dir.join("nw_network");
     let stamp_path = output_root.join(".input-hash");
@@ -71,14 +74,23 @@ fn main() -> Result<()> {
     );
     let project = RustSourceEmitter::emit_standalone_project(&rust_unit, &context)
         .with_context(|| "emit nw-network standalone Rust crate")?;
+    let network_schema = load_network_schema(&network_schema_file)?;
+    let network_output = NetworkRustEmitter::emit_descriptors(&network_schema)
+        .context("emit network schema descriptor Rust")?;
+    let mut files = project.files;
+    files.push(RustStandaloneProjectFile {
+        path: "src/network_schema.rs".to_owned(),
+        source: network_output.source,
+    });
+    let mut report = serde_json::to_string_pretty(&network_output.report)
+        .context("serialize network schema Rust generation report")?;
+    report.push('\n');
+    files.push(RustStandaloneProjectFile {
+        path: "network-schema.rust-report.json".to_owned(),
+        source: report,
+    });
 
-    write_project(
-        &output_root,
-        &stamp_path,
-        &input_hash,
-        project.files,
-        &context,
-    )
+    write_project(&output_root, &stamp_path, &input_hash, files, &context)
 }
 
 #[derive(Debug, Deserialize)]
@@ -122,16 +134,30 @@ fn rerun_if_changed(path: &Path) {
     println!("cargo:rerun-if-changed={}", path.display());
 }
 
-fn input_hash(build_script: &Path, selection_file: &Path) -> Result<String> {
+fn input_hash(
+    build_script: &Path,
+    selection_file: &Path,
+    network_schema_file: &Path,
+) -> Result<String> {
     let mut hash = blake3::Hasher::new();
     hash.update(CODEGEN_VERSION.as_bytes());
     hash_file("build.rs", build_script, &mut hash)?;
     hash_resource("serialize.json", nw_resources::SERIALIZE_JSON, &mut hash);
     hash_file("codegen/selection.json", selection_file, &mut hash)?;
+    hash_file(
+        "codegen/network-schema.json",
+        network_schema_file,
+        &mut hash,
+    )?;
     for resource in nw_resources::module_descriptors() {
         hash_resource(resource.path, resource.bytes, &mut hash);
     }
     Ok(hash.finalize().to_hex().to_string())
+}
+
+fn load_network_schema(path: &Path) -> Result<NetworkSchema> {
+    let bytes = fs::read(path).with_context(|| format!("read {}", path.display()))?;
+    serde_json::from_slice(&bytes).with_context(|| format!("parse {}", path.display()))
 }
 
 fn embedded_module_descriptors(context: &CodegenContext) -> Result<Value> {
@@ -240,7 +266,9 @@ fn generated_source(path: &str, source: String) -> String {
         } else {
             source
         };
-        return without_inner_attr.replace("pub mod az;", "#[doc(hidden)]\npub mod az;");
+        let mut source = without_inner_attr.replace("pub mod az;", "#[doc(hidden)]\npub mod az;");
+        source.push_str("\npub mod network_schema;\n");
+        return source;
     }
     source
 }
