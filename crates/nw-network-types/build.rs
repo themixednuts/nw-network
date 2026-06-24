@@ -8,11 +8,11 @@ use std::{
 use anyhow::{Context, Result, bail};
 use nw_resources::EmbeddedResource;
 use nw_serialize_codegen::{
-    CodegenContext, NetworkRustEmitter, NetworkSchema, RustCodegenPlanner, RustSourceEmitter,
-    RustStandaloneProjectFile, SerializeCodegenRootMode, SerializeCodegenRootSelection,
-    SerializeContextCompileInputs, SerializeContextCompiler, SerializeContextDocument,
-    complete_known_missing_reflected_bodies, module_descriptor_capture, module_descriptors_root,
-    module_name_from_resource_name, resolve_codegen_root_type_ids,
+    CodegenContext, NETWORK_RUST_EMITTER_VERSION, NetworkRustEmitter, NetworkSchema,
+    RustCodegenPlanner, RustSourceEmitter, RustStandaloneProjectFile, SerializeCodegenRootMode,
+    SerializeCodegenRootSelection, SerializeContextCompileInputs, SerializeContextCompiler,
+    SerializeContextDocument, complete_known_missing_reflected_bodies, module_descriptor_capture,
+    module_descriptors_root, module_name_from_resource_name, resolve_codegen_root_type_ids,
 };
 use serde::Deserialize;
 use serde_json::Value;
@@ -141,6 +141,7 @@ fn input_hash(
 ) -> Result<String> {
     let mut hash = blake3::Hasher::new();
     hash.update(CODEGEN_VERSION.as_bytes());
+    hash.update(NETWORK_RUST_EMITTER_VERSION.as_bytes());
     hash_file("build.rs", build_script, &mut hash)?;
     hash_resource("serialize.json", nw_resources::SERIALIZE_JSON, &mut hash);
     hash_file("codegen/selection.json", selection_file, &mut hash)?;
