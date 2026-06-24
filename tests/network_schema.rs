@@ -1,8 +1,9 @@
 use nw_network::network_schema::identity::RaidDataComponentReplicatedState;
 use nw_network::{
-    NetworkFieldConfidence, NetworkTypeIdentity, NetworkTypeKind, fields_for_type_index,
-    is_replicated_state_type_index, name_for_type_index, non_replicated_state_type_indices,
-    type_by_type_index, unknown_type_indices, validate_state_fragment_type_indices,
+    NetworkFieldConfidence, NetworkTypeIdentity, NetworkTypeKind, NetworkWireShape,
+    fields_for_type_index, is_replicated_state_type_index, name_for_type_index,
+    non_replicated_state_type_indices, type_by_type_index, unknown_type_indices,
+    validate_state_fragment_type_indices,
 };
 use serde_json::Value;
 
@@ -24,6 +25,7 @@ fn generated_schema_resolves_known_state_and_message_types() {
         field.index == 0
             && field.name == "raidId"
             && field.group == Some(0)
+            && field.wire_shape == Some(NetworkWireShape::U64)
             && field.confidence == NetworkFieldConfidence::High
     }));
 
