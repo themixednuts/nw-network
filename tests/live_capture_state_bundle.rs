@@ -1,5 +1,6 @@
 use nw_network::{
     hub::{InterestId, ReplicatedStateBundleView, SequenceNumber, StateFragmentTypeId},
+    non_replicated_state_type_indices,
     serialize::{CARRIER_ENDIAN, MarshalerError, ReadBuffer},
     states::{
         ALCReplicatedState, AggregateContractCountComponentReplicatedState,
@@ -7,6 +8,7 @@ use nw_network::{
         ProgressionComponentReplicatedState, TemporaryAffiliationReplicatedState,
     },
     types::TypeRegistryEntry,
+    unknown_type_indices,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -491,6 +493,8 @@ fn vendor_dseq0037_stops_at_non_fragment_type_index_67() {
         "{}: expected non-fragment typeIndex 67, got {err}",
         fixture.name
     );
+    assert_eq!(unknown_type_indices([67]), Vec::<u32>::new());
+    assert_eq!(non_replicated_state_type_indices([67]), vec![67]);
 }
 
 fn assert_expected_state(

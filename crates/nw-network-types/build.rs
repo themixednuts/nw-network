@@ -17,7 +17,7 @@ use nw_serialize_codegen::{
 use serde::Deserialize;
 use serde_json::Value;
 
-const CODEGEN_VERSION: &str = "nw-network-v1.3";
+const CODEGEN_VERSION: &str = "nw-network-v1.4";
 
 fn main() -> Result<()> {
     let manifest_dir =
