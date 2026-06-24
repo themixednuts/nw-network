@@ -2,6 +2,7 @@
 
 extern crate self as nw_network;
 
+pub mod generated_states;
 pub mod hub;
 pub mod serialize;
 pub mod source {

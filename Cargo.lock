@@ -1488,7 +1488,7 @@ dependencies = [
 [[package]]
 name = "nw-asset"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git#54ba38710d8e6c0ea3d5a3553159165d07a0c0ae"
+source = "git+https://github.com/themixednuts/nw-tools.git#8687bf6c7d6a27d1df19d1c0183eb288a6fb0574"
 dependencies = [
  "nw-filesystem",
  "nw-pak",
@@ -1500,7 +1500,7 @@ dependencies = [
 [[package]]
 name = "nw-filesystem"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git#54ba38710d8e6c0ea3d5a3553159165d07a0c0ae"
+source = "git+https://github.com/themixednuts/nw-tools.git#8687bf6c7d6a27d1df19d1c0183eb288a6fb0574"
 dependencies = [
  "thiserror",
 ]
@@ -1508,7 +1508,7 @@ dependencies = [
 [[package]]
 name = "nw-jobs"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git#54ba38710d8e6c0ea3d5a3553159165d07a0c0ae"
+source = "git+https://github.com/themixednuts/nw-tools.git#8687bf6c7d6a27d1df19d1c0183eb288a6fb0574"
 dependencies = [
  "rayon",
  "signal-hook",
@@ -1520,8 +1520,10 @@ dependencies = [
 name = "nw-network"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "arrayvec",
  "bevy_math",
+ "blake3",
  "criterion",
  "derive_more",
  "glam",
@@ -1530,6 +1532,8 @@ dependencies = [
  "inventory",
  "nw-network-derive",
  "nw-network-types",
+ "nw-serialize-codegen",
+ "serde",
  "serde_json",
  "thiserror",
  "uuid",
@@ -1569,7 +1573,7 @@ dependencies = [
 [[package]]
 name = "nw-objectstream"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git#54ba38710d8e6c0ea3d5a3553159165d07a0c0ae"
+source = "git+https://github.com/themixednuts/nw-tools.git#8687bf6c7d6a27d1df19d1c0183eb288a6fb0574"
 dependencies = [
  "arcstr",
  "crc32fast",
@@ -1585,7 +1589,7 @@ dependencies = [
 [[package]]
 name = "nw-pak"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git#54ba38710d8e6c0ea3d5a3553159165d07a0c0ae"
+source = "git+https://github.com/themixednuts/nw-tools.git#8687bf6c7d6a27d1df19d1c0183eb288a6fb0574"
 dependencies = [
  "crc32fast",
  "flate2",
@@ -1601,12 +1605,12 @@ dependencies = [
 [[package]]
 name = "nw-resources"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git#54ba38710d8e6c0ea3d5a3553159165d07a0c0ae"
+source = "git+https://github.com/themixednuts/nw-tools.git#8687bf6c7d6a27d1df19d1c0183eb288a6fb0574"
 
 [[package]]
 name = "nw-serialize-codegen"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git#54ba38710d8e6c0ea3d5a3553159165d07a0c0ae"
+source = "git+https://github.com/themixednuts/nw-tools.git#8687bf6c7d6a27d1df19d1c0183eb288a6fb0574"
 dependencies = [
  "anyhow",
  "blake3",

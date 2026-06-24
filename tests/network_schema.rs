@@ -1,3 +1,4 @@
+use nw_network::generated_states::RaidDataComponentReplicatedState as GeneratedRaidDataComponentReplicatedState;
 use nw_network::network_schema::identity::RaidDataComponentReplicatedState;
 use nw_network::{
     NetworkFieldConfidence, NetworkTypeIdentity, NetworkTypeKind, NetworkWireShape,
@@ -7,9 +8,11 @@ use nw_network::{
     validate_state_fragment_type_indices,
 };
 use serde_json::Value;
+use uuid::Uuid;
 
 const NETWORK_SCHEMA_JSON: &str =
     include_str!("../crates/nw-network-types/codegen/network-schema.json");
+const RAID_DATA_TYPE_ID: Uuid = Uuid::from_u128(0xa85df621_dce0_409f_8d39_a447ea0807ff);
 
 #[test]
 fn generated_schema_resolves_known_state_and_message_types() {
@@ -88,16 +91,19 @@ fn state_fragment_type_coverage_distinguishes_schema_and_decoder_gaps() {
     assert_eq!(coverage.non_replicated_state_type_indices, vec![67, 164]);
     assert_eq!(
         coverage.unregistered_replicated_state_type_indices,
-        vec![28]
+        Vec::<u32>::new()
     );
-    assert_eq!(coverage.registered_replicated_state_type_indices, vec![11]);
+    assert_eq!(
+        coverage.registered_replicated_state_type_indices,
+        vec![11, 28]
+    );
     assert_eq!(
         coverage.field_shape_incomplete_replicated_state_type_indices,
         vec![11]
     );
     assert_eq!(
         coverage.generation_ready_unregistered_replicated_state_type_indices,
-        vec![28]
+        Vec::<u32>::new()
     );
     assert!(!coverage.is_fully_registered());
     assert!(!coverage.is_fully_supported());
@@ -106,10 +112,15 @@ fn state_fragment_type_coverage_distinguishes_schema_and_decoder_gaps() {
     assert!(registered_state.is_fully_registered());
     assert!(!registered_state.has_complete_field_shapes());
     assert!(!registered_state.is_fully_supported());
+
+    let generated_state = validate_state_fragment_type_indices([28]);
+    assert!(generated_state.is_fully_registered());
+    assert!(generated_state.has_complete_field_shapes());
+    assert!(generated_state.is_fully_supported());
 }
 
 #[test]
-fn replicated_state_port_statuses_compare_schema_and_hand_ports() {
+fn replicated_state_port_statuses_compare_schema_and_registered_ports() {
     let statuses = replicated_state_port_statuses();
 
     let raid_state = statuses
@@ -120,11 +131,11 @@ fn replicated_state_port_statuses_compare_schema_and_hand_ports() {
         raid_state.name,
         Some("Javelin::RaidDataComponentReplicatedState")
     );
-    assert!(!raid_state.is_registered);
+    assert!(raid_state.is_registered);
     assert_eq!(raid_state.field_count, 5);
     assert_eq!(raid_state.missing_field_wire_shape_count, 0);
     assert!(raid_state.has_complete_field_shapes());
-    assert!(raid_state.can_generate_state_fields());
+    assert!(!raid_state.can_generate_state_fields());
 
     let alc_status_state = statuses
         .iter()
@@ -134,6 +145,23 @@ fn replicated_state_port_statuses_compare_schema_and_hand_ports() {
     assert_eq!(alc_status_state.field_count, 0);
     assert!(!alc_status_state.has_complete_field_shapes());
     assert!(!alc_status_state.can_generate_state_fields());
+}
+
+#[test]
+fn generated_replicated_state_is_registered_from_schema_selection() {
+    assert_eq!(
+        <GeneratedRaidDataComponentReplicatedState as nw_network::TypeRegistryEntry>::TYPE_INDEX,
+        28
+    );
+    assert_eq!(
+        <GeneratedRaidDataComponentReplicatedState as nw_network::AzRtti>::TYPE_ID,
+        RAID_DATA_TYPE_ID
+    );
+
+    let registration =
+        nw_network::hub::fragment_registration_by_type_index(28).expect("generated raid state");
+    assert_eq!((registration.type_index)(), 28);
+    assert_eq!((registration.uuid)(), RAID_DATA_TYPE_ID);
 }
 
 #[test]
