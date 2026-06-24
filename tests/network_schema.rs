@@ -1,6 +1,7 @@
+use nw_network::network_schema::identity::RaidDataComponentReplicatedState;
 use nw_network::{
-    NetworkFieldConfidence, NetworkTypeKind, fields_for_type_index, name_for_type_index,
-    type_by_type_index, unknown_type_indices,
+    NetworkFieldConfidence, NetworkTypeIdentity, NetworkTypeKind, fields_for_type_index,
+    name_for_type_index, type_by_type_index, unknown_type_indices,
 };
 
 #[test]
@@ -21,6 +22,23 @@ fn generated_schema_resolves_known_state_and_message_types() {
     assert_eq!(
         name_for_type_index(164),
         Some("ClientActorRoutingAuthorizationTrait::ClientAddEntryMsg")
+    );
+}
+
+#[test]
+fn generated_identity_marker_resolves_descriptor_metadata() {
+    assert_eq!(RaidDataComponentReplicatedState::TYPE_INDEX, 28);
+    assert_eq!(
+        RaidDataComponentReplicatedState::NAME,
+        "Javelin::RaidDataComponentReplicatedState"
+    );
+    assert_eq!(
+        RaidDataComponentReplicatedState::KIND,
+        NetworkTypeKind::ReplicatedState
+    );
+    assert_eq!(
+        RaidDataComponentReplicatedState::descriptor().name,
+        "Javelin::RaidDataComponentReplicatedState"
     );
 }
 
