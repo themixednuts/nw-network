@@ -32,9 +32,10 @@ pub use hub::{
 };
 pub use network_schema::{
     NetworkFieldConfidence, NetworkFieldDescriptor, NetworkTypeDescriptor, NetworkTypeIdentity,
-    NetworkTypeKind, NetworkWireShape, fields_for_type_index, is_known_type_index,
-    is_replicated_state_type_index, name_for_type_index, non_replicated_state_type_indices,
-    type_by_type_id, type_by_type_index, unknown_type_indices,
+    NetworkTypeKind, NetworkWireShape, field_for_type_index, fields_for_type_index,
+    is_known_type_index, is_replicated_state_type_index, name_for_type_index,
+    non_replicated_state_type_indices, type_by_type_id, type_by_type_index,
+    type_indices_missing_field_wire_shapes, unknown_type_indices,
 };
 pub use nw_network_derive::{
     AzRtti, ChunkMarshaler, FixedReplicatedStateFields, Marshaler, ReplicatedState, TypeRegistry,

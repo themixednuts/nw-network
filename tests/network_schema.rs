@@ -1,8 +1,9 @@
 use nw_network::network_schema::identity::RaidDataComponentReplicatedState;
 use nw_network::{
     NetworkFieldConfidence, NetworkTypeIdentity, NetworkTypeKind, NetworkWireShape,
-    fields_for_type_index, is_replicated_state_type_index, name_for_type_index,
-    non_replicated_state_type_indices, type_by_type_index, unknown_type_indices,
+    field_for_type_index, fields_for_type_index, is_replicated_state_type_index,
+    name_for_type_index, non_replicated_state_type_indices, type_by_type_index,
+    type_indices_missing_field_wire_shapes, unknown_type_indices,
     validate_state_fragment_type_indices,
 };
 use serde_json::Value;
@@ -28,6 +29,15 @@ fn generated_schema_resolves_known_state_and_message_types() {
             && field.wire_shape == Some(NetworkWireShape::U64)
             && field.confidence == NetworkFieldConfidence::High
     }));
+    let raid_id = field_for_type_index(28, 0).expect("raidId field descriptor");
+    assert_eq!(raid_id.name, "raidId");
+    assert!(raid_id.has_wire_shape());
+    assert_eq!(raid_state.missing_field_wire_shape_count(), 0);
+    assert!(raid_state.has_complete_field_wire_shapes());
+    assert_eq!(
+        type_indices_missing_field_wire_shapes([28]),
+        Vec::<u32>::new()
+    );
 
     assert_eq!(
         name_for_type_index(164),
