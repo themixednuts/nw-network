@@ -2,7 +2,7 @@ use nw_network::network_schema::identity::RaidDataComponentReplicatedState;
 use nw_network::{
     NetworkFieldConfidence, NetworkTypeIdentity, NetworkTypeKind, fields_for_type_index,
     is_replicated_state_type_index, name_for_type_index, non_replicated_state_type_indices,
-    type_by_type_index, unknown_type_indices,
+    type_by_type_index, unknown_type_indices, validate_state_fragment_type_indices,
 };
 use serde_json::Value;
 
@@ -66,6 +66,22 @@ fn generated_schema_reports_unknown_type_indices_for_capture_validation() {
         non_replicated_state_type_indices([28, 67, 164, u32::MAX]),
         vec![67, 164]
     );
+}
+
+#[test]
+fn state_fragment_type_coverage_distinguishes_schema_and_decoder_gaps() {
+    let coverage = validate_state_fragment_type_indices([11, 11, 28, 67, 164, u32::MAX]);
+
+    assert_eq!(coverage.unknown_type_indices, vec![u32::MAX]);
+    assert_eq!(coverage.non_replicated_state_type_indices, vec![67, 164]);
+    assert_eq!(
+        coverage.unregistered_replicated_state_type_indices,
+        vec![28]
+    );
+    assert_eq!(coverage.registered_replicated_state_type_indices, vec![11]);
+    assert!(!coverage.is_fully_registered());
+
+    assert!(validate_state_fragment_type_indices([11]).is_fully_registered());
 }
 
 #[test]

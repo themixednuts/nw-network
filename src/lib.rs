@@ -16,6 +16,7 @@ pub mod network_schema {
 }
 pub mod states;
 pub mod types;
+pub mod validation;
 
 pub use hub::{
     BandwidthMode, ClientContextId, DynFragment, FieldGroup, FieldGroupMut, FieldVector,
@@ -52,3 +53,4 @@ pub use types::{
     RemoteTypelessServerFacetRef, ReplicationCategory, TimePoint, TypeRegistryEntry,
     WallClockTimePoint,
 };
+pub use validation::{StateFragmentTypeCoverage, validate_state_fragment_type_indices};
