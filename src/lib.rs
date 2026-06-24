@@ -54,4 +54,7 @@ pub use types::{
     RemoteTypelessServerFacetRef, ReplicationCategory, TimePoint, TypeRegistryEntry,
     WallClockTimePoint,
 };
-pub use validation::{StateFragmentTypeCoverage, validate_state_fragment_type_indices};
+pub use validation::{
+    ReplicatedStatePortStatus, StateFragmentTypeCoverage, replicated_state_port_statuses,
+    validate_state_fragment_type_indices,
+};

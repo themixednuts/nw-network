@@ -2,8 +2,8 @@ use nw_network::network_schema::identity::RaidDataComponentReplicatedState;
 use nw_network::{
     NetworkFieldConfidence, NetworkTypeIdentity, NetworkTypeKind, NetworkWireShape,
     field_for_type_index, fields_for_type_index, is_replicated_state_type_index,
-    name_for_type_index, non_replicated_state_type_indices, type_by_type_index,
-    type_indices_missing_field_wire_shapes, unknown_type_indices,
+    name_for_type_index, non_replicated_state_type_indices, replicated_state_port_statuses,
+    type_by_type_index, type_indices_missing_field_wire_shapes, unknown_type_indices,
     validate_state_fragment_type_indices,
 };
 use serde_json::Value;
@@ -91,9 +91,49 @@ fn state_fragment_type_coverage_distinguishes_schema_and_decoder_gaps() {
         vec![28]
     );
     assert_eq!(coverage.registered_replicated_state_type_indices, vec![11]);
+    assert_eq!(
+        coverage.field_shape_incomplete_replicated_state_type_indices,
+        vec![11]
+    );
+    assert_eq!(
+        coverage.generation_ready_unregistered_replicated_state_type_indices,
+        vec![28]
+    );
     assert!(!coverage.is_fully_registered());
+    assert!(!coverage.is_fully_supported());
 
-    assert!(validate_state_fragment_type_indices([11]).is_fully_registered());
+    let registered_state = validate_state_fragment_type_indices([11]);
+    assert!(registered_state.is_fully_registered());
+    assert!(!registered_state.has_complete_field_shapes());
+    assert!(!registered_state.is_fully_supported());
+}
+
+#[test]
+fn replicated_state_port_statuses_compare_schema_and_hand_ports() {
+    let statuses = replicated_state_port_statuses();
+
+    let raid_state = statuses
+        .iter()
+        .find(|status| status.type_index == 28)
+        .expect("raid state status");
+    assert_eq!(
+        raid_state.name,
+        Some("Javelin::RaidDataComponentReplicatedState")
+    );
+    assert!(!raid_state.is_registered);
+    assert_eq!(raid_state.field_count, 5);
+    assert_eq!(raid_state.missing_field_wire_shape_count, 0);
+    assert!(raid_state.has_complete_field_shapes());
+    assert!(raid_state.can_generate_state_fields());
+
+    let alc_status_state = statuses
+        .iter()
+        .find(|status| status.type_index == 11)
+        .expect("alc status state status");
+    assert!(alc_status_state.is_registered);
+    assert_eq!(alc_status_state.field_count, 0);
+    assert!(!alc_status_state.has_complete_field_shapes());
+    assert!(!alc_status_state.can_generate_state_fields());
 }
 
 #[test]
