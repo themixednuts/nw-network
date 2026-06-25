@@ -1,5 +1,5 @@
 use nw_network::{
-    hub::{InterestId, ReplicatedStateBundleView, SequenceNumber, StateFragmentTypeId},
+    hub::{FragmentTypeInfo, InterestId, ReplicatedStateBundleView, SequenceNumber},
     serialize::{CARRIER_ENDIAN, MarshalerError, ReadBuffer},
     states::{
         ALCReplicatedState, AggregateContractCountComponentReplicatedState,
@@ -326,8 +326,8 @@ fn live_state_bundle_modeled_fragments_decode() {
                 fixture.name
             );
             assert_eq!(
-                fragment.header.type_id,
-                StateFragmentTypeId::TypeIndex(expected.type_index),
+                fragment.header.type_info,
+                FragmentTypeInfo::TypeIndex(expected.type_index),
                 "{}",
                 fixture.name
             );
@@ -363,8 +363,8 @@ fn live_state_702_walks_instanced_slayer_script_into_progression() {
     let slayer_index = fragments
         .iter()
         .position(|fragment| {
-            fragment.header.type_id
-                == StateFragmentTypeId::TypeIndex(InstancedSlayerScriptReplicatedState::TYPE_INDEX)
+            fragment.header.type_info
+                == FragmentTypeInfo::TypeIndex(InstancedSlayerScriptReplicatedState::TYPE_INDEX)
         })
         .unwrap_or_else(|| panic!("{}: missing instanced slayer script state", fixture.name));
     let slayer = &fragments[slayer_index];
@@ -389,8 +389,8 @@ fn live_state_702_walks_instanced_slayer_script_into_progression() {
         fixture.name
     );
     assert_eq!(
-        progression.header.type_id,
-        StateFragmentTypeId::TypeIndex(ProgressionComponentReplicatedState::TYPE_INDEX),
+        progression.header.type_info,
+        FragmentTypeInfo::TypeIndex(ProgressionComponentReplicatedState::TYPE_INDEX),
         "{}",
         fixture.name
     );
@@ -401,8 +401,8 @@ fn live_state_702_walks_instanced_slayer_script_into_progression() {
     let affiliation = fragments
         .iter()
         .find(|fragment| {
-            fragment.header.type_id
-                == StateFragmentTypeId::TypeIndex(TemporaryAffiliationReplicatedState::TYPE_INDEX)
+            fragment.header.type_info
+                == FragmentTypeInfo::TypeIndex(TemporaryAffiliationReplicatedState::TYPE_INDEX)
         })
         .unwrap_or_else(|| panic!("{}: missing temporary affiliation state", fixture.name));
     assert_eq!(affiliation.body_range, 0x338..0x340, "{}", fixture.name);
@@ -430,8 +430,8 @@ fn live_state_702_walks_instanced_slayer_script_into_progression() {
     let last = fragments.last().unwrap();
     assert_eq!(last.record.interest_id.get(), 101, "{}", fixture.name);
     assert_eq!(
-        last.header.type_id,
-        StateFragmentTypeId::TypeIndex(InteractReplicatedState::TYPE_INDEX),
+        last.header.type_info,
+        FragmentTypeInfo::TypeIndex(InteractReplicatedState::TYPE_INDEX),
         "{}",
         fixture.name
     );

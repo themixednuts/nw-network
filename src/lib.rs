@@ -23,16 +23,16 @@ pub mod types;
 pub mod validation;
 
 pub use hub::{
-    BandwidthMode, ClientContextId, DynFragment, FieldGroup, FieldGroupMut, FieldVector,
-    FieldVectorMut, FixedMergeOutcome, FixedReplicatedState, FixedReplicatedStateFields,
-    FixedStateRegister, Fragment, FragmentBase, FragmentCategory, FragmentCategoryBitset,
-    FragmentKey, FragmentRegistration, GroupBaselines, GroupIndex, HubAddress, InterestId,
-    MAX_REPLICATION_CONTROL_MESSAGE_IDS, MarshalContext, NamedField, NamedFieldMut,
-    ReplicatedDefaultBits, ReplicatedFieldInfo, ReplicatedFieldInfoMut, ReplicatedFilterGroup,
-    ReplicatedMergeOutcome, ReplicatedState, ReplicatedStateBundle, ReplicatedStateBundleView,
-    ReplicationControl, ReplicationControlData, ReplicationPerformanceData, SequenceNumber,
-    StateBundleBuilder, StateFragmentHeaderSpan, StateFragmentIter, StateFragmentTypeId,
-    StateFragmentView, StateRecordHeader, StateRecordWriter, TypeIndex,
+    BandwidthMode, BaselineableFragment, BaselineableFragmentRef, ClientContextId, DynFragment,
+    FieldGroup, FieldGroupMut, FieldVector, FieldVectorMut, FixedMergeOutcome,
+    FixedReplicatedState, FixedReplicatedStateFields, FixedStateRegister, Fragment, FragmentBase,
+    FragmentCategory, FragmentCategoryBitset, FragmentKey, FragmentRegistration, FragmentTypeInfo,
+    GroupBaselines, GroupIndex, HubAddress, InterestId, MAX_REPLICATION_CONTROL_MESSAGE_IDS,
+    MarshalContext, NamedField, NamedFieldMut, ReplicatedDefaultBits, ReplicatedFieldInfo,
+    ReplicatedFieldInfoMut, ReplicatedFilterGroup, ReplicatedMergeOutcome, ReplicatedState,
+    ReplicatedStateBundle, ReplicatedStateBundleView, ReplicationControl, ReplicationControlData,
+    ReplicationPerformanceData, SequenceNumber, StateBundleBuilder, StateFragmentHeaderSpan,
+    StateFragmentIter, StateFragmentView, StateRecordHeader, StateRecordWriter, TypeIndex,
 };
 pub use messages::{
     AuthToken, ClientVersionTokenMap, ConnTicket, ImpersonatedValues, LoginToken,

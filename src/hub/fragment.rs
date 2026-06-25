@@ -415,6 +415,9 @@ mod tests {
 pub type FragmentContentsDecodeFn =
     for<'a> fn(&mut ReadBuffer<'a>) -> Result<Box<dyn Fragment>, MarshalerError>;
 pub type FragmentContentsConsumeFn = for<'a> fn(&mut ReadBuffer<'a>) -> Result<(), MarshalerError>;
+pub type FullFragmentDecodeFn =
+    for<'a> fn(&mut ReadBuffer<'a>) -> Result<Box<dyn Fragment>, MarshalerError>;
+pub type FullFragmentConsumeFn = for<'a> fn(&mut ReadBuffer<'a>) -> Result<(), MarshalerError>;
 
 pub struct FragmentRegistration {
     pub uuid: fn() -> Uuid,
@@ -422,6 +425,8 @@ pub struct FragmentRegistration {
     pub type_index: fn() -> u32,
     pub decode_contents: FragmentContentsDecodeFn,
     pub consume_contents: FragmentContentsConsumeFn,
+    pub decode_full: FullFragmentDecodeFn,
+    pub consume_full: FullFragmentConsumeFn,
 }
 
 inventory::collect!(FragmentRegistration);
@@ -444,6 +449,16 @@ impl FragmentRegistration {
             consume_contents: |rb| {
                 let mut fragment = T::default();
                 fragment.unmarshal_contents(rb)?;
+                Ok(())
+            },
+            decode_full: |rb| {
+                let mut fragment = T::default();
+                fragment.full_unmarshal(rb)?;
+                Ok(Box::new(fragment))
+            },
+            consume_full: |rb| {
+                let mut fragment = T::default();
+                fragment.full_unmarshal(rb)?;
                 Ok(())
             },
         }

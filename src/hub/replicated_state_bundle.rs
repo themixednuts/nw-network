@@ -18,7 +18,7 @@
 //!
 //! StateFragment:
 //!   VLQ32 fragment_key
-//!   StateFragmentTypeId
+//!   FragmentTypeInfo
 //! ```
 //!
 //! Fragment bodies are not length-prefixed. Readers must decode each body with
@@ -31,8 +31,9 @@ use uuid::Uuid;
 
 use super::sequence_number::SequenceNumber;
 use super::{
-    BandwidthMode, ClientContextId, DynFragment, FragmentKey, InterestId, MarshalContext,
-    TypeIndex, fragment_registration_by_type_index, fragment_type_index_by_uuid,
+    BandwidthMode, ClientContextId, DynFragment, Fragment, FragmentKey, FragmentRegistration,
+    InterestId, MarshalContext, TypeIndex, fragment_registration_by_type_index,
+    fragment_registration_by_uuid, fragment_type_index_by_uuid,
 };
 use crate::serialize::buffer::{CARRIER_ENDIAN, ReadBuffer, WriteBuffer};
 use crate::serialize::error::MarshalerError;
@@ -849,19 +850,25 @@ pub struct StateRecordHeader {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct StateFragmentHeaderSpan {
     pub fragment_key: FragmentKey,
-    pub type_id: StateFragmentTypeId,
+    pub type_info: FragmentTypeInfo,
     pub start: usize,
     pub header_end: usize,
     pub body_start: usize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum StateFragmentTypeId {
+pub enum FragmentTypeInfo {
     TypeIndex(u32),
     RawUuid(Uuid),
 }
 
-impl StateFragmentTypeId {
+impl Default for FragmentTypeInfo {
+    fn default() -> Self {
+        Self::RawUuid(Uuid::nil())
+    }
+}
+
+impl FragmentTypeInfo {
     #[must_use]
     pub fn registered<C>() -> Self
     where
@@ -909,17 +916,184 @@ impl StateFragmentTypeId {
         }
     }
 
-    /// Read a state-fragment type id.
+    /// Read fragment type info.
     ///
     /// # Errors
     ///
     /// Returns an error when the VLQ type index or raw UUID bytes are truncated.
     pub fn read_from(rb: &mut ReadBuffer<'_>) -> Result<Self, MarshalerError> {
-        read_state_fragment_type_id(rb)
+        read_fragment_type_info(rb)
     }
 
     pub fn write_to(self, wb: &mut WriteBuffer) {
-        write_state_fragment_type_id(wb, self);
+        write_fragment_type_info(wb, self);
+    }
+
+    /// Resolve this type info against the registered fragment table.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when no registered fragment matches the compact type
+    /// index or raw UUID.
+    pub fn registration(self) -> Result<&'static FragmentRegistration, MarshalerError> {
+        match self {
+            Self::TypeIndex(type_index) => fragment_registration_by_type_index(type_index)
+                .ok_or(MarshalerError::UnknownTypeIndex { type_index }),
+            Self::RawUuid(uuid) => {
+                fragment_registration_by_uuid(uuid).ok_or(MarshalerError::UnknownClassUuid)
+            }
+        }
+    }
+
+    /// Decode fragment contents using the registration selected by this type info.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the type info is unknown or the contents decoder fails.
+    pub fn decode_contents(
+        self,
+        rb: &mut ReadBuffer<'_>,
+    ) -> Result<Box<dyn Fragment>, MarshalerError> {
+        let registration = self.registration()?;
+        (registration.decode_contents)(rb)
+    }
+
+    /// Consume fragment contents using the registration selected by this type info.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the type info is unknown or the contents decoder fails.
+    pub fn consume_contents(self, rb: &mut ReadBuffer<'_>) -> Result<(), MarshalerError> {
+        let registration = self.registration()?;
+        (registration.consume_contents)(rb)
+    }
+
+    /// Decode a full fragment using the registration selected by this type info.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the type info is unknown or any full-fragment decoder fails.
+    pub fn decode_full(self, rb: &mut ReadBuffer<'_>) -> Result<Box<dyn Fragment>, MarshalerError> {
+        let registration = self.registration()?;
+        (registration.decode_full)(rb)
+    }
+
+    /// Consume a full fragment using the registration selected by this type info.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the type info is unknown or any full-fragment decoder fails.
+    pub fn consume_full(self, rb: &mut ReadBuffer<'_>) -> Result<(), MarshalerError> {
+        let registration = self.registration()?;
+        (registration.consume_full)(rb)
+    }
+}
+
+/// Borrowed baselineable fragment payload selected by a preceding [`FragmentTypeInfo`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BaselineableFragmentRef<'a> {
+    pub type_info: FragmentTypeInfo,
+    pub body: &'a [u8],
+}
+
+impl<'a> BaselineableFragmentRef<'a> {
+    /// Read type info and borrow the exact body range consumed by its registration.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the type info is unknown or any body section decoder fails.
+    pub fn read_from(rb: &mut ReadBuffer<'a>) -> Result<Self, MarshalerError> {
+        let type_info = FragmentTypeInfo::read_from(rb)?;
+        let body_start = rb.position();
+        type_info.consume_full(rb)?;
+        let body_end = rb.position();
+        Ok(Self {
+            type_info,
+            body: rb.range(body_start..body_end)?,
+        })
+    }
+
+    /// Decode the borrowed body as a registered fragment.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when any body section decoder fails.
+    pub fn decode(self) -> Result<Box<dyn Fragment>, MarshalerError> {
+        let mut rb = ReadBuffer::new(CARRIER_ENDIAN, self.body);
+        self.type_info.decode_full(&mut rb)
+    }
+
+    #[must_use]
+    pub fn into_owned(self) -> BaselineableFragment {
+        BaselineableFragment {
+            type_info: self.type_info,
+            body: self.body.to_vec(),
+        }
+    }
+}
+
+/// Owned baselineable fragment payload selected by a preceding [`FragmentTypeInfo`].
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct BaselineableFragment {
+    pub type_info: FragmentTypeInfo,
+    pub body: Vec<u8>,
+}
+
+impl BaselineableFragment {
+    #[must_use]
+    pub fn new(type_info: FragmentTypeInfo, body: impl Into<Vec<u8>>) -> Self {
+        Self {
+            type_info,
+            body: body.into(),
+        }
+    }
+
+    #[must_use]
+    pub fn as_ref(&self) -> BaselineableFragmentRef<'_> {
+        BaselineableFragmentRef {
+            type_info: self.type_info,
+            body: &self.body,
+        }
+    }
+
+    /// Encode a registered fragment as a full body.
+    #[must_use]
+    pub fn encode<C>(fragment: &C, marshal_context: &MarshalContext<'_>) -> Self
+    where
+        C: DynFragment + TypeRegistryEntry,
+    {
+        let mut wb = WriteBuffer::new(CARRIER_ENDIAN);
+        fragment.full_marshal(marshal_context, &mut wb);
+        Self {
+            type_info: FragmentTypeInfo::registered::<C>(),
+            body: wb.into_vec(),
+        }
+    }
+
+    /// Decode the owned body as a registered fragment.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when any body section decoder fails.
+    pub fn decode(&self) -> Result<Box<dyn Fragment>, MarshalerError> {
+        self.as_ref().decode()
+    }
+}
+
+impl From<BaselineableFragmentRef<'_>> for BaselineableFragment {
+    fn from(value: BaselineableFragmentRef<'_>) -> Self {
+        value.into_owned()
+    }
+}
+
+impl Marshaler for BaselineableFragment {
+    fn marshal(&self, wb: &mut WriteBuffer) {
+        self.type_info.write_to(wb);
+        wb.write_bytes(&self.body);
+    }
+
+    fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
+        BaselineableFragmentRef::read_from(rb).map(Into::into)
     }
 }
 
@@ -958,48 +1132,48 @@ pub fn read_state_record_header(
 ///
 /// # Errors
 ///
-/// Returns an error when the fragment key, type id, or raw UUID bytes are malformed.
+/// Returns an error when the fragment key, type info, or raw UUID bytes are malformed.
 pub fn read_state_fragment_header(
     rb: &mut ReadBuffer<'_>,
 ) -> Result<StateFragmentHeaderSpan, MarshalerError> {
     let start = rb.position();
     let fragment_key = FragmentKey::new(VlqU32Marshaler.unmarshal(rb)?);
-    let type_id = read_state_fragment_type_id(rb)?;
+    let type_info = read_fragment_type_info(rb)?;
     let header_end = rb.position();
     Ok(StateFragmentHeaderSpan {
         fragment_key,
-        type_id,
+        type_info,
         start,
         header_end,
         body_start: header_end,
     })
 }
 
-/// Read a state-fragment type id.
+/// Read fragment type info.
 ///
 /// # Errors
 ///
 /// Returns an error when the VLQ type index or raw UUID bytes are truncated.
-pub fn read_state_fragment_type_id(
+pub fn read_fragment_type_info(
     rb: &mut ReadBuffer<'_>,
-) -> Result<StateFragmentTypeId, MarshalerError> {
+) -> Result<FragmentTypeInfo, MarshalerError> {
     let type_index = VlqU32Marshaler.unmarshal(rb)?;
     if type_index == 0 {
-        return Ok(StateFragmentTypeId::RawUuid(Uuid::from_bytes(
+        return Ok(FragmentTypeInfo::RawUuid(Uuid::from_bytes(
             *rb.read_array::<16>()?,
         )));
     }
 
-    Ok(StateFragmentTypeId::TypeIndex(type_index))
+    Ok(FragmentTypeInfo::TypeIndex(type_index))
 }
 
-pub fn write_state_fragment_type_id(wb: &mut WriteBuffer, type_id: StateFragmentTypeId) {
-    match type_id {
-        StateFragmentTypeId::TypeIndex(type_index) => {
+pub fn write_fragment_type_info(wb: &mut WriteBuffer, type_info: FragmentTypeInfo) {
+    match type_info {
+        FragmentTypeInfo::TypeIndex(type_index) => {
             debug_assert!(type_index != 0, "zero typeIndex must be encoded as RawUuid");
             VlqU32Marshaler.marshal(wb, type_index);
         }
-        StateFragmentTypeId::RawUuid(uuid) => {
+        FragmentTypeInfo::RawUuid(uuid) => {
             VlqU32Marshaler.marshal(wb, 0);
             wb.write_bytes(uuid.as_bytes());
         }
@@ -1093,7 +1267,7 @@ impl StateRecordWriter<'_> {
         self.reserve_fragment_slot()?;
         let fragment_start = self.wb.mark();
         VlqU32Marshaler.marshal(self.wb, fragment_key.get());
-        StateFragmentTypeId::registered::<C>().write_to(self.wb);
+        FragmentTypeInfo::registered::<C>().write_to(self.wb);
         let wrote_payload = fragment.marshal_contents_with(marshal_context, self.wb);
         if !wrote_payload {
             self.wb.truncate_to(fragment_start);
@@ -1111,7 +1285,7 @@ impl StateRecordWriter<'_> {
         Ok(())
     }
 
-    /// Write a raw fragment body with a caller-supplied type id.
+    /// Write a raw fragment body with caller-supplied type info.
     ///
     /// # Errors
     ///
@@ -1119,14 +1293,14 @@ impl StateRecordWriter<'_> {
     pub fn write_raw_fragment(
         &mut self,
         fragment_key: impl Into<FragmentKey>,
-        type_id: StateFragmentTypeId,
+        type_info: FragmentTypeInfo,
         body: &[u8],
     ) -> Result<(), MarshalerError> {
         let fragment_key = fragment_key.into();
         self.reserve_fragment_slot()?;
         let fragment_start = self.wb.mark();
         VlqU32Marshaler.marshal(self.wb, fragment_key.get());
-        type_id.write_to(self.wb);
+        type_info.write_to(self.wb);
         self.wb.write_bytes(body);
         if self.wb.len() > MAX_REPLICATED_STATE_BUNDLE_BUFFER_SIZE {
             let len = self.wb.len();
@@ -1189,6 +1363,67 @@ mod tests {
     }
 
     impl Fragment for EmptyFragment {}
+
+    #[derive(
+        Debug,
+        Default,
+        nw_network_derive::AzRtti,
+        nw_network_derive::TypeRegistry,
+        nw_network_derive::Fragment,
+    )]
+    #[az_rtti("33333333-3333-4333-8333-333333333333")]
+    #[type_registry(64_990)]
+    struct FullBodyFragment {
+        base: FragmentBase,
+        contents: u8,
+        attributes: u16,
+        metadata: u32,
+    }
+
+    impl DynFragment for FullBodyFragment {
+        fn base(&self) -> &FragmentBase {
+            &self.base
+        }
+
+        fn base_mut(&mut self) -> &mut FragmentBase {
+            &mut self.base
+        }
+
+        fn marshal_contents(&self, wb: &mut WriteBuffer) -> bool {
+            self.contents.marshal(wb);
+            true
+        }
+
+        fn unmarshal_contents(&mut self, rb: &mut ReadBuffer) -> Result<bool, MarshalerError> {
+            self.contents = u8::unmarshal(rb)?;
+            Ok(true)
+        }
+
+        fn marshal_attributes(&self, _mc: &MarshalContext<'_>, wb: &mut WriteBuffer) -> bool {
+            self.attributes.marshal(wb);
+            true
+        }
+
+        fn unmarshal_attributes(&mut self, rb: &mut ReadBuffer) -> Result<bool, MarshalerError> {
+            self.attributes = u16::unmarshal(rb)?;
+            Ok(true)
+        }
+
+        fn marshal_field_metadata(&self, _mc: &MarshalContext<'_>, wb: &mut WriteBuffer) -> bool {
+            self.metadata.marshal(wb);
+            true
+        }
+
+        fn unmarshal_field_metadata(
+            &mut self,
+            rb: &mut ReadBuffer,
+        ) -> Result<bool, MarshalerError> {
+            self.metadata = u32::unmarshal(rb)?;
+            Ok(true)
+        }
+    }
+
+    impl Fragment for FullBodyFragment {}
 
     #[test]
     fn bundle_buffer_is_vlq_len_then_raw_bytes() {
@@ -1371,14 +1606,18 @@ mod tests {
         let mut bundle = ReplicatedStateBundle::default();
         bundle
             .write_record(2, |record| {
-                record.write_raw_fragment(3, StateFragmentTypeId::RawUuid(uuid), &[0xcc])
+                record.write_raw_fragment(3, FragmentTypeInfo::RawUuid(uuid), &[0xcc])
             })
             .unwrap();
 
         let mut seen = Vec::new();
         bundle
             .visit_fragments(|record, fragment, rb| {
-                seen.push((record.interest_id, fragment.fragment_key, fragment.type_id));
+                seen.push((
+                    record.interest_id,
+                    fragment.fragment_key,
+                    fragment.type_info,
+                ));
                 assert_eq!(rb.read_u8()?, 0xcc);
                 Ok(())
             })
@@ -1389,7 +1628,7 @@ mod tests {
             vec![(
                 InterestId::new(2),
                 FragmentKey::new(3),
-                StateFragmentTypeId::RawUuid(uuid)
+                FragmentTypeInfo::RawUuid(uuid)
             )]
         );
     }
@@ -1407,11 +1646,44 @@ mod tests {
     }
 
     #[test]
+    fn baselineable_fragment_uses_full_registration_decoder() {
+        let fragment = FullBodyFragment {
+            contents: 0x11,
+            attributes: 0x2233,
+            metadata: 0x4455_6677,
+            ..Default::default()
+        };
+        let body = BaselineableFragment::encode(&fragment, &MarshalContext::default());
+
+        assert_eq!(
+            body.type_info,
+            FragmentTypeInfo::TypeIndex(FullBodyFragment::TYPE_INDEX)
+        );
+        assert_eq!(body.body, &[0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77]);
+
+        let mut wb = WriteBuffer::new(CARRIER_ENDIAN);
+        body.marshal(&mut wb);
+        let mut rb = ReadBuffer::new(CARRIER_ENDIAN, wb.as_slice());
+
+        let body_ref = BaselineableFragmentRef::read_from(&mut rb).unwrap();
+
+        assert_eq!(body_ref.body, body.body);
+        assert_eq!(rb.left(), 0);
+
+        let decoded = body_ref.decode().unwrap();
+        let decoded = decoded.downcast_ref::<FullBodyFragment>().unwrap();
+
+        assert_eq!(decoded.contents, 0x11);
+        assert_eq!(decoded.attributes, 0x2233);
+        assert_eq!(decoded.metadata, 0x4455_6677);
+    }
+
+    #[test]
     fn failed_record_write_rolls_back() {
         let mut bundle = ReplicatedStateBundle::with_bundle_buffer(vec![0xaa]);
         let err = bundle
             .write_record(2, |record| -> Result<(), MarshalerError> {
-                record.write_raw_fragment(3, StateFragmentTypeId::TypeIndex(4), &[0xcc])?;
+                record.write_raw_fragment(3, FragmentTypeInfo::TypeIndex(4), &[0xcc])?;
                 Err(MarshalerError::InvalidDiscriminant { value: 99 })
             })
             .unwrap_err();

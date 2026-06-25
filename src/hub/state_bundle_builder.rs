@@ -164,7 +164,7 @@ impl ReplicatedStateBundle {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::hub::StateFragmentTypeId;
+    use crate::hub::FragmentTypeInfo;
 
     #[test]
     fn typestate_builder_sets_wire_header_and_control_data() {
@@ -190,7 +190,7 @@ mod tests {
         let mut payload = ReplicatedStateBundle::default();
         payload
             .write_record(7, |record| {
-                record.write_raw_fragment(3, StateFragmentTypeId::TypeIndex(4), &[0xcc])
+                record.write_raw_fragment(3, FragmentTypeInfo::TypeIndex(4), &[0xcc])
             })
             .unwrap();
 

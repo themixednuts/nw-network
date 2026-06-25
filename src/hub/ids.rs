@@ -1,5 +1,7 @@
 use std::fmt;
 
+use crate::serialize::{Marshaler, MarshalerError, ReadBuffer, WriteBuffer};
+
 macro_rules! id {
     (
         $(#[$meta:meta])*
@@ -52,6 +54,19 @@ macro_rules! id {
             }
         }
 
+        impl Marshaler for $name {
+            const MARSHAL_SIZE: usize = <$inner as Marshaler>::MARSHAL_SIZE;
+
+            #[inline]
+            fn marshal(&self, wb: &mut WriteBuffer) {
+                self.0.marshal(wb);
+            }
+
+            #[inline]
+            fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
+                Ok(Self(<$inner as Marshaler>::unmarshal(rb)?))
+            }
+        }
     };
 }
 
@@ -61,7 +76,7 @@ id!(
 );
 
 id!(
-    /// Per-record fragment key written before a state fragment type id.
+    /// Per-record fragment key written before fragment type info.
     FragmentKey(u32)
 );
 

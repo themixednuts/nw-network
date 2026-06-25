@@ -2,8 +2,7 @@ use std::{iter::FusedIterator, ops::Range};
 
 use super::{
     ReplicatedStateBundle, ReplicatedStateBundleView, StateFragmentHeaderSpan, StateRecordHeader,
-    consume_fragment_contents_by_type_index, decode_state_fragment_contents,
-    read_state_fragment_header, read_state_record_header,
+    decode_state_fragment_contents, read_state_fragment_header, read_state_record_header,
 };
 use crate::serialize::{CARRIER_ENDIAN, MarshalerError, ReadBuffer};
 
@@ -73,12 +72,8 @@ impl<'a> StateFragmentIter<'a> {
             .expect("state fragment iterator has an active record");
         let header = read_state_fragment_header(&mut self.rb)?;
         let body_start = self.rb.position();
-        let type_index = header
-            .type_id
-            .type_index()
-            .ok_or(MarshalerError::UnknownClassUuid)?;
 
-        consume_fragment_contents_by_type_index(type_index, &mut self.rb)?;
+        header.type_info.consume_contents(&mut self.rb)?;
 
         let body_end = self.rb.position();
         self.fragments_left_in_record -= 1;
@@ -140,7 +135,7 @@ mod tests {
     use super::*;
     use crate::{
         hub::{
-            DynFragment, Fragment, FragmentBase, FragmentKey, InterestId, StateFragmentTypeId,
+            DynFragment, Fragment, FragmentBase, FragmentKey, FragmentTypeInfo, InterestId,
             StateRecordWriter,
         },
         serialize::{Marshaler, WriteBuffer},
@@ -206,8 +201,8 @@ mod tests {
         assert_eq!(fragments[0].record.interest_id, InterestId::new(7));
         assert_eq!(fragments[0].header.fragment_key, FragmentKey::new(3));
         assert_eq!(
-            fragments[0].header.type_id,
-            StateFragmentTypeId::TypeIndex(ByteFragment::TYPE_INDEX)
+            fragments[0].header.type_info,
+            FragmentTypeInfo::TypeIndex(ByteFragment::TYPE_INDEX)
         );
         assert_eq!(fragments[0].body, &[0xcc]);
         assert_eq!(fragments[0].decode::<ByteFragment>().unwrap().value, 0xcc);

@@ -2,10 +2,14 @@ use nw_network::generated_states::RaidDataComponentReplicatedState as GeneratedR
 use nw_network::network_schema::identity::RaidDataComponentReplicatedState;
 use nw_network::{
     NetworkFieldConfidence, NetworkTypeIdentity, NetworkTypeKind, NetworkWireShape,
-    field_for_type_index, fields_for_type_index, is_replicated_state_type_index,
-    name_for_type_index, non_replicated_state_type_indices, replicated_state_port_statuses,
-    type_by_type_index, type_indices_missing_field_wire_shapes, unknown_type_indices,
-    validate_state_fragment_type_indices,
+    field_for_type_index, fields_for_type_index,
+    generated_messages::{
+        RegisterFragmentAccessMsg, ReplicateClientFragmentUpdateMsg, UnregisterFragmentAccessMsg,
+    },
+    hub::{BaselineableFragment, FragmentKey},
+    is_replicated_state_type_index, name_for_type_index, non_replicated_state_type_indices,
+    replicated_state_port_statuses, type_by_type_index, type_indices_missing_field_wire_shapes,
+    unknown_type_indices, validate_state_fragment_type_indices,
 };
 use serde_json::Value;
 use uuid::Uuid;
@@ -67,6 +71,39 @@ fn generated_identity_marker_resolves_descriptor_metadata() {
         RaidDataComponentReplicatedState::descriptor().name,
         Some("Javelin::RaidDataComponentReplicatedState")
     );
+}
+
+#[test]
+fn generated_fragment_messages_compile_with_source_backed_fields() {
+    assert_eq!(
+        <RegisterFragmentAccessMsg as nw_network::TypeRegistryEntry>::TYPE_INDEX,
+        397
+    );
+    assert_eq!(
+        <UnregisterFragmentAccessMsg as nw_network::TypeRegistryEntry>::TYPE_INDEX,
+        399
+    );
+    assert_eq!(
+        <ReplicateClientFragmentUpdateMsg as nw_network::TypeRegistryEntry>::TYPE_INDEX,
+        422
+    );
+
+    let register = RegisterFragmentAccessMsg {
+        proxy_ref: Default::default(),
+        key: FragmentKey::new(7),
+    };
+    let unregister = UnregisterFragmentAccessMsg {
+        proxy_ref: register.proxy_ref,
+        key: register.key,
+    };
+    let update = ReplicateClientFragmentUpdateMsg {
+        target_ref: unregister.proxy_ref,
+        key: unregister.key,
+        fragment: BaselineableFragment::default(),
+    };
+
+    assert_eq!(update.key, FragmentKey::new(7));
+    assert!(update.fragment.body.is_empty());
 }
 
 #[test]

@@ -33,13 +33,13 @@ pub use replicated_state::{
     ReplicatedStateConstants,
 };
 pub use replicated_state_bundle::{
+    BaselineableFragment, BaselineableFragmentRef, FragmentTypeInfo,
     MAX_REPLICATED_STATE_BUNDLE_BUFFER_SIZE, MAX_REPLICATION_CONTROL_IDS,
     MAX_REPLICATION_CONTROL_MESSAGE_IDS, ReplicatedStateBundle, ReplicatedStateBundleView,
     ReplicationControl, ReplicationControlData, ReplicationPerformanceData,
-    StateFragmentHeaderSpan, StateFragmentTypeId, StateRecordHeader, StateRecordWriter,
-    decode_state_fragment_contents, marshal_bundle_buffer, read_bundle_buffer,
-    read_state_fragment_header, read_state_fragment_type_id, read_state_record_header,
-    write_state_fragment_type_id, write_state_record,
+    StateFragmentHeaderSpan, StateRecordHeader, StateRecordWriter, decode_state_fragment_contents,
+    marshal_bundle_buffer, read_bundle_buffer, read_fragment_type_info, read_state_fragment_header,
+    read_state_record_header, write_fragment_type_info, write_state_record,
 };
 pub use sequence_number::SequenceNumber;
 pub use state_bundle_builder::StateBundleBuilder;
