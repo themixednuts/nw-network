@@ -4,7 +4,6 @@ use crate::states::inventory::SimpleItemDescriptor;
 
 pub const MAX_CONTRIBUTION_XP_EVENT_CHANGES: usize = 0x3fff;
 
-/// Generated network value shape.
 #[derive(nw_network_derive::Marshaler, Debug, Clone, Default, PartialEq)]
 pub struct ContributionXpEvent {
     pub field_08: u64,

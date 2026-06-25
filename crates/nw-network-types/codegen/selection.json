@@ -41,6 +41,10 @@
       "reason": "game-data entity identifier"
     },
     {
+      "root": "GridSides",
+      "reason": "buildable-grid side enum"
+    },
+    {
       "root": "RemoteServerGDERef",
       "reason": "remote game-data reference"
     },
@@ -59,6 +63,18 @@
     {
       "root": "AfflictionData",
       "reason": "game-mode affliction state data"
+    },
+    {
+      "root": "RecipeCooldownData",
+      "reason": "crafting cooldown state data"
+    },
+    {
+      "root": "TemporaryAffiliationType",
+      "reason": "temporary-affiliation state data"
+    },
+    {
+      "root": "TemporaryAffiliationRelationship",
+      "reason": "temporary-affiliation state data"
     }
   ]
 }

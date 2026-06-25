@@ -7,8 +7,7 @@ use super::{
     error::MarshalerError,
     marshaler::Marshaler,
 };
-use crate::types::Bounds2;
-use bevy_math::bounding::Aabb3d;
+use bevy_math::bounding::{Aabb2d, Aabb3d};
 use glam::{Affine3A, Mat3, Mat3A, Quat, Vec2, Vec3, Vec3A, Vec4};
 
 impl Marshaler for Vec2 {
@@ -26,8 +25,8 @@ impl Marshaler for Vec2 {
     }
 }
 
-/// Two raw `Vec2` values: min then max.
-impl Marshaler for Bounds2 {
+/// `AZ::Bounds` wire layout: two raw `AZ::Vector2` values, min then max.
+impl Marshaler for Aabb2d {
     const MARSHAL_SIZE: usize = 16;
 
     fn marshal(&self, wb: &mut WriteBuffer) {
@@ -189,13 +188,16 @@ mod tests {
 
     #[test]
     fn bounds_marshal_is_two_vec2_16_bytes() {
-        let bounds = Bounds2::new(Vec2::new(1.0, 2.0), Vec2::new(3.0, 4.0));
+        let bounds = Aabb2d {
+            min: Vec2::new(1.0, 2.0),
+            max: Vec2::new(3.0, 4.0),
+        };
         let mut wb = WriteBuffer::new(Endian::BigEndian);
         bounds.marshal(&mut wb);
         let bytes = wb.into_vec();
         assert_eq!(bytes.len(), 16);
         let mut rb = ReadBuffer::new(Endian::BigEndian, &bytes);
-        let decoded = Bounds2::unmarshal(&mut rb).unwrap();
+        let decoded = Aabb2d::unmarshal(&mut rb).unwrap();
         assert_eq!(decoded, bounds);
     }
 

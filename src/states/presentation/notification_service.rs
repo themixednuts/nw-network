@@ -3,7 +3,6 @@ use crate::serialize::{ReplicatedMap, VlqU64};
 
 pub const MAX_NOTIFICATION_CHANGES: usize = 0x3fff;
 
-/// Generated network value shape.
 #[derive(nw_network_derive::Marshaler, Debug, Clone, Default, PartialEq, Eq)]
 pub struct NotificationEntry {
     pub field_00: u16,

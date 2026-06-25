@@ -23,8 +23,16 @@ fn generate_struct_marshal(fields: &Fields<MarshalerField>) -> TokenStream {
                 }
 
                 let field_name = f.ident.as_ref().unwrap();
+                let field_type = &f.ty;
 
-                Some(if let Some(as_type) = &f.r#as {
+                Some(if let Some(codec) = &f.codec {
+                    quote! {
+                        <#codec as ::nw_network::serialize::marshaler::Codec<#field_type>>::marshal(
+                            &self.#field_name,
+                            wb,
+                        );
+                    }
+                } else if let Some(as_type) = &f.r#as {
                     quote! { <#as_type as ::core::convert::From<_>>::from(self.#field_name.clone()).marshal(wb); }
                 } else if let Some(with) = &f.with {
                     quote! { #with(&self.#field_name, wb); }
@@ -44,8 +52,16 @@ fn generate_struct_marshal(fields: &Fields<MarshalerField>) -> TokenStream {
                 }
 
                 let index = Index::from(i);
+                let field_type = &f.ty;
 
-                Some(if let Some(as_type) = &f.r#as {
+                Some(if let Some(codec) = &f.codec {
+                    quote! {
+                        <#codec as ::nw_network::serialize::marshaler::Codec<#field_type>>::marshal(
+                            &self.#index,
+                            wb,
+                        );
+                    }
+                } else if let Some(as_type) = &f.r#as {
                     quote! { <#as_type as ::core::convert::From<_>>::from(self.#index.clone()).marshal(wb); }
                 } else if let Some(with) = &f.with {
                     quote! { #with(&self.#index, wb); }
@@ -92,8 +108,16 @@ fn generate_enum_marshal(variants: &[MarshalerVariant], repr: Option<&Type>) -> 
                     if f.skip {
                         return None;
                     }
+                    let field_type = &f.ty;
 
-                    Some(if let Some(as_type) = &f.r#as {
+                    Some(if let Some(codec) = &f.codec {
+                        quote! {
+                            <#codec as ::nw_network::serialize::marshaler::Codec<#field_type>>::marshal(
+                                #name,
+                                wb,
+                            );
+                        }
+                    } else if let Some(as_type) = &f.r#as {
                         quote! { <#as_type as ::core::convert::From<_>>::from(#name.clone()).marshal(wb); }
                     } else if let Some(with) = &f.with {
                         quote! { #with(#name, wb); }
@@ -120,8 +144,16 @@ fn generate_enum_marshal(variants: &[MarshalerVariant], repr: Option<&Type>) -> 
                     }
 
                     let name = f.ident.as_ref().unwrap();
+                    let field_type = &f.ty;
 
-                    Some(if let Some(as_type) = &f.r#as {
+                    Some(if let Some(codec) = &f.codec {
+                        quote! {
+                            <#codec as ::nw_network::serialize::marshaler::Codec<#field_type>>::marshal(
+                                #name,
+                                wb,
+                            );
+                        }
+                    } else if let Some(as_type) = &f.r#as {
                         quote! { <#as_type as ::core::convert::From<_>>::from(#name.clone()).marshal(wb); }
                     } else if let Some(with) = &f.with {
                         quote! { #with(#name, wb); }

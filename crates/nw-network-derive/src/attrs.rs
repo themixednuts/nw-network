@@ -28,6 +28,14 @@ pub struct MarshalerField {
     #[darling(default, rename = "as")]
     pub r#as: Option<syn::Type>,
 
+    /// Marshal with a [`Codec`](nw_network::serialize::Codec) policy:
+    /// `#[marshal(codec = "ConversionMarshaler<u8, GridSides>")]`.
+    ///
+    /// Unlike `as`, this keeps the field's Rust type unchanged and uses the
+    /// policy type only for encoding/decoding.
+    #[darling(default)]
+    pub codec: Option<syn::Type>,
+
     /// Custom marshaler function path: `#[marshal(with = "path::to::marshal_fn")]`
     #[darling(default)]
     pub with: Option<Path>,

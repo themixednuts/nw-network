@@ -16,7 +16,7 @@ pub struct ObjectiveTaskKey {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Marshaler)]
 #[expect(
     clippy::struct_excessive_bools,
-    reason = "generated serialization shape keeps independent bool fields in wire order"
+    reason = "wire shape keeps independent bool fields in order"
 )]
 pub struct ObjectiveReplicationData {
     pub objective_type: u32,

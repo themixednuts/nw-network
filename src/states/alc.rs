@@ -1,7 +1,7 @@
 use arrayvec::ArrayVec;
+use bevy_math::bounding::Aabb2d;
 use glam::{Quat, Vec3};
 
-use crate::Bounds2;
 use crate::hub::{
     DynFragment, FixedReplicatedState, FixedReplicatedStateFields, Fragment, FragmentBase,
     FragmentCategory, GroupIndex, MarshalContext, SequenceNumber,
@@ -205,7 +205,7 @@ impl Marshaler for GridAccessibility {
 
 #[derive(Debug, Clone, PartialEq, nw_network_derive::Marshaler)]
 pub struct AlcForbiddenBounds {
-    pub bounds: Bounds2,
+    pub bounds: Aabb2d,
     pub accessibility: GridAccessibility,
     pub for_exit: bool,
 }

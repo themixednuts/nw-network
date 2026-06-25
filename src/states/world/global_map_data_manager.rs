@@ -16,7 +16,6 @@ pub struct GlobalMapDataValue {
     pub field_10: bool,
 }
 
-/// Generated serialization shape for replicated global-map entries.
 #[derive(Debug, Clone, Default, PartialEq, Marshaler)]
 #[repr(transparent)]
 pub struct GlobalMapData(ReplicatedIndexMap<u64, GlobalMapDataValue>);

@@ -34,6 +34,7 @@ pub use compression_marshal::{
     Vec3CompNormMarshaler,
 };
 pub use container_marshal::WIRE_VEC_CAP;
+pub use data_marshal::{ConversionMarshaler, MarshalerConversion};
 pub use error::MarshalerError;
 pub use flat_bitmask::FlatBitmask;
 pub use indexmap::{IndexMap, IndexSet};

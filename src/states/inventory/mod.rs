@@ -11,13 +11,13 @@ pub mod loot_tracker;
 pub mod paperdoll;
 pub mod transmog;
 
+pub use crate::types::RecipeCooldownData;
 pub use container::{
     ContainerComponentReplicatedState, ContainerInventorySettings, ContainerItemClasses,
     ContainerItemDescriptor, ContainerSnapshot,
 };
 pub use crafting::{
     CraftingComponentReplicatedState, MAX_CRAFTING_GS_BONUSES, MAX_CRAFTING_RECIPE_COOLDOWNS,
-    RecipeCooldownData,
 };
 pub use currency::CurrencyComponentReplicatedState;
 pub use item_descriptor::{ReplicatedItemDescriptor, SimpleItemDescriptor};

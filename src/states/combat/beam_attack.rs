@@ -1,6 +1,5 @@
 use crate::types::ActorRequestId;
 
-/// Generated network value shape.
 #[derive(
     nw_network_derive::Marshaler,
     Debug,

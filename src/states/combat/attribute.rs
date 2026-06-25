@@ -11,7 +11,6 @@ pub struct CharacterAttributeValue {
     pub points: u32,
 }
 
-/// Generated serialization shape.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Marshaler)]
 pub struct CharacterAttributes {
     pub entries: Vec<CharacterAttributeValue>,

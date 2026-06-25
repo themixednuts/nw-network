@@ -1,3 +1,4 @@
+pub mod address;
 pub mod fixed_replicated_state;
 pub mod fragment;
 pub mod ids;
@@ -9,6 +10,7 @@ pub mod sequence_number;
 pub mod state_bundle_builder;
 pub mod state_bundle_view;
 
+pub use address::HubAddress;
 pub use fixed_replicated_state::{
     FieldGroup, FieldGroupMut, FieldVector, FieldVectorMut, FixedMergeOutcome,
     FixedReplicatedState, FixedReplicatedStateFields, FixedStateRegister, NamedField,

@@ -2,8 +2,11 @@
 
 extern crate self as nw_network;
 
+mod generated_conversions;
+pub mod generated_messages;
 pub mod generated_states;
 pub mod hub;
+pub mod messages;
 pub mod serialize;
 pub mod source {
     //! Generated data types used by packet and state ports.
@@ -23,13 +26,17 @@ pub use hub::{
     BandwidthMode, ClientContextId, DynFragment, FieldGroup, FieldGroupMut, FieldVector,
     FieldVectorMut, FixedMergeOutcome, FixedReplicatedState, FixedReplicatedStateFields,
     FixedStateRegister, Fragment, FragmentBase, FragmentCategory, FragmentCategoryBitset,
-    FragmentKey, FragmentRegistration, GroupBaselines, GroupIndex, InterestId,
+    FragmentKey, FragmentRegistration, GroupBaselines, GroupIndex, HubAddress, InterestId,
     MAX_REPLICATION_CONTROL_MESSAGE_IDS, MarshalContext, NamedField, NamedFieldMut,
     ReplicatedDefaultBits, ReplicatedFieldInfo, ReplicatedFieldInfoMut, ReplicatedFilterGroup,
     ReplicatedMergeOutcome, ReplicatedState, ReplicatedStateBundle, ReplicatedStateBundleView,
     ReplicationControl, ReplicationControlData, ReplicationPerformanceData, SequenceNumber,
     StateBundleBuilder, StateFragmentHeaderSpan, StateFragmentIter, StateFragmentTypeId,
     StateFragmentView, StateRecordHeader, StateRecordWriter, TypeIndex,
+};
+pub use messages::{
+    AuthToken, ClientVersionTokenMap, ConnTicket, ImpersonatedValues, LoginToken,
+    RegistrationRequestV3Msg, TypeIndexCrc,
 };
 pub use network_schema::{
     NetworkFieldConfidence, NetworkFieldDescriptor, NetworkTypeDescriptor, NetworkTypeIdentity,
@@ -42,18 +49,18 @@ pub use nw_network_derive::{
     AzRtti, ChunkMarshaler, FixedReplicatedStateFields, Marshaler, ReplicatedState, TypeRegistry,
 };
 pub use serialize::{
-    Codec, DefaultMarshaler, Marshaler, MarshalerError, ReadBuffer, ReadBufferMark,
-    ReplicatedContainer, ReplicatedFieldHandler, ReplicatedFieldHandlerBase, VlqU16,
-    VlqU16Marshaler, VlqU32, VlqU32Marshaler, VlqU64, VlqU64Marshaler, WriteBuffer,
-    WriteBufferMark,
+    Codec, ConversionMarshaler, DefaultMarshaler, Marshaler, MarshalerConversion, MarshalerError,
+    ReadBuffer, ReadBufferMark, ReplicatedContainer, ReplicatedFieldHandler,
+    ReplicatedFieldHandlerBase, VlqU16, VlqU16Marshaler, VlqU32, VlqU32Marshaler, VlqU64,
+    VlqU64Marshaler, WriteBuffer, WriteBufferMark,
 };
 pub use types::{
-    ActorRequestId, AfflictionData, AssetId, AzRtti, Bounds2, CharacterAttributeType, ComponentId,
-    Crc32, EntityId, EntityRef, GameModeParticipantStatus, GatheringStatus, GdeId, GdeRef,
-    GeneralCooldownType, PaperdollSlotAlias, RemoteServerContextRef,
+    ActorRequestId, AfflictionData, AssetId, AzRtti, CharacterAttributeType, ComponentId, Crc32,
+    EntityId, EntityRef, GameModeParticipantStatus, GatheringStatus, GdeId, GdeRef,
+    GeneralCooldownType, GridSides, PaperdollSlotAlias, RecipeCooldownData, RemoteServerContextRef,
     RemoteServerFacetRefGameModeParticipantComponentServerFacet, RemoteServerGdeRef,
-    RemoteTypelessServerFacetRef, ReplicationCategory, TimePoint, TypeRegistryEntry,
-    WallClockTimePoint,
+    RemoteTypelessServerFacetRef, ReplicationCategory, TemporaryAffiliationRelationship,
+    TemporaryAffiliationType, TimePoint, TypeRegistryEntry, WallClockTimePoint,
 };
 pub use validation::{
     ReplicatedStatePortStatus, StateFragmentTypeCoverage, replicated_state_port_statuses,

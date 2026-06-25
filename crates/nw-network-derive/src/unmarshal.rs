@@ -26,7 +26,12 @@ fn generate_struct_unmarshal(_ident: &syn::Ident, fields: &Fields<MarshalerField
                 let field_name = f.ident.as_ref().unwrap();
                 let field_type = &f.ty;
 
-                Some(if let Some(as_type) = &f.r#as {
+                Some(if let Some(codec) = &f.codec {
+                    quote! {
+                        let #field_name =
+                            <#codec as ::nw_network::serialize::marshaler::Codec<#field_type>>::unmarshal(rb)?;
+                    }
+                } else if let Some(as_type) = &f.r#as {
                     quote! {
                         let #field_name = <#field_type as ::core::convert::From<#as_type>>::from(
                             <#as_type as ::nw_network::serialize::marshaler::Marshaler>::unmarshal(rb)?,
@@ -67,7 +72,12 @@ fn generate_struct_unmarshal(_ident: &syn::Ident, fields: &Fields<MarshalerField
                 let field_name = quote::format_ident!("f{}", i);
                 let field_type = &f.ty;
 
-                Some(if let Some(as_type) = &f.r#as {
+                Some(if let Some(codec) = &f.codec {
+                    quote! {
+                        let #field_name =
+                            <#codec as ::nw_network::serialize::marshaler::Codec<#field_type>>::unmarshal(rb)?;
+                    }
+                } else if let Some(as_type) = &f.r#as {
                     quote! { let #field_name = <#field_type as ::core::convert::From<#as_type>>::from(<#as_type>::unmarshal(rb)?); }
                 } else if let Some(unmarshal_with) = &f.unmarshal_with {
                     quote! { let #field_name = #unmarshal_with(rb)?; }
@@ -128,7 +138,12 @@ fn generate_enum_unmarshal(
                     let field_name = quote::format_ident!("f{}", i);
                     let field_type = &f.ty;
 
-                    Some(if let Some(as_type) = &f.r#as {
+                    Some(if let Some(codec) = &f.codec {
+                        quote! {
+                            let #field_name =
+                                <#codec as ::nw_network::serialize::marshaler::Codec<#field_type>>::unmarshal(rb)?;
+                        }
+                    } else if let Some(as_type) = &f.r#as {
                         quote! { let #field_name = <#field_type as ::core::convert::From<#as_type>>::from(<#as_type>::unmarshal(rb)?); }
                     } else if let Some(unmarshal_with) = &f.unmarshal_with {
                         quote! { let #field_name = #unmarshal_with(rb)?; }
@@ -162,7 +177,12 @@ fn generate_enum_unmarshal(
                     let field_name = f.ident.as_ref().unwrap();
                     let field_type = &f.ty;
 
-                    Some(if let Some(as_type) = &f.r#as {
+                    Some(if let Some(codec) = &f.codec {
+                        quote! {
+                            let #field_name =
+                                <#codec as ::nw_network::serialize::marshaler::Codec<#field_type>>::unmarshal(rb)?;
+                        }
+                    } else if let Some(as_type) = &f.r#as {
                         quote! { let #field_name = <#field_type as ::core::convert::From<#as_type>>::from(<#as_type>::unmarshal(rb)?); }
                     } else if let Some(unmarshal_with) = &f.unmarshal_with {
                         quote! { let #field_name = #unmarshal_with(rb)?; }

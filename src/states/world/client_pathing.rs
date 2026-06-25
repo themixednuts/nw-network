@@ -11,7 +11,6 @@ pub const MAX_CLIENT_PATHING_CORRIDOR_PATHS: usize = 6;
 pub const MAX_CLIENT_PATHING_CORRIDOR_POINTS: usize = 49;
 pub const MAX_CLIENT_PATHING_CORRIDOR_SAMPLES: usize = 50;
 
-/// Generated network value shape.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct ClientPathingCorridorPath {
     pub start: Vec3,
@@ -20,7 +19,6 @@ pub struct ClientPathingCorridorPath {
     pub samples: ArrayVec<f32, MAX_CLIENT_PATHING_CORRIDOR_SAMPLES>,
 }
 
-/// Generated network value shape.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ClientPathingCorridorPaths {
     pub paths: ArrayVec<Option<ClientPathingCorridorPath>, MAX_CLIENT_PATHING_CORRIDOR_PATHS>,

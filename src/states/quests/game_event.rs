@@ -7,7 +7,7 @@ use crate::serialize::ReplicatedVec;
 #[derive(Debug, Clone, Default, PartialEq, Marshaler)]
 #[expect(
     clippy::struct_excessive_bools,
-    reason = "generated serialization shape keeps independent bool fields in wire order"
+    reason = "wire shape keeps independent bool fields in order"
 )]
 pub struct GameEventSubEntry {
     pub category_id: u32,

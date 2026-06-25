@@ -284,6 +284,8 @@ impl Marshaler for f64 {
 }
 
 impl Marshaler for bool {
+    const MARSHAL_SIZE: usize = 1;
+
     #[inline]
     fn marshal(&self, wb: &mut WriteBuffer) {
         wb.write_raw(*self);
@@ -294,9 +296,14 @@ impl Marshaler for bool {
     }
 }
 
-///
-/// it back on read. Rust uses `From`/`Into` for the same explicit conversion;
-/// focused newtype instead of hiding truncation in a generic policy.
+/// Converts a value to and from the representation used by a [`ConversionMarshaler`].
+pub trait MarshalerConversion<SerializedType>: Copy {
+    fn to_serialized(self) -> SerializedType;
+
+    fn try_from_serialized(value: SerializedType) -> Result<Self, MarshalerError>;
+}
+
+/// Encodes a value through a different serialized representation.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ConversionMarshaler<SerializedType, OriginalType>(
     PhantomData<fn() -> (SerializedType, OriginalType)>,
@@ -305,17 +312,17 @@ pub struct ConversionMarshaler<SerializedType, OriginalType>(
 impl<SerializedType, OriginalType> Codec<OriginalType>
     for ConversionMarshaler<SerializedType, OriginalType>
 where
-    SerializedType: Marshaler + From<OriginalType>,
-    OriginalType: Copy + From<SerializedType>,
+    SerializedType: Marshaler,
+    OriginalType: MarshalerConversion<SerializedType>,
 {
     const MARSHAL_SIZE: usize = SerializedType::MARSHAL_SIZE;
 
     fn marshal(value: &OriginalType, wb: &mut WriteBuffer) {
-        SerializedType::from(*value).marshal(wb);
+        (*value).to_serialized().marshal(wb);
     }
 
     fn unmarshal(rb: &mut ReadBuffer) -> Result<OriginalType, MarshalerError> {
-        Ok(OriginalType::from(SerializedType::unmarshal(rb)?))
+        OriginalType::try_from_serialized(SerializedType::unmarshal(rb)?)
     }
 }
 

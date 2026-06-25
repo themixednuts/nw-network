@@ -1,6 +1,5 @@
 use crate::serialize::{Marshaler, MarshalerError, ReadBuffer, WriteBuffer};
 
-/// Generated network value shape.
 #[derive(
     Debug, Clone, Default, PartialEq, Eq, nw_network_derive::AzRtti, nw_network_derive::TypeRegistry,
 )]

@@ -1,12 +1,12 @@
-use glam::Vec2;
 pub use nw_network_types::{
     az::{asset::AssetId, crc::Crc32},
     types::{
         AfflictionData, CharacterAttributeType, GDEID as GdeId, GameModeParticipantStatus,
-        GatheringStatus, GeneralCooldownType, PaperdollSlotAlias, RemoteServerContextRef,
-        RemoteServerFacetRefGameModeParticipantComponentServerFacet,
+        GatheringStatus, GeneralCooldownType, GridSides, PaperdollSlotAlias, RecipeCooldownData,
+        RemoteServerContextRef, RemoteServerFacetRefGameModeParticipantComponentServerFacet,
         RemoteServerGDERef as RemoteServerGdeRef, RemoteTypelessServerFacetRef,
-        ReplicationCategory, TimePoint, WallClockTimePoint,
+        ReplicationCategory, TemporaryAffiliationRelationship, TemporaryAffiliationType, TimePoint,
+        WallClockTimePoint,
     },
 };
 use uuid::Uuid;
@@ -205,19 +205,5 @@ impl EntityRef {
 impl Default for EntityRef {
     fn default() -> Self {
         Self::String(String::new())
-    }
-}
-
-/// Two-dimensional bounds carried as min/max `Vec2` values.
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
-pub struct Bounds2 {
-    pub min: Vec2,
-    pub max: Vec2,
-}
-
-impl Bounds2 {
-    #[must_use]
-    pub const fn new(min: Vec2, max: Vec2) -> Self {
-        Self { min, max }
     }
 }

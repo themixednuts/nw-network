@@ -5,6 +5,7 @@ pub mod player_generic_invite;
 pub mod state;
 pub mod temporary_affiliation;
 
+pub use crate::types::{TemporaryAffiliationRelationship, TemporaryAffiliationType};
 pub use chat::{ChatMuteEntry, ChatMutes, ChatMutesReplicatedState, ChatReplicatedState};
 pub use groups::{
     GameInviteData, GroupFinderApplicationData, GroupInviteData, GroupsComponentReplicatedState,
@@ -19,6 +20,5 @@ pub use player_generic_invite::{
 };
 pub use state::{SocialCollectionsSnapshot, SocialReplicatedState};
 pub use temporary_affiliation::{
-    MAX_TEMPORARY_AFFILIATION_CHANGES, TemporaryAffiliation, TemporaryAffiliationRelationship,
-    TemporaryAffiliationReplicatedState, TemporaryAffiliationType,
+    MAX_TEMPORARY_AFFILIATION_CHANGES, TemporaryAffiliation, TemporaryAffiliationReplicatedState,
 };

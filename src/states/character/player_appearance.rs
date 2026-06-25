@@ -2,7 +2,6 @@ use crate::Marshaler;
 use crate::hub::ReplicatedState;
 use crate::serialize::ReplicatedFieldHandler;
 
-/// Generated serialization shape.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Marshaler)]
 pub struct PlayerAppearanceIconData {
     pub gender: u8,

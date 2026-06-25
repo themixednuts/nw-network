@@ -20,7 +20,6 @@ pub struct WarDataParticipantBlock {
     pub field_190: u64,
 }
 
-/// Generated serialization shape for a referenced war-data asset.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Marshaler)]
 pub struct WarDataAssetReference {
     pub value_id: u32,

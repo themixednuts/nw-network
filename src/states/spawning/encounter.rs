@@ -5,7 +5,6 @@ use crate::serialize::ReplicatedFieldHandler;
 
 pub const MAX_ENCOUNTER_STATUS_ENTRIES: usize = 10;
 
-/// Generated network value shape.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, nw_network_derive::Marshaler)]
 pub struct EncounterStatusEntry {
     pub key: u32,

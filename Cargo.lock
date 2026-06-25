@@ -1488,7 +1488,7 @@ dependencies = [
 [[package]]
 name = "nw-asset"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git#b62dd31974d52cc2232b42ab3f0cf5dadc4efc38"
+source = "git+https://github.com/themixednuts/nw-tools.git#ba5f3e19378a848188edb09cff5ff8da399942b5"
 dependencies = [
  "nw-filesystem",
  "nw-pak",
@@ -1500,7 +1500,7 @@ dependencies = [
 [[package]]
 name = "nw-filesystem"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git#b62dd31974d52cc2232b42ab3f0cf5dadc4efc38"
+source = "git+https://github.com/themixednuts/nw-tools.git#ba5f3e19378a848188edb09cff5ff8da399942b5"
 dependencies = [
  "thiserror",
 ]
@@ -1508,7 +1508,7 @@ dependencies = [
 [[package]]
 name = "nw-jobs"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git#b62dd31974d52cc2232b42ab3f0cf5dadc4efc38"
+source = "git+https://github.com/themixednuts/nw-tools.git#ba5f3e19378a848188edb09cff5ff8da399942b5"
 dependencies = [
  "rayon",
  "signal-hook",
@@ -1532,6 +1532,7 @@ dependencies = [
  "inventory",
  "nw-network-derive",
  "nw-network-types",
+ "nw-resources",
  "nw-serialize-codegen",
  "serde",
  "serde_json",
@@ -1573,7 +1574,7 @@ dependencies = [
 [[package]]
 name = "nw-objectstream"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git#b62dd31974d52cc2232b42ab3f0cf5dadc4efc38"
+source = "git+https://github.com/themixednuts/nw-tools.git#ba5f3e19378a848188edb09cff5ff8da399942b5"
 dependencies = [
  "arcstr",
  "crc32fast",
@@ -1589,7 +1590,7 @@ dependencies = [
 [[package]]
 name = "nw-pak"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git#b62dd31974d52cc2232b42ab3f0cf5dadc4efc38"
+source = "git+https://github.com/themixednuts/nw-tools.git#ba5f3e19378a848188edb09cff5ff8da399942b5"
 dependencies = [
  "crc32fast",
  "flate2",
@@ -1605,12 +1606,12 @@ dependencies = [
 [[package]]
 name = "nw-resources"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git#b62dd31974d52cc2232b42ab3f0cf5dadc4efc38"
+source = "git+https://github.com/themixednuts/nw-tools.git#ba5f3e19378a848188edb09cff5ff8da399942b5"
 
 [[package]]
 name = "nw-serialize-codegen"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git#b62dd31974d52cc2232b42ab3f0cf5dadc4efc38"
+source = "git+https://github.com/themixednuts/nw-tools.git#ba5f3e19378a848188edb09cff5ff8da399942b5"
 dependencies = [
  "anyhow",
  "blake3",

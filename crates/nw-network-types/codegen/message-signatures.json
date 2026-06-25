@@ -1,0 +1,222 @@
+{
+  "messages": [
+    {
+      "typeId": "0B826B33-89F5-49E0-B8CB-FE4433427778",
+      "typeIndex": 19,
+      "name": "RegistrationRequestV3Msg",
+      "rustName": "RegistrationRequestV3Msg",
+      "source": "source-signature-notes",
+      "fields": [
+        {
+          "index": 0,
+          "name": "TypeIndexCrc",
+          "nativeType": "AZ::Crc32",
+          "rustType": "::nw_network::TypeIndexCrc",
+          "wireShape": "u32"
+        },
+        {
+          "index": 1,
+          "name": "ClientVersion",
+          "nativeType": "Amazon::Configuration::ClientVersionTokenMap",
+          "rustType": "::nw_network::ClientVersionTokenMap"
+        },
+        {
+          "index": 2,
+          "name": "ConnTicket",
+          "nativeType": "std::string",
+          "rustType": "::nw_network::ConnTicket",
+          "wireShape": "string"
+        },
+        {
+          "index": 3,
+          "name": "LoginToken",
+          "nativeType": "LoginToken",
+          "rustType": "::nw_network::LoginToken"
+        },
+        {
+          "index": 4,
+          "name": "AuthToken",
+          "nativeType": "AuthToken",
+          "rustType": "::nw_network::AuthToken"
+        },
+        {
+          "index": 5,
+          "name": "ImpersonateInfo",
+          "nativeType": "ImpersonatedValues",
+          "rustType": "::nw_network::ImpersonatedValues"
+        },
+        {
+          "index": 6,
+          "name": "UseCapabilities",
+          "nativeType": "bool",
+          "rustType": "bool",
+          "wireShape": "bool"
+        }
+      ]
+    },
+    {
+      "typeId": "104145A7-FF95-44F1-9468-21FB41C8AC2B",
+      "typeIndex": 3,
+      "name": "REPClient::RegistrationResponseMsg",
+      "rustName": "RegistrationResponseMsg",
+      "source": "source-signature-notes",
+      "fields": [
+        {
+          "index": 0,
+          "name": "StatusCode",
+          "nativeType": "std::int32_t",
+          "wireShape": "u32"
+        },
+        {
+          "index": 1,
+          "name": "Time",
+          "nativeType": "Amazon::Hub::SyncedTimestamp",
+          "wireShape": "u64"
+        },
+        {
+          "index": 2,
+          "name": "AnalyticsSessionId",
+          "nativeType": "std::string",
+          "wireShape": "string"
+        },
+        {
+          "index": 3,
+          "name": "ServerVersion",
+          "nativeType": "std::string",
+          "wireShape": "string"
+        },
+        {
+          "index": 4,
+          "name": "EnableClientMsgWhitelist",
+          "nativeType": "bool",
+          "wireShape": "bool"
+        },
+        {
+          "index": 5,
+          "name": "EnableGameMasterClient",
+          "nativeType": "bool",
+          "wireShape": "bool"
+        },
+        {
+          "index": 6,
+          "name": "EnableSuperGameMasterClient",
+          "nativeType": "bool",
+          "wireShape": "bool"
+        },
+        {
+          "index": 7,
+          "name": "RequireAntiCheat",
+          "nativeType": "bool",
+          "wireShape": "bool"
+        }
+      ]
+    },
+    {
+      "typeId": "038CD847-0653-4243-9A26-936E3BD7F312",
+      "typeIndex": 335,
+      "name": "REPClient::TimeSynchMsg",
+      "rustName": "TimeSynchMsg",
+      "source": "source-signature-notes",
+      "fields": [
+        {
+          "index": 0,
+          "name": "Time",
+          "nativeType": "SyncedTimestamp",
+          "wireShape": "u64"
+        }
+      ]
+    },
+    {
+      "typeId": "6A379FB8-0BDD-43A1-AB3E-9843D7BE8CD3",
+      "typeIndex": 349,
+      "name": "REPClient::PingMsg",
+      "rustName": "PingMsg",
+      "source": "source-signature-notes",
+      "fields": [
+        {
+          "index": 0,
+          "name": "EpochTimeSend",
+          "nativeType": "Pervasives::Duration",
+          "wireShape": "u64"
+        }
+      ]
+    },
+    {
+      "typeId": "96A58E69-7BD5-45C5-86E4-DAF9F5EB1E86",
+      "typeIndex": 397,
+      "name": "Replicate::RegisterFragmentAccessMsg",
+      "rustName": "RegisterFragmentAccessMsg",
+      "source": "source-signature-notes",
+      "fields": [
+        {
+          "index": 0,
+          "name": "ProxyRef",
+          "nativeType": "ActorRef"
+        },
+        {
+          "index": 1,
+          "name": "Key",
+          "nativeType": "FragmentKey"
+        }
+      ]
+    },
+    {
+      "typeId": "2B7640E0-4204-4E52-998A-C2DB02E0A480",
+      "typeIndex": 399,
+      "name": "Replicate::UnregisterFragmentAccessMsg",
+      "rustName": "UnregisterFragmentAccessMsg",
+      "source": "source-signature-notes",
+      "fields": [
+        {
+          "index": 0,
+          "name": "ProxyRef",
+          "nativeType": "ActorRef"
+        },
+        {
+          "index": 1,
+          "name": "Key",
+          "nativeType": "FragmentKey"
+        }
+      ]
+    },
+    {
+      "typeId": "B5733A42-3CC9-442E-B6C7-D83AF26DBBB4",
+      "typeIndex": 401,
+      "name": "Replicate::UnregisterProxyMsg",
+      "rustName": "UnregisterProxyMsg",
+      "source": "source-signature-notes",
+      "fields": [
+        {
+          "index": 0,
+          "name": "Address",
+          "nativeType": "ActorRef",
+          "rustType": "::nw_network::HubAddress"
+        }
+      ]
+    },
+    {
+      "typeId": "951EF3ED-C9A0-4E3D-A6FD-7FE0673D28D2",
+      "typeIndex": 422,
+      "name": "ReplicateClient::FragmentUpdateMsg",
+      "rustName": "FragmentUpdateMsg",
+      "source": "source-signature-notes",
+      "fields": [
+        {
+          "index": 0,
+          "name": "TargetRef",
+          "nativeType": "ActorRef"
+        },
+        {
+          "index": 1,
+          "name": "Key",
+          "nativeType": "FragmentKey"
+        },
+        {
+          "index": 2,
+          "name": "Fragment",
+          "nativeType": "BaselineableFragment"
+        }
+      ]
+    }
+  ]
+}

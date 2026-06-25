@@ -4,7 +4,6 @@ use uuid::Uuid;
 use crate::Marshaler;
 use crate::serialize::{VlqU16, VlqU32};
 
-/// Generated serialization shape.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Marshaler)]
 pub struct ReplicatedItemDescriptor {
     pub packed_item_id: u64,
@@ -29,11 +28,10 @@ pub struct ReplicatedItemDescriptor {
     pub gear_score_flags: u8,
 }
 
-/// Generated serialization shape.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Marshaler)]
 #[expect(
     clippy::struct_excessive_bools,
-    reason = "generated serialization shape keeps independent bool fields in wire order"
+    reason = "wire shape keeps independent bool fields in order"
 )]
 pub struct SimpleItemDescriptor {
     pub field_10: u32,

@@ -1,15 +1,25 @@
 use crate::hub::ReplicatedState;
-use crate::serialize::ReplicatedMap;
-use crate::types::{Crc32, WallClockTimePoint};
+use crate::serialize::{Marshaler, MarshalerError, ReadBuffer, ReplicatedMap, WriteBuffer};
+use crate::types::{Crc32, RecipeCooldownData, WallClockTimePoint};
 
 pub const MAX_CRAFTING_RECIPE_COOLDOWNS: usize = 0x1d;
 pub const MAX_CRAFTING_GS_BONUSES: usize = 7;
 
-/// Generated network value shape.
-#[derive(nw_network_derive::Marshaler, Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub struct RecipeCooldownData {
-    pub count: u8,
-    pub cooldown_end: WallClockTimePoint,
+impl Marshaler for RecipeCooldownData {
+    const MARSHAL_SIZE: usize =
+        <u8 as Marshaler>::MARSHAL_SIZE + <WallClockTimePoint as Marshaler>::MARSHAL_SIZE;
+
+    fn marshal(&self, wb: &mut WriteBuffer) {
+        self.count.marshal(wb);
+        self.cooldown_end.marshal(wb);
+    }
+
+    fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
+        Ok(Self {
+            count: u8::unmarshal(rb)?,
+            cooldown_end: WallClockTimePoint::unmarshal(rb)?,
+        })
+    }
 }
 
 #[derive(
