@@ -51,9 +51,16 @@ fn generated_schema_resolves_known_state_and_message_types() {
         Some("ClientActorRoutingAuthorizationTrait::ClientAddEntryMsg")
     );
 
-    let unnamed_type = type_by_type_index(67).expect("unnamed descriptor");
-    assert_eq!(unnamed_type.name, None);
-    assert_eq!(name_for_type_index(67), None);
+    let force_migrate = type_by_type_index(67).expect("force migrate descriptor");
+    assert_eq!(
+        force_migrate.name,
+        Some("MB::ServerContext::ForceMigrateActorMsg")
+    );
+    assert_eq!(force_migrate.kind, NetworkTypeKind::Message);
+    assert_eq!(
+        name_for_type_index(67),
+        Some("MB::ServerContext::ForceMigrateActorMsg")
+    );
 }
 
 #[test]

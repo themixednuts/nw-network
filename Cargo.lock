@@ -1488,7 +1488,7 @@ dependencies = [
 [[package]]
 name = "nw-asset"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git#4757a6f489eccabe4dd8889bff77731dde44092f"
+source = "git+https://github.com/themixednuts/nw-tools.git#930cbfc45030f2d87a4e033cf6fac3928e815507"
 dependencies = [
  "nw-filesystem",
  "nw-pak",
@@ -1500,7 +1500,7 @@ dependencies = [
 [[package]]
 name = "nw-filesystem"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git#4757a6f489eccabe4dd8889bff77731dde44092f"
+source = "git+https://github.com/themixednuts/nw-tools.git#930cbfc45030f2d87a4e033cf6fac3928e815507"
 dependencies = [
  "thiserror",
 ]
@@ -1508,7 +1508,7 @@ dependencies = [
 [[package]]
 name = "nw-jobs"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git#4757a6f489eccabe4dd8889bff77731dde44092f"
+source = "git+https://github.com/themixednuts/nw-tools.git#930cbfc45030f2d87a4e033cf6fac3928e815507"
 dependencies = [
  "rayon",
  "signal-hook",
@@ -1574,7 +1574,7 @@ dependencies = [
 [[package]]
 name = "nw-objectstream"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git#4757a6f489eccabe4dd8889bff77731dde44092f"
+source = "git+https://github.com/themixednuts/nw-tools.git#930cbfc45030f2d87a4e033cf6fac3928e815507"
 dependencies = [
  "arcstr",
  "crc32fast",
@@ -1590,7 +1590,7 @@ dependencies = [
 [[package]]
 name = "nw-pak"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git#4757a6f489eccabe4dd8889bff77731dde44092f"
+source = "git+https://github.com/themixednuts/nw-tools.git#930cbfc45030f2d87a4e033cf6fac3928e815507"
 dependencies = [
  "crc32fast",
  "flate2",
@@ -1606,12 +1606,12 @@ dependencies = [
 [[package]]
 name = "nw-resources"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git#4757a6f489eccabe4dd8889bff77731dde44092f"
+source = "git+https://github.com/themixednuts/nw-tools.git#930cbfc45030f2d87a4e033cf6fac3928e815507"
 
 [[package]]
 name = "nw-serialize-codegen"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git#4757a6f489eccabe4dd8889bff77731dde44092f"
+source = "git+https://github.com/themixednuts/nw-tools.git#930cbfc45030f2d87a4e033cf6fac3928e815507"
 dependencies = [
  "anyhow",
  "blake3",
