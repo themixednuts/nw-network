@@ -50,6 +50,7 @@ pub use replicated_field::{
     DeltaMarshaler, DynamicDeltaReplicatedFieldHandler, FloatTimerDeltaReplicatedField,
     HalfF32Marshaler, HalfVec3Marshaler, IntegerOmitLowerByteMarshaler, PositionAnchorMarshaler,
     QuantizedRelativePosition, ReplicatedFieldHandler, ReplicatedFieldHandlerBase,
+    quantize_with_range, unquantize_with_range,
 };
 pub use utility_marshal::{BitSet, HalfF32, RawSequenceNumber};
 pub use vlq::{VlqU16, VlqU16Marshaler, VlqU32, VlqU32Marshaler, VlqU64, VlqU64Marshaler};

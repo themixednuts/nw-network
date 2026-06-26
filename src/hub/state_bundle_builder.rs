@@ -78,6 +78,10 @@ impl<Reliability, Bandwidth, Payload> StateBundleBuilder<Reliability, Bandwidth,
         Ok(self)
     }
 
+    /// Build a bundle from the fields set so far.
+    ///
+    /// Empty payloads are valid; the typestate parameters prevent setting the
+    /// same axis twice, but they do not require every optional axis.
     #[must_use]
     pub fn build(self) -> ReplicatedStateBundle {
         ReplicatedStateBundle {

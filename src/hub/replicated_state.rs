@@ -1,7 +1,7 @@
 use uuid::Uuid;
 
 use super::{
-    GroupIndex, SequenceNumber,
+    ClientActorHash, GroupIndex, SequenceNumber,
     fragment::{FragmentBase, FragmentCategory},
 };
 use crate::serialize::container_marshal::ContainerMarshaler;
@@ -19,13 +19,13 @@ pub mod ReplicatedStateConstants {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct FilterValue {
-    pub value: u64,
+    pub value: ClientActorHash,
     pub ref_count: u64,
 }
 
 impl FilterValue {
     #[must_use]
-    pub const fn new(value: u64, ref_count: u64) -> Self {
+    pub const fn new(value: ClientActorHash, ref_count: u64) -> Self {
         Self { value, ref_count }
     }
 }
@@ -38,7 +38,7 @@ impl Marshaler for FilterValue {
 
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         Ok(Self {
-            value: u64::unmarshal(rb)?,
+            value: ClientActorHash::unmarshal(rb)?,
             ref_count: u64::unmarshal(rb)?,
         })
     }
@@ -383,7 +383,7 @@ impl ReplicatedState {
     }
 
     #[must_use]
-    pub fn should_send_to_client(&self, client_id: u64, group_idx: GroupIndex) -> bool {
+    pub fn should_send_to_client(&self, client_id: ClientActorHash, group_idx: GroupIndex) -> bool {
         let group_idx = group_idx.get();
         if group_idx >= ReplicatedStateConstants::MAX_FILTERGROUPS_PER_REPLICATED_STATE as usize {
             return false;
@@ -398,7 +398,11 @@ impl ReplicatedState {
                 .any(|entry| entry.value == client_id)
     }
 
-    pub fn add_client_to_replication_whitelist(&mut self, client_id: u64, group_idx: GroupIndex) {
+    pub fn add_client_to_replication_whitelist(
+        &mut self,
+        client_id: ClientActorHash,
+        group_idx: GroupIndex,
+    ) {
         let group_idx = group_idx.get();
         self.ensure_filter_groups(group_idx.saturating_add(1));
         let Some(group) = self.filter_groups.get_mut(group_idx) else {
@@ -416,7 +420,7 @@ impl ReplicatedState {
 
     pub fn remove_client_from_replication_whitelist(
         &mut self,
-        client_id: u64,
+        client_id: ClientActorHash,
         group_idx: GroupIndex,
     ) {
         let group_idx = group_idx.get();
@@ -605,12 +609,12 @@ mod tests {
         let group = GroupIndex::new(2);
 
         assert_eq!(header.num_filter_groups(), 1);
-        assert!(header.should_send_to_client(7, group));
+        assert!(header.should_send_to_client(ClientActorHash::new(7), group));
 
-        header.add_client_to_replication_whitelist(7, group);
+        header.add_client_to_replication_whitelist(ClientActorHash::new(7), group);
 
         assert_eq!(header.num_filter_groups(), 3);
-        assert!(header.should_send_to_client(7, group));
-        assert!(!header.should_send_to_client(8, group));
+        assert!(header.should_send_to_client(ClientActorHash::new(7), group));
+        assert!(!header.should_send_to_client(ClientActorHash::new(8), group));
     }
 }

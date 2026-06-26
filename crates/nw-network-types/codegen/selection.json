@@ -41,6 +41,18 @@
       "reason": "game-data entity identifier"
     },
     {
+      "root": "ClientOptionsData",
+      "reason": "player telemetry/options payload"
+    },
+    {
+      "root": "PersistentActionListServerData",
+      "reason": "action-list persistent server payload"
+    },
+    {
+      "root": "InstancedSlayerScriptPart",
+      "reason": "instanced slayer-script region metadata payload"
+    },
+    {
       "root": "GridSides",
       "reason": "buildable-grid side enum"
     },

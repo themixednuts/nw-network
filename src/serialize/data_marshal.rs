@@ -546,8 +546,7 @@ impl Marshaler for String {
     }
 }
 
-///
-/// Rust exposes the positive case as a trait bound rather than a SFINAE false
+/// Marker for primitive scalar types with direct marshaler support.
 pub trait FundamentalMarshalType: Marshaler {}
 
 impl FundamentalMarshalType for f32 {}

@@ -106,11 +106,11 @@ impl StatMultiplierTableComponentReplicatedState {
 
     fn marshal_fields(&self, wb: &mut WriteBuffer) {
         let group1_dirty = [
-            self.multiplier_table.is_dirty(),
-            self.stamina_cost_reduction_multipliers.is_dirty(),
-            self.xp_increase_multipliers.is_dirty(),
+            self.multiplier_table.has_field_payload(),
+            self.stamina_cost_reduction_multipliers.has_field_payload(),
+            self.xp_increase_multipliers.has_field_payload(),
         ];
-        let group2_dirty = [self.remote_multiplier_table.is_dirty()];
+        let group2_dirty = [self.remote_multiplier_table.has_field_payload()];
         let mut descriptor_mask = 0u8;
         if group1_dirty.iter().any(|dirty| *dirty) {
             descriptor_mask |= 0x02;
@@ -122,19 +122,19 @@ impl StatMultiplierTableComponentReplicatedState {
 
         if (descriptor_mask & 0x02) != 0 {
             MaskChain::from_dirty_fields(&group1_dirty).marshal(wb);
-            if self.multiplier_table.is_dirty() {
+            if self.multiplier_table.has_field_payload() {
                 self.multiplier_table.marshal(wb);
             }
-            if self.stamina_cost_reduction_multipliers.is_dirty() {
+            if self.stamina_cost_reduction_multipliers.has_field_payload() {
                 self.stamina_cost_reduction_multipliers.marshal(wb);
             }
-            if self.xp_increase_multipliers.is_dirty() {
+            if self.xp_increase_multipliers.has_field_payload() {
                 self.xp_increase_multipliers.marshal(wb);
             }
         }
         if (descriptor_mask & 0x04) != 0 {
             MaskChain::from_dirty_fields(&group2_dirty).marshal(wb);
-            if self.remote_multiplier_table.is_dirty() {
+            if self.remote_multiplier_table.has_field_payload() {
                 self.remote_multiplier_table.marshal(wb);
             }
         }

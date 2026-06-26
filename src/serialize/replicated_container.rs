@@ -397,15 +397,12 @@ where
     #[inline]
     #[must_use]
     pub fn has_value(&self) -> bool {
-        self.last_modified.is_valid()
-            || self.flags.default_value()
-            || self.values.len() > 0
-            || !self.current_changes.is_empty()
+        self.last_modified.is_valid() || self.flags.default_value()
     }
 
     #[inline]
     #[must_use]
-    pub fn is_dirty(&self) -> bool {
+    pub fn has_field_payload(&self) -> bool {
         self.has_value()
     }
 
@@ -1062,6 +1059,9 @@ where
     }
 }
 
+// Convenience round-trip codec for standalone container payloads. Replicated
+// state encoding should call `marshal_since` through `ReplicatedFieldHandlerBase`
+// so the caller's baseline can choose between full snapshots and deltas.
 impl<C, const CAP: usize, KM, VM> Marshaler for ReplicatedContainer<C, CAP, KM, VM>
 where
     C: ReplicatedContainerStorage,

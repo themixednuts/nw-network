@@ -10,7 +10,7 @@ pub mod sequence_number;
 pub mod state_bundle_builder;
 pub mod state_bundle_view;
 
-pub use address::HubAddress;
+pub use address::ActorRef;
 pub use fixed_replicated_state::{
     FieldGroup, FieldGroupMut, FieldVector, FieldVectorMut, FixedMergeOutcome,
     FixedReplicatedState, FixedReplicatedStateFields, FixedStateRegister, NamedField,
@@ -25,7 +25,9 @@ pub use fragment::{
     fragment_registration_by_type_index, fragment_registration_by_uuid,
     fragment_type_index_by_uuid, registered_fragment_type_indices,
 };
-pub use ids::{BandwidthMode, ClientContextId, FragmentKey, InterestId, TypeIndex};
+pub use ids::{
+    BandwidthMode, ClientActorHash, ClientContextId, FragmentKey, InterestId, TypeIndex,
+};
 pub use replicated_state::{
     ClientFilterContainer, ClientFilterContainerMarshalShim, ClientFilterField, DefaultBitsField,
     FilterValue, REPLICATED_STATE_TYPE_ID, ReplicatedDefaultBits, ReplicatedFieldInfo,

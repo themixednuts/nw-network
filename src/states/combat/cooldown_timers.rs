@@ -127,13 +127,13 @@ impl CooldownTimersComponentReplicatedState {
 
     fn marshal_fields(&self, wb: &mut WriteBuffer) {
         let dirty = [
-            self.cooldown_map_1.is_dirty(),
-            self.cooldown_map_2.is_dirty(),
-            self.cooldown_map_3.is_dirty(),
-            self.conditional_cooldowns.is_dirty(),
-            self.general_cooldowns.is_dirty(),
-            self.next_daily_cooldown.is_dirty(),
-            self.next_weekly_cooldown.is_dirty(),
+            self.cooldown_map_1.has_field_payload(),
+            self.cooldown_map_2.has_field_payload(),
+            self.cooldown_map_3.has_field_payload(),
+            self.conditional_cooldowns.has_field_payload(),
+            self.general_cooldowns.has_field_payload(),
+            self.next_daily_cooldown.has_field_payload(),
+            self.next_weekly_cooldown.has_field_payload(),
         ];
         let any_dirty = dirty.iter().any(|dirty| *dirty);
         wb.write_u8(u8::from(any_dirty));
@@ -142,25 +142,25 @@ impl CooldownTimersComponentReplicatedState {
         }
 
         MaskChain::from_dirty_fields(&dirty).marshal(wb);
-        if self.cooldown_map_1.is_dirty() {
+        if self.cooldown_map_1.has_field_payload() {
             self.cooldown_map_1.marshal(wb);
         }
-        if self.cooldown_map_2.is_dirty() {
+        if self.cooldown_map_2.has_field_payload() {
             self.cooldown_map_2.marshal(wb);
         }
-        if self.cooldown_map_3.is_dirty() {
+        if self.cooldown_map_3.has_field_payload() {
             self.cooldown_map_3.marshal(wb);
         }
-        if self.conditional_cooldowns.is_dirty() {
+        if self.conditional_cooldowns.has_field_payload() {
             self.conditional_cooldowns.marshal(wb);
         }
-        if self.general_cooldowns.is_dirty() {
+        if self.general_cooldowns.has_field_payload() {
             self.general_cooldowns.marshal(wb);
         }
-        if self.next_daily_cooldown.is_dirty() {
+        if self.next_daily_cooldown.has_field_payload() {
             self.next_daily_cooldown.marshal(wb);
         }
-        if self.next_weekly_cooldown.is_dirty() {
+        if self.next_weekly_cooldown.has_field_payload() {
             self.next_weekly_cooldown.marshal(wb);
         }
     }

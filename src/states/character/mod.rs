@@ -8,7 +8,10 @@ pub use look_targeting::LookTargetingComponentReplicatedState;
 pub use mount::{
     MountComponentReplicatedState, MountDyeData, PersistentMountDataValue, SummonAuthorization,
 };
-pub use player::{FreePlayerCountdown, PlayerComponentReplicatedState, PlayerIdentitySnapshot};
+pub use player::{
+    DebugAccountProbationOverride, FreePlayerCountdown, PlayerComponentReplicatedState,
+    PlayerIdentitySnapshot,
+};
 pub use player_appearance::{
     PlayerAppearanceComponentReplicatedState, PlayerAppearanceIconData, PlayerAppearanceSnapshot,
 };

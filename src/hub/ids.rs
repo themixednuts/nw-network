@@ -71,6 +71,11 @@ macro_rules! id {
 }
 
 id!(
+    /// Hashed client actor identity used by replicated-state filter groups.
+    ClientActorHash(u64)
+);
+
+id!(
     /// Actor interest identifier used by state-bundle records and replication control.
     InterestId(u16)
 );

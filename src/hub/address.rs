@@ -2,15 +2,15 @@ use uuid::Uuid;
 
 use crate::serialize::{Marshaler, MarshalerError, ReadBuffer, WriteBuffer};
 
-/// Routing address used by replication control messages.
+/// Routing reference used by replication control messages.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct HubAddress {
+pub struct ActorRef {
     pub world_id: u32,
     pub context_id: Uuid,
     pub correlation_id: Uuid,
 }
 
-impl HubAddress {
+impl ActorRef {
     pub const MARSHAL_SIZE: usize = 36;
 
     #[must_use]
@@ -23,7 +23,7 @@ impl HubAddress {
     }
 }
 
-impl Marshaler for HubAddress {
+impl Marshaler for ActorRef {
     const MARSHAL_SIZE: usize = Self::MARSHAL_SIZE;
 
     #[inline]
@@ -52,8 +52,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn hub_address_round_trips_as_fixed_width_payload() {
-        let address = HubAddress::new(
+    fn actor_ref_round_trips_as_fixed_width_payload() {
+        let address = ActorRef::new(
             0xDEAD_BEEF,
             uuid!("11223344-5566-7788-99AA-BBCCDDEEFF00"),
             uuid!("AABBCCDD-EEFF-0011-2233-445566778899"),
@@ -63,11 +63,11 @@ mod tests {
         address.marshal(&mut wb);
 
         let bytes = wb.into_vec();
-        assert_eq!(bytes.len(), HubAddress::MARSHAL_SIZE);
+        assert_eq!(bytes.len(), ActorRef::MARSHAL_SIZE);
         assert_eq!(&bytes[..4], &0xDEAD_BEEFu32.to_be_bytes());
 
         let mut rb = ReadBuffer::new(CARRIER_ENDIAN, &bytes);
-        assert_eq!(HubAddress::unmarshal(&mut rb).unwrap(), address);
+        assert_eq!(ActorRef::unmarshal(&mut rb).unwrap(), address);
         assert_eq!(rb.left(), 0);
     }
 }

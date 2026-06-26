@@ -3,7 +3,7 @@
 use std::collections::BTreeSet;
 
 use crate::{
-    hub::{fragment_registration_by_type_index, registered_fragment_type_indices},
+    hub::{TypeIndex, fragment_registration_by_type_index, registered_fragment_type_indices},
     network_schema::{NETWORK_TYPES, NetworkTypeDescriptor, NetworkTypeKind, type_by_type_index},
 };
 
@@ -119,12 +119,12 @@ pub fn replicated_state_port_statuses() -> Vec<ReplicatedStatePortStatus> {
 
 fn replicated_state_port_status(
     descriptor: &NetworkTypeDescriptor,
-    registered: &BTreeSet<u32>,
+    registered: &BTreeSet<TypeIndex>,
 ) -> ReplicatedStatePortStatus {
     ReplicatedStatePortStatus {
         type_index: descriptor.type_index,
         name: descriptor.name,
-        is_registered: registered.contains(&descriptor.type_index),
+        is_registered: registered.contains(&TypeIndex::new(descriptor.type_index)),
         field_count: descriptor.fields.len(),
         missing_field_wire_shape_count: descriptor.missing_field_wire_shape_count(),
     }

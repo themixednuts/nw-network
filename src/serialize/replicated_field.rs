@@ -48,7 +48,7 @@ macro_rules! marshal_replicated_fields {
     ($wb:expr, $($field:expr),+ $(,)?) => {{
         use $crate::serialize::Marshaler as _;
 
-        let dirty = [$($field.is_dirty()),+];
+        let dirty = [$($field.has_field_payload()),+];
         let mut group_start = 0usize;
         while group_start < dirty.len() {
             let batch = (dirty.len() - group_start).min(8);
@@ -273,7 +273,7 @@ impl<T: Default, M: Codec<T>> ReplicatedFieldHandler<T, M> {
     /// [`is_dirty_since`](Self::is_dirty_since), which gates on a baseline
     /// sequence.
     #[must_use]
-    pub fn is_dirty(&self) -> bool {
+    pub fn has_field_payload(&self) -> bool {
         self.value.is_some()
     }
 
@@ -409,7 +409,6 @@ impl<T: Default + PartialEq + Clone, M: Codec<T>> ReplicatedFieldHandler<T, M> {
                 self.has_new_network_data = true;
             } else if new_value.default_value.is_some() {
                 self.value.clone_from(&new_value.value);
-                self.default_value.clone_from(&new_value.default_value);
             }
             return detected_new_data;
         }
@@ -1311,7 +1310,7 @@ mod tests {
 
         assert_eq!(field.value, None);
         assert_eq!(field.last_modified(), SequenceNumber::Invalid);
-        assert!(!field.is_dirty());
+        assert!(!field.has_field_payload());
     }
 
     #[test]

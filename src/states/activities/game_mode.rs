@@ -8,12 +8,12 @@ use crate::serialize::{
     ReplicatedFieldHandler, ReplicatedMap, VlqU64, WIRE_VEC_CAP, WriteBuffer,
 };
 use crate::types::{
-    AfflictionData, EntityRef, GameModeParticipantStatus,
+    AfflictionData, Crc32, EntityId, EntityRef, GameModeParticipantStatus,
     RemoteServerFacetRefGameModeParticipantComponentServerFacet,
 };
 
 pub type GameModeIndexedByteMap = ReplicatedMap<VlqU64, u8>;
-pub type GameModeTimerMap = ReplicatedMap<u32, VlqU64>;
+pub type GameModeTimerMap = ReplicatedMap<Crc32, VlqU64>;
 pub type GameModeParticipantFacetRefs =
     ReplicatedMap<VlqU64, RemoteServerFacetRefGameModeParticipantComponentServerFacet>;
 pub type GameModeParticipantCharacterIds = ReplicatedMap<VlqU64, EntityRef>;
@@ -78,11 +78,11 @@ pub struct GameModeMapIcon {
 #[az_rtti("78EA6535-BB84-4D6A-A5A3-747AF2F5167C")]
 #[type_registry(2343)]
 pub struct GameModeReplicatedState {
-    pub cur_script_state_id: ReplicatedFieldHandler<u8>,
-    pub cur_script_id: ReplicatedFieldHandler<u32>,
-    pub spawned_entity_ids_by_spawner_id: ReplicatedMap<u32, u64>,
-    pub game_mode_id: ReplicatedFieldHandler<u32>,
-    pub game_mode_map_id: ReplicatedFieldHandler<u32>,
+    pub cur_script_state_id: ReplicatedFieldHandler<i8>,
+    pub cur_script_id: ReplicatedFieldHandler<Crc32>,
+    pub spawned_entity_ids_by_spawner_id: ReplicatedMap<Crc32, EntityId>,
+    pub game_mode_id: ReplicatedFieldHandler<Crc32>,
+    pub game_mode_map_id: ReplicatedFieldHandler<Crc32>,
     pub participant_facet_refs: GameModeParticipantFacetRefs,
     pub participant_statuses: GameModeParticipantStatuses,
     pub participant_team_indexes: GameModeIndexedByteMap,
@@ -101,7 +101,7 @@ pub struct GameModeReplicatedState {
     pub event9: ReplicatedFieldHandler<GameModeReplicatedEvent>,
     pub event10: ReplicatedFieldHandler<GameModeReplicatedEvent>,
     pub global_affliction_data: ReplicatedFieldHandler<AfflictionData>,
-    pub map_origin: ReplicatedFieldHandler<u32>,
+    pub map_origin: ReplicatedFieldHandler<Crc32>,
     pub tile_size_meters: ReplicatedFieldHandler<u8>,
     pub map_size_in_tiles: ReplicatedFieldHandler<u16>,
     pub tile_ui_filename_id_and_rotation: GameModeIndexedByteMap,

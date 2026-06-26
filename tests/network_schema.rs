@@ -1,9 +1,11 @@
-use nw_network::generated_states::RaidDataComponentReplicatedState as GeneratedRaidDataComponentReplicatedState;
+use std::collections::BTreeMap;
+
+use nw_network::generated::states::RaidDataComponentReplicatedState as GeneratedRaidDataComponentReplicatedState;
 use nw_network::network_schema::identity::RaidDataComponentReplicatedState;
 use nw_network::{
     NetworkFieldConfidence, NetworkTypeIdentity, NetworkTypeKind, NetworkWireShape,
     field_for_type_index, fields_for_type_index,
-    generated_messages::{
+    generated::messages::{
         RegisterFragmentAccessMsg, ReplicateClientFragmentUpdateMsg, UnregisterFragmentAccessMsg,
     },
     hub::{BaselineableFragment, FragmentKey},
@@ -81,7 +83,7 @@ fn generated_identity_marker_resolves_descriptor_metadata() {
 }
 
 #[test]
-fn generated_fragment_messages_compile_with_source_backed_fields() {
+fn generated_fragment_messages_compile_with_resolved_fields() {
     assert_eq!(
         <RegisterFragmentAccessMsg as nw_network::TypeRegistryEntry>::TYPE_INDEX,
         397
@@ -192,7 +194,7 @@ fn replicated_state_port_statuses_compare_schema_and_registered_ports() {
 }
 
 #[test]
-fn generated_replicated_state_is_registered_from_schema_selection() {
+fn generated_replicated_state_is_registered_from_allowlist() {
     assert_eq!(
         <GeneratedRaidDataComponentReplicatedState as nw_network::TypeRegistryEntry>::TYPE_INDEX,
         28
@@ -206,6 +208,24 @@ fn generated_replicated_state_is_registered_from_schema_selection() {
         nw_network::hub::fragment_registration_by_type_index(28).expect("generated raid state");
     assert_eq!((registration.type_index)(), 28);
     assert_eq!((registration.uuid)(), RAID_DATA_TYPE_ID);
+}
+
+#[test]
+fn fragment_type_index_registrations_are_unique() {
+    let mut counts = BTreeMap::<u32, usize>::new();
+    for registration in inventory::iter::<nw_network::FragmentRegistration> {
+        *counts.entry((registration.type_index)()).or_default() += 1;
+    }
+
+    let duplicates = counts
+        .into_iter()
+        .filter_map(|(type_index, count)| (count > 1).then_some((type_index, count)))
+        .collect::<Vec<_>>();
+
+    assert!(
+        duplicates.is_empty(),
+        "duplicate fragment registrations: {duplicates:?}"
+    );
 }
 
 #[test]

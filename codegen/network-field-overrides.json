@@ -1,0 +1,33 @@
+{
+  "fields": [
+    {
+      "typeIndex": 3362,
+      "fieldIndex": 0,
+      "field": "curScriptStateId",
+      "nativeType": "AZ::s8",
+      "rustType": "i8",
+      "wireShape": "u8",
+      "wireShapeSource": "field-override:SlayerScriptReplicatedState",
+      "confidence": "high"
+    },
+    {
+      "typeIndex": 3362,
+      "fieldIndex": 1,
+      "field": "curScriptId",
+      "nativeType": "AZ::Crc32",
+      "rustType": "::nw_network::Crc32",
+      "wireShape": "u32",
+      "wireShapeSource": "field-override:SlayerScriptReplicatedState",
+      "confidence": "high"
+    },
+    {
+      "typeIndex": 3362,
+      "fieldIndex": 2,
+      "field": "spawnedEntityIdsBySpawnerId",
+      "nativeType": "MB::ReplicatedMapFieldHandler<AZ::Crc32, AZ::EntityId>",
+      "rustType": "::nw_network::serialize::ReplicatedMap<::nw_network::Crc32, ::nw_network::EntityId>",
+      "wireShapeSource": "field-override:SlayerScriptReplicatedState",
+      "confidence": "high"
+    }
+  ]
+}

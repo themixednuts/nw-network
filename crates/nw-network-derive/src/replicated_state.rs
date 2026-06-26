@@ -892,7 +892,7 @@ fn expand_fragment(
 
             fn should_send_to_client_group(
                 &self,
-                target: u64,
+                target: ::nw_network::hub::ClientActorHash,
                 group_idx: ::nw_network::hub::GroupIndex,
             ) -> bool {
                 group_idx.get() < #n_groups

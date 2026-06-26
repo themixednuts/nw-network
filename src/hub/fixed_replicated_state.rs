@@ -3,7 +3,7 @@
 //! VLQ-u64 field mask used inside each present group.
 
 use super::{
-    GroupIndex, SequenceNumber,
+    ClientActorHash, GroupIndex, SequenceNumber,
     fragment::{Fragment, FragmentBase, MarshalContext},
 };
 use crate::serialize::marshaler::Codec;
@@ -35,7 +35,7 @@ impl Default for FixedMergeOutcome {
 }
 
 pub type ClientWhitelistVector<const CLIENT_WHITELIST_SIZE: usize> =
-    ArrayVec<u64, CLIENT_WHITELIST_SIZE>;
+    ArrayVec<ClientActorHash, CLIENT_WHITELIST_SIZE>;
 pub type ClientWhitelistField<const CLIENT_WHITELIST_SIZE: usize> =
     ReplicatedFieldHandler<ClientWhitelistVector<CLIENT_WHITELIST_SIZE>>;
 pub type GroupPresentFlagBitset<const N_GROUPS: usize> = [bool; N_GROUPS];
@@ -209,22 +209,22 @@ impl<
     }
 
     #[must_use]
-    pub fn client_whitelist(&self, group_idx: GroupIndex) -> Option<&[u64]> {
+    pub fn client_whitelist(&self, group_idx: GroupIndex) -> Option<&[ClientActorHash]> {
         let group_idx = group_idx.get();
         self.field_groups.get(group_idx).map(|group| {
             group
                 .client_whitelist
                 .value()
-                .map_or(&[] as &[u64], |whitelist| whitelist.as_slice())
+                .map_or(&[] as &[ClientActorHash], |whitelist| whitelist.as_slice())
         })
     }
 
-    pub fn client_whitelists(&self) -> impl Iterator<Item = &[u64]> {
+    pub fn client_whitelists(&self) -> impl Iterator<Item = &[ClientActorHash]> {
         self.field_groups.iter().map(|group| {
             group
                 .client_whitelist
                 .value()
-                .map_or(&[] as &[u64], |whitelist| whitelist.as_slice())
+                .map_or(&[] as &[ClientActorHash], |whitelist| whitelist.as_slice())
         })
     }
 
@@ -310,7 +310,7 @@ impl<
     }
 
     #[must_use]
-    pub fn should_send_to_client(&self, client_id: u64, group_idx: GroupIndex) -> bool {
+    pub fn should_send_to_client(&self, client_id: ClientActorHash, group_idx: GroupIndex) -> bool {
         let group_idx = group_idx.get();
         if group_idx >= N_GROUPS {
             return false;
@@ -321,13 +321,13 @@ impl<
         let whitelist = group
             .client_whitelist
             .value()
-            .map_or(&[] as &[u64], |whitelist| whitelist.as_slice());
+            .map_or(&[] as &[ClientActorHash], |whitelist| whitelist.as_slice());
         whitelist.is_empty() || whitelist.contains(&client_id)
     }
 
     pub fn add_client_to_replication_whitelist(
         &mut self,
-        client_id: u64,
+        client_id: ClientActorHash,
         group_idx: GroupIndex,
     ) -> bool {
         let group_idx = group_idx.get();
@@ -351,7 +351,7 @@ impl<
 
     pub fn remove_client_from_replication_whitelist(
         &mut self,
-        client_id: u64,
+        client_id: ClientActorHash,
         group_idx: GroupIndex,
     ) -> bool {
         let group_idx = group_idx.get();
@@ -833,14 +833,14 @@ pub trait FixedReplicatedStateFields<
         N_GROUPS
     }
 
-    fn should_send_to_client(&self, client_id: u64, group_idx: GroupIndex) -> bool {
+    fn should_send_to_client(&self, client_id: ClientActorHash, group_idx: GroupIndex) -> bool {
         self.fixed_replicated_state()
             .should_send_to_client(client_id, group_idx)
     }
 
     fn add_client_to_replication_whitelist(
         &mut self,
-        client_id: u64,
+        client_id: ClientActorHash,
         group_idx: GroupIndex,
     ) -> bool {
         self.fixed_replicated_state_mut()
@@ -849,7 +849,7 @@ pub trait FixedReplicatedStateFields<
 
     fn remove_client_from_replication_whitelist(
         &mut self,
-        client_id: u64,
+        client_id: ClientActorHash,
         group_idx: GroupIndex,
     ) -> bool {
         self.fixed_replicated_state_mut()
@@ -1449,7 +1449,7 @@ fn marshal_attributes(
 }
 
 fn marshal_client_whitelist<const CLIENT_WHITELIST_SIZE: usize>(
-    whitelist: &[u64],
+    whitelist: &[ClientActorHash],
     wb: &mut WriteBuffer,
 ) {
     debug_assert!(
@@ -1486,7 +1486,7 @@ fn unmarshal_client_whitelist<const CLIENT_WHITELIST_SIZE: usize>(
 
     let mut whitelist = ArrayVec::new();
     for _ in 0..len {
-        whitelist.push(u64::unmarshal(rb)?);
+        whitelist.push(ClientActorHash::unmarshal(rb)?);
     }
     Ok(whitelist)
 }
@@ -1550,7 +1550,10 @@ mod tests {
     #[test]
     fn fixed_client_whitelist_attributes_are_replicated_fields() {
         let mut fixed_state = FixedReplicatedState::<2, 1, 1>::default();
-        assert!(fixed_state.add_client_to_replication_whitelist(7, GroupIndex::new(1)));
+        assert!(
+            fixed_state
+                .add_client_to_replication_whitelist(ClientActorHash::new(7), GroupIndex::new(1))
+        );
 
         let mut wb = WriteBuffer::new(CARRIER_ENDIAN);
         assert!(fixed_state.marshal_client_whitelist_attributes(SequenceNumber::Invalid, &mut wb));
@@ -1569,11 +1572,11 @@ mod tests {
         );
         assert_eq!(
             decoded.client_whitelist(GroupIndex::new(0)),
-            Some(&[] as &[u64])
+            Some(&[] as &[ClientActorHash])
         );
         assert_eq!(
             decoded.client_whitelist(GroupIndex::new(1)),
-            Some([7].as_slice())
+            Some([ClientActorHash::new(7)].as_slice())
         );
         assert_eq!(rb.left(), 0);
     }
@@ -1617,13 +1620,13 @@ mod tests {
 
         let mut state = Demo::default();
         let group = GroupIndex::new(1);
-        assert!(state.should_send_to_client(10, group));
+        assert!(state.should_send_to_client(ClientActorHash::new(10), group));
 
-        assert!(state.add_client_to_replication_whitelist(10, group));
-        assert!(state.should_send_to_client(10, group));
-        assert!(!state.should_send_to_client(11, group));
+        assert!(state.add_client_to_replication_whitelist(ClientActorHash::new(10), group));
+        assert!(state.should_send_to_client(ClientActorHash::new(10), group));
+        assert!(!state.should_send_to_client(ClientActorHash::new(11), group));
 
-        assert!(state.remove_client_from_replication_whitelist(10, group));
-        assert!(state.should_send_to_client(11, group));
+        assert!(state.remove_client_from_replication_whitelist(ClientActorHash::new(10), group));
+        assert!(state.should_send_to_client(ClientActorHash::new(11), group));
     }
 }

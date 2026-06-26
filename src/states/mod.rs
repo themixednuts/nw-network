@@ -30,10 +30,11 @@ pub use activities::{
 pub use alc::ALCReplicatedState;
 pub use base::HubIFragmentReplicatedState;
 pub use character::{
-    FreePlayerCountdown, LookTargetingComponentReplicatedState, MountComponentReplicatedState,
-    MountDyeData, PersistentMountDataValue, PlayerAppearanceComponentReplicatedState,
-    PlayerAppearanceIconData, PlayerAppearanceSnapshot, PlayerArenaReplicatedState,
-    PlayerComponentReplicatedState, PlayerIdentitySnapshot, SummonAuthorization,
+    DebugAccountProbationOverride, FreePlayerCountdown, LookTargetingComponentReplicatedState,
+    MountComponentReplicatedState, MountDyeData, PersistentMountDataValue,
+    PlayerAppearanceComponentReplicatedState, PlayerAppearanceIconData, PlayerAppearanceSnapshot,
+    PlayerArenaReplicatedState, PlayerComponentReplicatedState, PlayerIdentitySnapshot,
+    SummonAuthorization,
 };
 pub use combat::{
     AbilityComponentReplicatedState, AbilityInstanceTrackingComponentReplicatedState,
@@ -119,8 +120,8 @@ pub use quests::{
     SeasonsRewardsTaskIds, SeasonsRewardsTrackedStatReplicatedState,
 };
 pub use scripting::{
-    InstancedSlayerScriptReplicatedState, InstancedSlayerScriptSnapshot,
-    SlayerScriptReplicatedState,
+    InstancedSlayerScriptReplicatedState, InstancedSlayerScriptSnapshot, SlayerScriptEntityMap,
+    SlayerScriptReplicatedState, SlayerScriptTimerMap,
 };
 pub use social::{
     ChatMuteEntry, ChatMutes, ChatMutesReplicatedState, ChatReplicatedState, EligibleTerritoryWar,

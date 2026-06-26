@@ -899,7 +899,7 @@ impl FragmentTypeInfo {
     pub fn type_index(self) -> Option<u32> {
         match self {
             Self::TypeIndex(type_index) => Some(type_index),
-            Self::RawUuid(uuid) => fragment_type_index_by_uuid(uuid),
+            Self::RawUuid(uuid) => fragment_type_index_by_uuid(uuid).map(TypeIndex::get),
         }
     }
 

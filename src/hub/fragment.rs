@@ -3,7 +3,7 @@ use std::{any::Any, fmt::Debug};
 use glam::Vec3;
 use uuid::Uuid;
 
-use super::SequenceNumber;
+use super::{ClientActorHash, SequenceNumber, TypeIndex};
 use crate::serialize::{MarshalerError, ReadBuffer, WriteBuffer};
 use crate::types::{AzRtti, TypeRegistryEntry};
 
@@ -170,7 +170,7 @@ impl<'a> From<&'a [SequenceNumber]> for GroupBaselines<'a> {
 #[derive(Debug, Clone, Copy)]
 pub struct MarshalContext<'a> {
     pub baseline_seq: SequenceNumber,
-    pub filter_target: Option<u64>,
+    pub filter_target: Option<ClientActorHash>,
     pub group_baselines: Option<GroupBaselines<'a>>,
 }
 
@@ -279,12 +279,12 @@ pub trait Fragment: DynFragment {
         self.base().correlation_id()
     }
 
-    /// storage; Rust keeps this explicit on `&mut self`.
+    /// Update the route/correlation id carried by this fragment.
     fn set_correlation_id(&mut self, correlation_id: Uuid) {
         self.base_mut().set_correlation_id(correlation_id);
     }
 
-    /// replicated-state specializations provide concrete helpers.
+    /// Merge new data into this fragment and advance the update sequence.
     fn merge_and_update_sequence(
         &self,
         _new_fragment: &mut dyn Fragment,
@@ -354,17 +354,20 @@ pub trait Fragment: DynFragment {
         1
     }
 
-    /// false for a single group.
-    fn should_send_to_client_group(&self, _target: u64, _group_idx: GroupIndex) -> bool {
+    fn should_send_to_client_group(
+        &self,
+        _target: ClientActorHash,
+        _group_idx: GroupIndex,
+    ) -> bool {
         false
     }
 
-    fn should_send_to_client_any_group(&self, target: u64) -> bool {
+    fn should_send_to_client_any_group(&self, target: ClientActorHash) -> bool {
         (0..self.num_filter_groups())
             .any(|group_idx| self.should_send_to_client_group(target, GroupIndex::new(group_idx)))
     }
 
-    /// merging return a default instance of their concrete fragment.
+    /// Create an empty instance of this fragment for merge/decode paths.
     fn create_new_instance(&self) -> Option<Box<dyn Fragment>> {
         None
     }
@@ -474,15 +477,16 @@ pub fn fragment_registration_by_uuid(uuid: Uuid) -> Option<&'static FragmentRegi
 
 #[must_use]
 pub fn fragment_registration_by_type_index(
-    type_index: u32,
+    type_index: impl Into<TypeIndex>,
 ) -> Option<&'static FragmentRegistration> {
+    let type_index = type_index.into();
     inventory::iter::<FragmentRegistration>
         .into_iter()
-        .find(|entry| (entry.type_index)() == type_index)
+        .find(|entry| TypeIndex::new((entry.type_index)()) == type_index)
 }
 
 #[must_use]
-pub fn registered_fragment_type_indices() -> Vec<u32> {
+pub fn registered_fragment_type_indices() -> Vec<TypeIndex> {
     let mut type_indices = inventory::iter::<FragmentRegistration>
         .into_iter()
         .filter_map(|entry| fragment_type_index_by_uuid((entry.uuid)()))
@@ -493,16 +497,16 @@ pub fn registered_fragment_type_indices() -> Vec<u32> {
 }
 
 #[must_use]
-pub fn fragment_name_for_type_index(type_index: u32) -> Option<&'static str> {
+pub fn fragment_name_for_type_index(type_index: impl Into<TypeIndex>) -> Option<&'static str> {
     fragment_registration_by_type_index(type_index).map(|entry| (entry.name)())
 }
 
 #[must_use]
-pub fn fragment_type_index_by_uuid(uuid: Uuid) -> Option<u32> {
+pub fn fragment_type_index_by_uuid(uuid: Uuid) -> Option<TypeIndex> {
     inventory::iter::<FragmentRegistration>
         .into_iter()
         .find(|entry| (entry.uuid)() == uuid)
-        .map(|entry| (entry.type_index)())
+        .map(|entry| TypeIndex::new((entry.type_index)()))
 }
 
 /// Consume a registered fragment body by compact type index.
@@ -511,11 +515,15 @@ pub fn fragment_type_index_by_uuid(uuid: Uuid) -> Option<u32> {
 ///
 /// Returns an error when the type index is unknown or the body decoder fails.
 pub fn consume_fragment_contents_by_type_index(
-    type_index: u32,
+    type_index: impl Into<TypeIndex>,
     rb: &mut ReadBuffer<'_>,
 ) -> Result<(), MarshalerError> {
-    let registration = fragment_registration_by_type_index(type_index)
-        .ok_or(MarshalerError::UnknownTypeIndex { type_index })?;
+    let type_index = type_index.into();
+    let registration = fragment_registration_by_type_index(type_index).ok_or(
+        MarshalerError::UnknownTypeIndex {
+            type_index: type_index.get(),
+        },
+    )?;
     (registration.consume_contents)(rb)
 }
 
@@ -525,10 +533,14 @@ pub fn consume_fragment_contents_by_type_index(
 ///
 /// Returns an error when the type index is unknown or the body decoder fails.
 pub fn decode_fragment_contents_by_type_index(
-    type_index: u32,
+    type_index: impl Into<TypeIndex>,
     rb: &mut ReadBuffer<'_>,
 ) -> Result<Box<dyn Fragment>, MarshalerError> {
-    let registration = fragment_registration_by_type_index(type_index)
-        .ok_or(MarshalerError::UnknownTypeIndex { type_index })?;
+    let type_index = type_index.into();
+    let registration = fragment_registration_by_type_index(type_index).ok_or(
+        MarshalerError::UnknownTypeIndex {
+            type_index: type_index.get(),
+        },
+    )?;
     (registration.decode_contents)(rb)
 }

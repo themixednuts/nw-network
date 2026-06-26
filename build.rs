@@ -7,7 +7,8 @@ use std::{
 use anyhow::{Context, Result, bail};
 use nw_resources::EmbeddedResource;
 use nw_serialize_codegen::{
-    CodegenContext, NETWORK_RUST_EMITTER_VERSION, NetworkRustEmitter, NetworkSchema,
+    CodegenContext, NETWORK_RUST_EMITTER_VERSION, NetworkConfidence, NetworkField,
+    NetworkReplicatedStateEmitOptions, NetworkRustEmitter, NetworkSchema, NetworkWireShape,
     SerializeCodegenRootMode, SerializeCodegenRootSelection, SerializeCodegenUnit,
     SerializeContextCompileInputs, SerializeContextCompiler, SerializeContextDocument,
     complete_known_missing_reflected_bodies, module_descriptor_capture, module_descriptors_root,
@@ -22,20 +23,23 @@ fn main() -> Result<()> {
     let manifest_dir =
         PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").context("CARGO_MANIFEST_DIR")?);
     let build_script = manifest_dir.join("build.rs");
-    let selection_file = manifest_dir.join("codegen/generated-states.json");
+    let registered_state_selection_file = manifest_dir.join("codegen/generated-states.json");
+    let network_field_overrides_file = manifest_dir.join("codegen/network-field-overrides.json");
     let generated_type_selection_file =
         manifest_dir.join("crates/nw-network-types/codegen/selection.json");
     let network_schema_file =
         manifest_dir.join("crates/nw-network-types/codegen/network-schema.json");
 
     rerun_if_changed(&build_script);
-    rerun_if_changed(&selection_file);
+    rerun_if_changed(&registered_state_selection_file);
+    rerun_if_changed(&network_field_overrides_file);
     rerun_if_changed(&generated_type_selection_file);
     rerun_if_changed(&network_schema_file);
 
     let input_hash = input_hash(
         &build_script,
-        &selection_file,
+        &registered_state_selection_file,
+        &network_field_overrides_file,
         &generated_type_selection_file,
         &network_schema_file,
     )?;
@@ -60,11 +64,19 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    let selection = StateSelectionFile::from_path(&selection_file)?;
-    let network_schema = load_network_schema(&network_schema_file)?;
-    let output =
-        NetworkRustEmitter::emit_replicated_states(&network_schema, selection.type_indices)
-            .context("emit generated replicated states")?;
+    let mut network_schema = load_network_schema(&network_schema_file)?;
+    let network_field_overrides =
+        NetworkFieldOverrideFile::from_path(&network_field_overrides_file)?;
+    apply_network_field_overrides(&mut network_schema, &network_field_overrides)?;
+    let registered_state_selection =
+        StateSelectionFile::from_path(&registered_state_selection_file)?;
+    let replicated_state_type_indices = replicated_state_type_indices(&network_schema);
+    let output = NetworkRustEmitter::emit_replicated_states_with_options(
+        &network_schema,
+        replicated_state_type_indices,
+        NetworkReplicatedStateEmitOptions::register_only(registered_state_selection.type_indices),
+    )
+    .context("emit generated replicated states")?;
     let message_output =
         NetworkRustEmitter::emit_messages(&network_schema).context("emit generated messages")?;
     let generated_types = selected_generated_type_unit(&generated_type_selection_file)
@@ -116,6 +128,97 @@ impl StateSelectionFile {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct NetworkFieldOverrideFile {
+    fields: Vec<NetworkFieldOverride>,
+}
+
+impl NetworkFieldOverrideFile {
+    fn from_path(path: &Path) -> Result<Self> {
+        let bytes = fs::read(path).with_context(|| format!("read {}", path.display()))?;
+        serde_json::from_slice(&bytes).with_context(|| format!("parse {}", path.display()))
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct NetworkFieldOverride {
+    type_index: u32,
+    field_index: Option<u32>,
+    field: Option<String>,
+    native_type: Option<String>,
+    rust_type: Option<String>,
+    wire_shape: Option<NetworkWireShape>,
+    wire_shape_source: Option<String>,
+    confidence: Option<NetworkConfidence>,
+}
+
+fn apply_network_field_overrides(
+    schema: &mut NetworkSchema,
+    overrides: &NetworkFieldOverrideFile,
+) -> Result<()> {
+    for override_field in &overrides.fields {
+        if override_field.field_index.is_none() && override_field.field.is_none() {
+            bail!(
+                "network field override for typeIndex {} must name a field or fieldIndex",
+                override_field.type_index
+            );
+        }
+
+        let network_type = schema
+            .types
+            .iter_mut()
+            .find(|network_type| network_type.type_index == Some(override_field.type_index))
+            .with_context(|| {
+                format!(
+                    "network field override references missing typeIndex {}",
+                    override_field.type_index
+                )
+            })?;
+        let field = network_type
+            .fields
+            .iter_mut()
+            .find(|field| network_field_override_matches(field, override_field))
+            .with_context(|| {
+                format!(
+                    "network field override references missing field {:?}/{:?} on typeIndex {}",
+                    override_field.field, override_field.field_index, override_field.type_index
+                )
+            })?;
+
+        if let Some(native_type) = override_field.native_type.as_ref() {
+            field.native_type = Some(native_type.clone());
+        }
+        if let Some(rust_type) = override_field.rust_type.as_ref() {
+            field.rust_type = Some(rust_type.clone());
+        }
+        if let Some(wire_shape) = override_field.wire_shape {
+            field.wire_shape = Some(wire_shape);
+        }
+        if let Some(wire_shape_source) = override_field.wire_shape_source.as_ref() {
+            field.wire_shape_source = Some(wire_shape_source.clone());
+        }
+        if let Some(confidence) = override_field.confidence {
+            field.confidence = confidence;
+        }
+    }
+    Ok(())
+}
+
+fn network_field_override_matches(
+    field: &NetworkField,
+    override_field: &NetworkFieldOverride,
+) -> bool {
+    override_field
+        .field_index
+        .map_or(true, |field_index| field.index == Some(field_index))
+        && override_field
+            .field
+            .as_deref()
+            .map_or(true, |field_name| field.name.as_deref() == Some(field_name))
+}
+
+#[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct GeneratedTypeSelectionFile {
     roots: Vec<RootEntry>,
@@ -158,7 +261,8 @@ fn rerun_if_changed(path: &Path) {
 
 fn input_hash(
     build_script: &Path,
-    selection_file: &Path,
+    registered_state_selection_file: &Path,
+    network_field_overrides_file: &Path,
     generated_type_selection_file: &Path,
     network_schema_file: &Path,
 ) -> Result<String> {
@@ -166,7 +270,16 @@ fn input_hash(
     hash.update(CODEGEN_VERSION.as_bytes());
     hash.update(NETWORK_RUST_EMITTER_VERSION.as_bytes());
     hash_file("build.rs", build_script, &mut hash)?;
-    hash_file("codegen/generated-states.json", selection_file, &mut hash)?;
+    hash_file(
+        "codegen/generated-states.json",
+        registered_state_selection_file,
+        &mut hash,
+    )?;
+    hash_file(
+        "codegen/network-field-overrides.json",
+        network_field_overrides_file,
+        &mut hash,
+    )?;
     hash_file(
         "crates/nw-network-types/codegen/selection.json",
         generated_type_selection_file,
@@ -187,6 +300,22 @@ fn input_hash(
 fn load_network_schema(path: &Path) -> Result<NetworkSchema> {
     let bytes = fs::read(path).with_context(|| format!("read {}", path.display()))?;
     serde_json::from_slice(&bytes).with_context(|| format!("parse {}", path.display()))
+}
+
+fn replicated_state_type_indices(schema: &NetworkSchema) -> Vec<u32> {
+    let mut type_indices = schema
+        .types
+        .iter()
+        .filter(|network_type| {
+            network_type
+                .root_kinds
+                .contains(&nw_serialize_codegen::NetworkRootKind::ReplicatedState)
+        })
+        .filter_map(|network_type| network_type.type_index)
+        .collect::<Vec<_>>();
+    type_indices.sort_unstable();
+    type_indices.dedup();
+    type_indices
 }
 
 fn selected_generated_type_unit(selection_file: &Path) -> Result<SerializeCodegenUnit> {

@@ -103,10 +103,10 @@ impl AttributeComponentReplicatedState {
 
     fn marshal_fields(&self, wb: &mut WriteBuffer) {
         let dirty = [
-            self.attributes.is_dirty(),
-            self.attribute_bonuses.is_dirty(),
-            self.placing_bonuses.is_dirty(),
-            self.persistent_attribute_data.is_dirty(),
+            self.attributes.has_field_payload(),
+            self.attribute_bonuses.has_field_payload(),
+            self.placing_bonuses.has_field_payload(),
+            self.persistent_attribute_data.has_field_payload(),
         ];
         let any_dirty = dirty.iter().any(|dirty| *dirty);
         wb.write_u8(u8::from(any_dirty));
@@ -115,16 +115,16 @@ impl AttributeComponentReplicatedState {
         }
 
         MaskChain::from_dirty_fields(&dirty).marshal(wb);
-        if self.attributes.is_dirty() {
+        if self.attributes.has_field_payload() {
             self.attributes.marshal(wb);
         }
-        if self.attribute_bonuses.is_dirty() {
+        if self.attribute_bonuses.has_field_payload() {
             self.attribute_bonuses.marshal(wb);
         }
-        if self.placing_bonuses.is_dirty() {
+        if self.placing_bonuses.has_field_payload() {
             self.placing_bonuses.marshal(wb);
         }
-        if self.persistent_attribute_data.is_dirty() {
+        if self.persistent_attribute_data.has_field_payload() {
             self.persistent_attribute_data.marshal(wb);
         }
     }

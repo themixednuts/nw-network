@@ -1,16 +1,18 @@
 use arrayvec::ArrayVec;
 use bevy_math::bounding::Aabb2d;
-use glam::{Quat, Vec3};
+use glam::{Quat, Vec2, Vec3};
+use std::fmt;
 
 use crate::hub::{
-    DynFragment, FixedReplicatedState, FixedReplicatedStateFields, Fragment, FragmentBase,
-    FragmentCategory, GroupIndex, MarshalContext, SequenceNumber,
+    ClientActorHash, DynFragment, FixedReplicatedState, FixedReplicatedStateFields, Fragment,
+    FragmentBase, FragmentCategory, GroupIndex, MarshalContext, SequenceNumber,
 };
 use crate::serialize::{
     Codec, DeltaCompressedCounterHandler, DeltaCompressedReplicatedFieldHandler,
-    FloatTimerDeltaReplicatedField, HalfF32, HalfF32Marshaler, Marshaler, MarshalerError,
-    QuantizedRelativePosition, QuatSmallestThreeQuantized, ReadBuffer, ReplicatedFieldHandler,
-    ReplicatedFieldHandlerBase, VlqU32, WriteBuffer,
+    FloatTimerDeltaReplicatedField, HalfF32Marshaler, Marshaler, MarshalerError,
+    PositionAnchorMarshaler, QuantizedRelativePosition, QuatSmallestThreeQuantized, ReadBuffer,
+    ReplicatedFieldHandler, ReplicatedFieldHandlerBase, VlqU32, WriteBuffer, quantize_with_range,
+    unquantize_with_range,
 };
 
 pub const ACTION_STATE_MAX_SCOPE_SIZE: usize = 16;
@@ -30,11 +32,10 @@ const ALC_CLIENT_WHITELIST_SIZE: usize = 1;
 type AlcFixedState =
     FixedReplicatedState<ALC_REPLICATION_GROUPS, ALC_FIELDS_PER_GROUP, ALC_CLIENT_WHITELIST_SIZE>;
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, nw_network_derive::Marshaler)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct AlcPositionAnchor {
     pub x: f32,
     pub y: f32,
-    #[marshal(as = "HalfF32")]
     pub height: f32,
 }
 
@@ -55,9 +56,25 @@ impl AlcPositionAnchor {
     }
 }
 
+#[derive(Debug, Clone, Copy, Default)]
+pub struct AlcPositionAnchorMarshaler;
+
+impl Codec<AlcPositionAnchor> for AlcPositionAnchorMarshaler {
+    const MARSHAL_SIZE: usize = <PositionAnchorMarshaler as Codec<(f32, f32, f32)>>::MARSHAL_SIZE;
+
+    fn marshal(value: &AlcPositionAnchor, wb: &mut WriteBuffer) {
+        PositionAnchorMarshaler::marshal(&(value.x, value.y, value.height), wb);
+    }
+
+    fn unmarshal(rb: &mut ReadBuffer) -> Result<AlcPositionAnchor, MarshalerError> {
+        let (x, y, height) = PositionAnchorMarshaler::unmarshal(rb)?;
+        Ok(AlcPositionAnchor::new(x, y, height))
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct AlcWorldPositionHandler {
-    pub absolute_portion: ReplicatedFieldHandler<AlcPositionAnchor>,
+    pub absolute_portion: ReplicatedFieldHandler<AlcPositionAnchor, AlcPositionAnchorMarshaler>,
     pub quantized_relative_portion: ReplicatedFieldHandler<QuantizedRelativePosition>,
     pub quantization: ReplicatedFieldHandler<f32>,
 }
@@ -84,6 +101,11 @@ impl AlcWorldPositionHandler {
                     Self::unquantize_delta(z, quantization),
                 ),
         )
+    }
+
+    #[must_use]
+    pub fn is_field_valid(&self) -> bool {
+        self.absolute_portion.is_field_valid()
     }
 
     pub fn set_value(&mut self, value: AlcPositionAnchor, quantization: f32) {
@@ -126,14 +148,12 @@ impl AlcWorldPositionHandler {
         abs_diff.x < quantization && abs_diff.y < quantization && abs_diff.z < quantization
     }
 
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     fn quantize_delta(value: f32, quantization: f32) -> u8 {
-        let normalized = (value + quantization) * 255.0 / (2.0 * quantization);
-        normalized.clamp(0.0, 255.0) as u8
+        quantize_with_range(value, quantization)
     }
 
     fn unquantize_delta(value: u8, quantization: f32) -> f32 {
-        2.0 * quantization * f32::from(value) / 255.0 - quantization
+        unquantize_with_range(value, quantization)
     }
 }
 
@@ -208,6 +228,26 @@ pub struct AlcForbiddenBounds {
     pub bounds: Aabb2d,
     pub accessibility: GridAccessibility,
     pub for_exit: bool,
+}
+
+impl Default for AlcForbiddenBounds {
+    fn default() -> Self {
+        Self {
+            bounds: Aabb2d::new(Vec2::ZERO, Vec2::ZERO),
+            accessibility: GridAccessibility::ACCESSIBLE,
+            for_exit: false,
+        }
+    }
+}
+
+impl fmt::Display for AlcForbiddenBounds {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{{{:?},{:?},{}}}",
+            self.bounds, self.bounds, self.for_exit
+        )
+    }
 }
 
 #[derive(
@@ -293,7 +333,7 @@ impl ALCReplicatedState {
         self.world_pos.set_value(value, quantization);
     }
 
-    pub fn set_owning_player(&mut self, player_actor_hash: u64) {
+    pub fn set_owning_player(&mut self, player_actor_hash: ClientActorHash) {
         let group = GroupIndex::new(Self::OWNING_PLAYER_GROUP_IDX);
         self.clear_replication_whitelist(group);
         self.add_client_to_replication_whitelist(player_actor_hash, group);
@@ -591,7 +631,7 @@ impl Fragment for ALCReplicatedState {
     }
 
     fn has_world_position(&self) -> bool {
-        true
+        self.world_pos.is_field_valid()
     }
 
     fn world_position(&self) -> Option<Vec3> {
@@ -602,7 +642,7 @@ impl Fragment for ALCReplicatedState {
         ALC_REPLICATION_GROUPS
     }
 
-    fn should_send_to_client_group(&self, target: u64, group_idx: GroupIndex) -> bool {
+    fn should_send_to_client_group(&self, target: ClientActorHash, group_idx: GroupIndex) -> bool {
         self.should_send_to_client(target, group_idx)
     }
 
@@ -698,5 +738,56 @@ impl Marshaler for ALCReplicatedState {
         let mut value = Self::default();
         DynFragment::unmarshal_contents(&mut value, rb)?;
         Ok(value)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn alc_world_position_reports_handler_validity() {
+        let mut state = ALCReplicatedState::default();
+        assert!(!Fragment::has_world_position(&state));
+        assert_eq!(Fragment::world_position(&state), None);
+
+        let position = AlcPositionAnchor::new(10.0, 20.0, 30.0);
+        state.set_world_pos(position, 0.25);
+
+        assert!(Fragment::has_world_position(&state));
+        assert_eq!(Fragment::world_position(&state), Some(position.as_vec3()));
+    }
+
+    #[test]
+    fn forbidden_bounds_default_matches_member_defaults() {
+        let bounds = AlcForbiddenBounds::default();
+
+        assert_eq!(bounds.accessibility, GridAccessibility::ACCESSIBLE);
+        assert!(!bounds.for_exit);
+    }
+
+    #[test]
+    fn forbidden_bounds_display_uses_registered_debug_shape() {
+        let bounds = AlcForbiddenBounds::default();
+
+        assert_eq!(
+            bounds.to_string(),
+            format!("{{{:?},{:?},false}}", bounds.bounds, bounds.bounds)
+        );
+    }
+
+    #[test]
+    fn alc_position_anchor_uses_packed_height_range() {
+        let mut min = WriteBuffer::default();
+        AlcPositionAnchorMarshaler::marshal(&AlcPositionAnchor::new(1.0, 2.0, -100.0), &mut min);
+        assert_eq!(
+            min.as_slice().len(),
+            AlcPositionAnchorMarshaler::MARSHAL_SIZE
+        );
+        assert_eq!(&min.as_slice()[8..], &[0x00, 0x00]);
+
+        let mut max = WriteBuffer::default();
+        AlcPositionAnchorMarshaler::marshal(&AlcPositionAnchor::new(1.0, 2.0, 2000.0), &mut max);
+        assert_eq!(&max.as_slice()[8..], &[0xff, 0xff]);
     }
 }

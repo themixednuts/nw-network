@@ -151,7 +151,8 @@
         {
           "index": 0,
           "name": "ProxyRef",
-          "nativeType": "ActorRef"
+          "nativeType": "ActorRef",
+          "rustType": "::nw_network::ActorRef"
         },
         {
           "index": 1,
@@ -170,7 +171,8 @@
         {
           "index": 0,
           "name": "ProxyRef",
-          "nativeType": "ActorRef"
+          "nativeType": "ActorRef",
+          "rustType": "::nw_network::ActorRef"
         },
         {
           "index": 1,
@@ -190,7 +192,7 @@
           "index": 0,
           "name": "Address",
           "nativeType": "ActorRef",
-          "rustType": "::nw_network::HubAddress"
+          "rustType": "::nw_network::ActorRef"
         }
       ]
     },
@@ -204,7 +206,8 @@
         {
           "index": 0,
           "name": "TargetRef",
-          "nativeType": "ActorRef"
+          "nativeType": "ActorRef",
+          "rustType": "::nw_network::ActorRef"
         },
         {
           "index": 1,

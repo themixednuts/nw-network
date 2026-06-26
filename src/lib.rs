@@ -2,9 +2,7 @@
 
 extern crate self as nw_network;
 
-mod generated_conversions;
-pub mod generated_messages;
-pub mod generated_states;
+pub mod generated;
 pub mod hub;
 pub mod messages;
 pub mod serialize;
@@ -23,16 +21,17 @@ pub mod types;
 pub mod validation;
 
 pub use hub::{
-    BandwidthMode, BaselineableFragment, BaselineableFragmentRef, ClientContextId, DynFragment,
-    FieldGroup, FieldGroupMut, FieldVector, FieldVectorMut, FixedMergeOutcome,
-    FixedReplicatedState, FixedReplicatedStateFields, FixedStateRegister, Fragment, FragmentBase,
-    FragmentCategory, FragmentCategoryBitset, FragmentKey, FragmentRegistration, FragmentTypeInfo,
-    GroupBaselines, GroupIndex, HubAddress, InterestId, MAX_REPLICATION_CONTROL_MESSAGE_IDS,
-    MarshalContext, NamedField, NamedFieldMut, ReplicatedDefaultBits, ReplicatedFieldInfo,
-    ReplicatedFieldInfoMut, ReplicatedFilterGroup, ReplicatedMergeOutcome, ReplicatedState,
-    ReplicatedStateBundle, ReplicatedStateBundleView, ReplicationControl, ReplicationControlData,
-    ReplicationPerformanceData, SequenceNumber, StateBundleBuilder, StateFragmentHeaderSpan,
-    StateFragmentIter, StateFragmentView, StateRecordHeader, StateRecordWriter, TypeIndex,
+    ActorRef, BandwidthMode, BaselineableFragment, BaselineableFragmentRef, ClientActorHash,
+    ClientContextId, DynFragment, FieldGroup, FieldGroupMut, FieldVector, FieldVectorMut,
+    FixedMergeOutcome, FixedReplicatedState, FixedReplicatedStateFields, FixedStateRegister,
+    Fragment, FragmentBase, FragmentCategory, FragmentCategoryBitset, FragmentKey,
+    FragmentRegistration, FragmentTypeInfo, GroupBaselines, GroupIndex, InterestId,
+    MAX_REPLICATION_CONTROL_MESSAGE_IDS, MarshalContext, NamedField, NamedFieldMut,
+    ReplicatedDefaultBits, ReplicatedFieldInfo, ReplicatedFieldInfoMut, ReplicatedFilterGroup,
+    ReplicatedMergeOutcome, ReplicatedState, ReplicatedStateBundle, ReplicatedStateBundleView,
+    ReplicationControl, ReplicationControlData, ReplicationPerformanceData, SequenceNumber,
+    StateBundleBuilder, StateFragmentHeaderSpan, StateFragmentIter, StateFragmentView,
+    StateRecordHeader, StateRecordWriter, TypeIndex,
 };
 pub use messages::{
     AuthToken, ClientVersionTokenMap, ConnTicket, ImpersonatedValues, LoginToken,
