@@ -1,5 +1,4 @@
 use crate::Marshaler;
-use crate::hub::ReplicatedState;
 use crate::serialize::{HalfF32, MarshalerError, ReadBuffer, ReplicatedMap, VlqU64, WriteBuffer};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Marshaler)]
@@ -72,16 +71,10 @@ pub struct StatusEffectsSnapshot {
     pub remote_replicated_update_counts: ReplicatedMap<u32, u16>,
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("E36B9CC4-082E-40F0-BA4F-5C5BE9CD3C16")]
-#[type_registry(4236)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("E36B9CC4-082E-40F0-BA4F-5C5BE9CD3C16")]
+#[::nw_network::type_registry(4236)]
 pub struct StatusEffectsComponentReplicatedState {
     #[replicated_state(group = 1)]
     pub local_effects_map: ReplicatedMap<u16, StatusEffectInstanceData>,
@@ -101,8 +94,6 @@ pub struct StatusEffectsComponentReplicatedState {
     pub local_replicated_update_counts: ReplicatedMap<u32, u16>,
     #[replicated_state(group = 2)]
     pub remote_replicated_update_counts: ReplicatedMap<u32, u16>,
-
-    pub hub: ReplicatedState,
 }
 
 impl StatusEffectsComponentReplicatedState {

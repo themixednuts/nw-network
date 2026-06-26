@@ -1,4 +1,3 @@
-use crate::hub::ReplicatedState;
 use crate::serialize::{
     Codec, ConversionMarshaler, Marshaler, MarshalerError, ReadBuffer, ReplicatedMap, VlqU64,
     WriteBuffer,
@@ -34,21 +33,13 @@ impl Marshaler for BuildableGridSideActive {
     }
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("FFABCADB-4B64-41C2-B159-A3A6980F44D0")]
-#[type_registry(2134)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("FFABCADB-4B64-41C2-B159-A3A6980F44D0")]
+#[::nw_network::type_registry(2134)]
 pub struct BuildableGridComponentReplicatedState {
     pub grid_sides_active:
         ReplicatedMap<VlqU64, BuildableGridSideActive, MAX_BUILDABLE_GRID_SIDE_CHANGES>,
-
-    pub hub: ReplicatedState,
 }
 
 #[cfg(test)]

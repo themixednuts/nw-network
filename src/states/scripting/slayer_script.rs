@@ -2,43 +2,28 @@ use std::collections::HashMap;
 
 use glam::Vec3;
 
-use crate::hub::ReplicatedState;
 use crate::serialize::{ReplicatedFieldHandler, ReplicatedMap, VlqU64};
 use crate::types::{Crc32, EntityId};
 
 pub type SlayerScriptEntityMap = ReplicatedMap<Crc32, EntityId>;
 pub type SlayerScriptTimerMap = ReplicatedMap<Crc32, VlqU64>;
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("B4DB39E2-5054-4604-9855-9A4DC75BDDE4")]
-#[type_registry(3362)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("B4DB39E2-5054-4604-9855-9A4DC75BDDE4")]
+#[::nw_network::type_registry(3362)]
 pub struct SlayerScriptReplicatedState {
     pub cur_script_state_id: ReplicatedFieldHandler<i8>,
     pub cur_script_id: ReplicatedFieldHandler<Crc32>,
     #[replicated_state(skip)]
     pub synced_timers: SlayerScriptTimerMap,
     pub spawned_entity_ids_by_spawner_id: SlayerScriptEntityMap,
-
-    pub hub: ReplicatedState,
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("B5E124FB-D4D1-4479-9A0B-3623BEF6EF0B")]
-#[type_registry(6234)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("B5E124FB-D4D1-4479-9A0B-3623BEF6EF0B")]
+#[::nw_network::type_registry(6234)]
 pub struct InstancedSlayerScriptReplicatedState {
     pub cur_script_state_id: ReplicatedFieldHandler<i8>,
     pub cur_script_id: ReplicatedFieldHandler<Crc32>,
@@ -51,8 +36,6 @@ pub struct InstancedSlayerScriptReplicatedState {
     pub script_location: ReplicatedFieldHandler<Vec3>,
     #[replicated_state(group = 1)]
     pub active_task_id: ReplicatedFieldHandler<EntityId>,
-
-    pub hub: ReplicatedState,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]

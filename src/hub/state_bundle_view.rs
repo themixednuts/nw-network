@@ -142,15 +142,9 @@ mod tests {
         types::TypeRegistryEntry,
     };
 
-    #[derive(
-        Debug,
-        Default,
-        nw_network_derive::AzRtti,
-        nw_network_derive::TypeRegistry,
-        nw_network_derive::Fragment,
-    )]
-    #[az_rtti("22222222-2222-4222-8222-222222222222")]
-    #[type_registry(64_991)]
+    #[derive(Debug, Default, ::nw_network::Fragment)]
+    #[::nw_network::az_rtti("22222222-2222-4222-8222-222222222222")]
+    #[::nw_network::type_registry(64_991)]
     struct ByteFragment {
         base: FragmentBase,
         value: u8,

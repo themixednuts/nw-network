@@ -7,17 +7,17 @@ use std::{
 use anyhow::{Context, Result, bail};
 use nw_resources::EmbeddedResource;
 use nw_serialize_codegen::{
-    CodegenContext, NETWORK_RUST_EMITTER_VERSION, NetworkConfidence, NetworkField,
-    NetworkReplicatedStateEmitOptions, NetworkRustEmitter, NetworkSchema, NetworkWireShape,
-    SerializeCodegenRootMode, SerializeCodegenRootSelection, SerializeCodegenUnit,
-    SerializeContextCompileInputs, SerializeContextCompiler, SerializeContextDocument,
-    complete_known_missing_reflected_bodies, module_descriptor_capture, module_descriptors_root,
-    module_name_from_resource_name, resolve_codegen_root_type_ids,
+    CodegenContext, NETWORK_RUST_EMITTER_VERSION, NetworkFieldOverrideFile,
+    NetworkReplicatedStateEmitOptions, NetworkRustEmitter, NetworkSchema, SerializeCodegenRootMode,
+    SerializeCodegenRootSelection, SerializeCodegenUnit, SerializeContextCompileInputs,
+    SerializeContextCompiler, SerializeContextDocument, complete_known_missing_reflected_bodies,
+    module_descriptor_capture, module_descriptors_root, module_name_from_resource_name,
+    resolve_codegen_root_type_ids,
 };
 use serde::Deserialize;
 use serde_json::Value;
 
-const CODEGEN_VERSION: &str = "nw-network-generated-payloads-v1";
+const CODEGEN_VERSION: &str = "nw-network-generated-payloads-v3";
 
 fn main() -> Result<()> {
     let manifest_dir =
@@ -65,9 +65,24 @@ fn main() -> Result<()> {
     }
 
     let mut network_schema = load_network_schema(&network_schema_file)?;
-    let network_field_overrides =
-        NetworkFieldOverrideFile::from_path(&network_field_overrides_file)?;
-    apply_network_field_overrides(&mut network_schema, &network_field_overrides)?;
+    let network_field_overrides = load_network_field_overrides(&network_field_overrides_file)?;
+    let override_report = network_schema.merge_field_overrides(
+        &network_field_overrides,
+        Some(network_field_overrides_file.display().to_string()),
+    );
+    if override_report.unmatched_type_count != 0
+        || override_report.ambiguous_type_count != 0
+        || override_report.unmatched_field_count != 0
+        || override_report.ambiguous_field_count != 0
+    {
+        bail!(
+            "network field overrides did not resolve cleanly: {} unmatched type(s), {} ambiguous type(s), {} unmatched field(s), {} ambiguous field(s)",
+            override_report.unmatched_type_count,
+            override_report.ambiguous_type_count,
+            override_report.unmatched_field_count,
+            override_report.ambiguous_field_count
+        );
+    }
     let registered_state_selection =
         StateSelectionFile::from_path(&registered_state_selection_file)?;
     let replicated_state_type_indices = replicated_state_type_indices(&network_schema);
@@ -127,95 +142,9 @@ impl StateSelectionFile {
     }
 }
 
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct NetworkFieldOverrideFile {
-    fields: Vec<NetworkFieldOverride>,
-}
-
-impl NetworkFieldOverrideFile {
-    fn from_path(path: &Path) -> Result<Self> {
-        let bytes = fs::read(path).with_context(|| format!("read {}", path.display()))?;
-        serde_json::from_slice(&bytes).with_context(|| format!("parse {}", path.display()))
-    }
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct NetworkFieldOverride {
-    type_index: u32,
-    field_index: Option<u32>,
-    field: Option<String>,
-    native_type: Option<String>,
-    rust_type: Option<String>,
-    wire_shape: Option<NetworkWireShape>,
-    wire_shape_source: Option<String>,
-    confidence: Option<NetworkConfidence>,
-}
-
-fn apply_network_field_overrides(
-    schema: &mut NetworkSchema,
-    overrides: &NetworkFieldOverrideFile,
-) -> Result<()> {
-    for override_field in &overrides.fields {
-        if override_field.field_index.is_none() && override_field.field.is_none() {
-            bail!(
-                "network field override for typeIndex {} must name a field or fieldIndex",
-                override_field.type_index
-            );
-        }
-
-        let network_type = schema
-            .types
-            .iter_mut()
-            .find(|network_type| network_type.type_index == Some(override_field.type_index))
-            .with_context(|| {
-                format!(
-                    "network field override references missing typeIndex {}",
-                    override_field.type_index
-                )
-            })?;
-        let field = network_type
-            .fields
-            .iter_mut()
-            .find(|field| network_field_override_matches(field, override_field))
-            .with_context(|| {
-                format!(
-                    "network field override references missing field {:?}/{:?} on typeIndex {}",
-                    override_field.field, override_field.field_index, override_field.type_index
-                )
-            })?;
-
-        if let Some(native_type) = override_field.native_type.as_ref() {
-            field.native_type = Some(native_type.clone());
-        }
-        if let Some(rust_type) = override_field.rust_type.as_ref() {
-            field.rust_type = Some(rust_type.clone());
-        }
-        if let Some(wire_shape) = override_field.wire_shape {
-            field.wire_shape = Some(wire_shape);
-        }
-        if let Some(wire_shape_source) = override_field.wire_shape_source.as_ref() {
-            field.wire_shape_source = Some(wire_shape_source.clone());
-        }
-        if let Some(confidence) = override_field.confidence {
-            field.confidence = confidence;
-        }
-    }
-    Ok(())
-}
-
-fn network_field_override_matches(
-    field: &NetworkField,
-    override_field: &NetworkFieldOverride,
-) -> bool {
-    override_field
-        .field_index
-        .map_or(true, |field_index| field.index == Some(field_index))
-        && override_field
-            .field
-            .as_deref()
-            .map_or(true, |field_name| field.name.as_deref() == Some(field_name))
+fn load_network_field_overrides(path: &Path) -> Result<NetworkFieldOverrideFile> {
+    let bytes = fs::read(path).with_context(|| format!("read {}", path.display()))?;
+    serde_json::from_slice(&bytes).with_context(|| format!("parse {}", path.display()))
 }
 
 #[derive(Debug, Deserialize)]
@@ -308,8 +237,8 @@ fn replicated_state_type_indices(schema: &NetworkSchema) -> Vec<u32> {
         .iter()
         .filter(|network_type| {
             network_type
-                .root_kinds
-                .contains(&nw_serialize_codegen::NetworkRootKind::ReplicatedState)
+                .capabilities
+                .contains(&nw_serialize_codegen::NetworkTypeCapability::ReplicatedState)
         })
         .filter_map(|network_type| network_type.type_index)
         .collect::<Vec<_>>();

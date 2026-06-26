@@ -1,6 +1,5 @@
 use uuid::Uuid;
 
-use crate::hub::ReplicatedState;
 use crate::serialize::{ReplicatedFieldHandler, ReplicatedMap, VlqU64};
 use crate::{EntityRef, Marshaler};
 
@@ -53,16 +52,10 @@ pub struct GuildInviteStateData {
     pub sent_time: u64,
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("704F90BD-BA5A-4DED-A3DF-DA1827A45E93")]
-#[type_registry(3217)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("704F90BD-BA5A-4DED-A3DF-DA1827A45E93")]
+#[::nw_network::type_registry(3217)]
 pub struct GuildsReplicatedState {
     pub guild_id: ReplicatedFieldHandler<Uuid>,
     pub guild_owner: ReplicatedFieldHandler<String>,
@@ -75,20 +68,12 @@ pub struct GuildsReplicatedState {
     pub owner_pvp_flag: ReplicatedFieldHandler<bool>,
     pub owner_ffa_flag: ReplicatedFieldHandler<bool>,
     pub permission_options: ReplicatedFieldHandler<u8>,
-
-    pub hub: ReplicatedState,
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("F5398BCB-8AF9-47C7-84C6-B8AFBF249F34")]
-#[type_registry(3147)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("F5398BCB-8AF9-47C7-84C6-B8AFBF249F34")]
+#[::nw_network::type_registry(3147)]
 pub struct GuildsComponentReplicatedState {
     pub guild_id: ReplicatedFieldHandler<Uuid>,
     pub guild_rank: ReplicatedFieldHandler<u16>,
@@ -140,6 +125,4 @@ pub struct GuildsComponentReplicatedState {
     pub guild_invites: ReplicatedMap<Uuid, GuildInviteStateData>,
     #[replicated_state(group = 1)]
     pub number_of_outstanding_invites: ReplicatedFieldHandler<u64>,
-
-    pub hub: ReplicatedState,
 }

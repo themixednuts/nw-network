@@ -1,5 +1,4 @@
 use crate::Marshaler;
-use crate::hub::ReplicatedState;
 use crate::serialize::{ReplicatedFieldHandler, ReplicatedVec};
 use crate::states::inventory::ItemTransformItemDescriptor;
 
@@ -16,16 +15,10 @@ pub struct RewardTrackSnapshot {
     pub rolled_rewards: ReplicatedVec<RolledReward>,
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("CCEA2E6C-2C3E-4A7F-97A7-C5CB86167960")]
-#[type_registry(4913)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("CCEA2E6C-2C3E-4A7F-97A7-C5CB86167960")]
+#[::nw_network::type_registry(4913)]
 pub struct RewardTrackComponentReplicatedState {
     #[replicated_state(group = 2)]
     pub rolled_rewards: ReplicatedVec<RolledReward>,
@@ -35,8 +28,6 @@ pub struct RewardTrackComponentReplicatedState {
     pub debug_track_excluded_tags: ReplicatedVec<u32>,
     #[replicated_state(group = 1)]
     pub pvp_xp_rank: ReplicatedFieldHandler<u16>,
-
-    pub hub: ReplicatedState,
 }
 
 impl RewardTrackComponentReplicatedState {

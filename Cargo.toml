@@ -28,8 +28,8 @@ nw-network-derive = { path = "crates/nw-network-derive" }
 [build-dependencies]
 anyhow = "1"
 blake3 = "1"
-nw-resources = { git = "https://github.com/themixednuts/nw-tools.git", rev = "10c597dc9cb6594d6295cbe7f4db471841ba2358" }
-nw-serialize-codegen = { git = "https://github.com/themixednuts/nw-tools.git", rev = "10c597dc9cb6594d6295cbe7f4db471841ba2358" }
+nw-resources = { git = "https://github.com/themixednuts/nw-tools.git", rev = "b439b812b0ce647f36e55aba9d5e3ea6610ee9b2" }
+nw-serialize-codegen = { git = "https://github.com/themixednuts/nw-tools.git", rev = "b439b812b0ce647f36e55aba9d5e3ea6610ee9b2" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 

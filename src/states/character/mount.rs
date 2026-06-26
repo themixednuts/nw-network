@@ -1,5 +1,4 @@
 use crate::Marshaler;
-use crate::hub::ReplicatedState;
 use crate::serialize::{ReplicatedFieldHandler, ReplicatedMap};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Marshaler)]
@@ -19,16 +18,10 @@ pub struct PersistentMountDataValue {
     pub name: String,
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("2C20C9F7-2500-496A-89E2-5ADA1053B5C2")]
-#[type_registry(5620)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("2C20C9F7-2500-496A-89E2-5ADA1053B5C2")]
+#[::nw_network::type_registry(5620)]
 pub struct MountComponentReplicatedState {
     #[replicated_state(group = 2)]
     pub mount_id: ReplicatedFieldHandler<u32>,
@@ -62,6 +55,4 @@ pub struct MountComponentReplicatedState {
     pub mount_remote_flags: ReplicatedFieldHandler<u8>,
     #[replicated_state(group = 3)]
     pub remote_dye_data: ReplicatedFieldHandler<MountDyeData>,
-
-    pub hub: ReplicatedState,
 }

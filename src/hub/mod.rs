@@ -2,8 +2,6 @@ pub mod address;
 pub mod fixed_replicated_state;
 pub mod fragment;
 pub mod ids;
-#[macro_use]
-pub mod macros;
 pub mod replicated_state;
 pub mod replicated_state_bundle;
 pub mod sequence_number;

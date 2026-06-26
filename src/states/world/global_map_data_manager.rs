@@ -4,7 +4,7 @@ use glam::Vec2;
 use indexmap::IndexMap;
 
 use crate::Marshaler;
-use crate::hub::{ReplicatedState, SequenceNumber};
+use crate::hub::SequenceNumber;
 use crate::serialize::{ReplicatedFieldHandler, ReplicatedIndexMap};
 
 /// Value payload of one global-map entry.
@@ -45,18 +45,10 @@ impl DerefMut for GlobalMapData {
 }
 
 /// Replicated global-map state.
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("111AEBB0-4F23-4914-B732-A349CCBD82D4")]
-#[type_registry(3780)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("111AEBB0-4F23-4914-B732-A349CCBD82D4")]
+#[::nw_network::type_registry(3780)]
 pub struct GlobalMapDataManagerComponentReplicatedState {
     pub global_map_data: ReplicatedFieldHandler<GlobalMapData>,
-
-    pub hub: ReplicatedState,
 }

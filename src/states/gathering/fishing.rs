@@ -1,27 +1,18 @@
-use crate::hub::ReplicatedState;
 use crate::serialize::{ReplicatedMap, VlqU64};
 
 pub const MAX_FISHING_STATE_TRANSITION_CHANGES: usize = 0x3fff;
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, nw_network_derive::Marshaler)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ::nw_network::Marshaler)]
 pub struct FishingStateTransition {
     pub state: u16,
     pub value: u32,
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("4FE321B0-4195-415A-8D37-57E202683785")]
-#[type_registry(5338)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("4FE321B0-4195-415A-8D37-57E202683785")]
+#[::nw_network::type_registry(5338)]
 pub struct FishingComponentReplicatedState {
     pub state_transitions:
         ReplicatedMap<VlqU64, FishingStateTransition, MAX_FISHING_STATE_TRANSITION_CHANGES>,
-
-    pub hub: ReplicatedState,
 }

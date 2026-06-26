@@ -1,4 +1,3 @@
-use crate::hub::ReplicatedState;
 use crate::serialize::{ReplicatedFieldHandler, ReplicatedVec};
 
 pub type SeasonsRewardsTaskIds = Vec<u32>;
@@ -36,24 +35,16 @@ pub struct SeasonsRewardsStatsUpdateSnapshot {
     pub group_stat_value: ReplicatedVec<u32>,
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("6F5CFE10-D60C-43C7-9C7A-2050B66DFABE")]
-#[type_registry(5606)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("6F5CFE10-D60C-43C7-9C7A-2050B66DFABE")]
+#[::nw_network::type_registry(5606)]
 pub struct SeasonsRewardsStatsUpdateReplicatedState {
     pub initialized: ReplicatedFieldHandler<bool>,
     pub group_list: ReplicatedVec<u32>,
     pub group_count_list: ReplicatedVec<u16>,
     pub group_stat_index: ReplicatedVec<u16>,
     pub group_stat_value: ReplicatedVec<u32>,
-
-    pub hub: ReplicatedState,
 }
 
 impl SeasonsRewardsStatsUpdateReplicatedState {
@@ -66,16 +57,10 @@ impl SeasonsRewardsStatsUpdateReplicatedState {
     }
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("A18C7B82-DE1E-4BCA-9852-A6F1372FBFF7")]
-#[type_registry(5485)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("A18C7B82-DE1E-4BCA-9852-A6F1372FBFF7")]
+#[::nw_network::type_registry(5485)]
 pub struct SeasonsRewardsReplicatedState {
     pub card_template: ReplicatedFieldHandler<u8>,
     pub claimed_tasks: ReplicatedVec<u16>,
@@ -97,8 +82,6 @@ pub struct SeasonsRewardsReplicatedState {
     pub escrow_bitmask: ReplicatedVec<u64>,
     pub foreign_escrow_bitmask: ReplicatedVec<u64>,
     pub first_character_connect_time: ReplicatedFieldHandler<u64>,
-
-    pub hub: ReplicatedState,
 }
 
 impl SeasonsRewardsReplicatedState {
@@ -130,20 +113,12 @@ impl SeasonsRewardsReplicatedState {
     }
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("737D86A4-B063-49C1-AE69-E9EFA8ED11EC")]
-#[type_registry(3290)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("737D86A4-B063-49C1-AE69-E9EFA8ED11EC")]
+#[::nw_network::type_registry(3290)]
 pub struct SeasonsRewardsTrackedStatReplicatedState {
     pub start_time_point: ReplicatedFieldHandler<u64>,
     pub duration_at_start: ReplicatedFieldHandler<u64>,
     pub paid_duration_at_start: ReplicatedFieldHandler<u64>,
-
-    pub hub: ReplicatedState,
 }

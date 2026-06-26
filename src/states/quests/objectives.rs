@@ -4,7 +4,6 @@ use arrayvec::ArrayVec;
 use uuid::Uuid;
 
 use crate::Marshaler;
-use crate::hub::ReplicatedState;
 use crate::serialize::{ReplicatedMap, ReplicatedVec};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Marshaler)]
@@ -53,16 +52,10 @@ pub struct ObjectivesSnapshot {
     pub dynamic_poi_indices: Option<ReplicatedVec<u16>>,
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("036365F4-A485-439D-8A3F-C51DFF6123B4")]
-#[type_registry(3857)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("036365F4-A485-439D-8A3F-C51DFF6123B4")]
+#[::nw_network::type_registry(3857)]
 pub struct ObjectivesComponentReplicatedState {
     #[replicated_state(group = 1)]
     pub task_start_times: ReplicatedMap<ObjectiveTaskKey, u64>,
@@ -78,8 +71,6 @@ pub struct ObjectivesComponentReplicatedState {
     pub objective_poi_entity_ids: ReplicatedVec<u64>,
     #[replicated_state(group = 1)]
     pub dynamic_poi_indices: ReplicatedVec<u16>,
-
-    pub hub: ReplicatedState,
 }
 
 impl ObjectivesComponentReplicatedState {

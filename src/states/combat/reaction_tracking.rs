@@ -1,4 +1,3 @@
-use crate::hub::ReplicatedState;
 use crate::serialize::{HalfF32, ReplicatedFieldHandler};
 use crate::{GdeId, Marshaler};
 
@@ -9,16 +8,10 @@ pub struct ReactionHalfVec3 {
     pub y: HalfF32,
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("058AD715-52F1-4DEE-8E9E-059319B6EDD3")]
-#[type_registry(1927)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("058AD715-52F1-4DEE-8E9E-059319B6EDD3")]
+#[::nw_network::type_registry(1927)]
 pub struct ReactionTrackingReplicatedState {
     pub reaction_ref_count: ReplicatedFieldHandler<u8>,
     pub damaging_gdeid: ReplicatedFieldHandler<Option<GdeId>>,
@@ -29,6 +22,4 @@ pub struct ReactionTrackingReplicatedState {
     pub stun_to_breakout: ReplicatedFieldHandler<f32>,
     pub reaction_flags: ReplicatedFieldHandler<u8>,
     pub attacker_level: ReplicatedFieldHandler<u8>,
-
-    pub hub: ReplicatedState,
 }

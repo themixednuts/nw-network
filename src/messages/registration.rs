@@ -2,9 +2,9 @@
 
 use uuid::Uuid;
 
+use crate::Marshaler;
 use crate::serialize::IndexMap;
 use crate::types::Crc32;
-use crate::{AzRtti, Marshaler, TypeRegistry};
 
 /// Build/type-index CRC sent at the front of the registration payload.
 pub type TypeIndexCrc = Crc32;
@@ -49,9 +49,9 @@ impl EntityId {
 }
 
 /// Client-to-server registration handshake message.
-#[derive(Debug, Clone, PartialEq, Eq, Marshaler, AzRtti, TypeRegistry)]
-#[az_rtti("0B826B33-89F5-49E0-B8CB-FE4433427778")]
-#[type_registry(19)]
+#[derive(Debug, Clone, PartialEq, Eq, Marshaler)]
+#[::nw_network::az_rtti("0B826B33-89F5-49E0-B8CB-FE4433427778")]
+#[::nw_network::type_registry(19)]
 pub struct RegistrationRequestV3Msg {
     /// Retail client build/type-index CRC.
     pub type_index_crc: TypeIndexCrc,

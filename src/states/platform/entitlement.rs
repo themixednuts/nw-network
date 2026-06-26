@@ -1,4 +1,3 @@
-use crate::hub::ReplicatedState;
 use crate::serialize::{ReplicatedFieldHandler, ReplicatedMap, ReplicatedVec};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -15,22 +14,14 @@ pub struct EntitlementSnapshot {
     pub balances: Vec<EntitlementBalance>,
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("FEAFABE8-6219-4C4A-9269-261D1E76878E")]
-#[type_registry(3133)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("FEAFABE8-6219-4C4A-9269-261D1E76878E")]
+#[::nw_network::type_registry(3133)]
 pub struct EntitlementComponentReplicatedState {
     pub entitlements: ReplicatedVec<u8, 0x23f>,
     pub balances: ReplicatedMap<u32, u32, 1000>,
     pub entitlements_received: ReplicatedFieldHandler<bool>,
-
-    pub hub: ReplicatedState,
 }
 
 impl EntitlementComponentReplicatedState {

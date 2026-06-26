@@ -223,7 +223,7 @@ impl Marshaler for GridAccessibility {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, nw_network_derive::Marshaler)]
+#[derive(Debug, Clone, PartialEq, ::nw_network::Marshaler)]
 pub struct AlcForbiddenBounds {
     pub bounds: Aabb2d,
     pub accessibility: GridAccessibility,
@@ -250,16 +250,10 @@ impl fmt::Display for AlcForbiddenBounds {
     }
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::AzRtti,
-    nw_network_derive::Fragment,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("01B0664B-3AB6-44A6-87E3-8C69D40E0365")]
-#[type_registry(11)]
+#[::nw_network::fixed_replicated_state(AlcFixedState)]
+#[derive(Debug, Clone, Default, ::nw_network::Fragment)]
+#[::nw_network::az_rtti("01B0664B-3AB6-44A6-87E3-8C69D40E0365")]
+#[::nw_network::type_registry(11)]
 pub struct ALCReplicatedState {
     pub state_id: DeltaCompressedCounterHandler,
     pub time_anchor_microseconds: ReplicatedFieldHandler<u64>,
@@ -297,7 +291,6 @@ pub struct ALCReplicatedState {
     pub current_grid_accessibility: ReplicatedFieldHandler<GridAccessibility>,
     pub distance_to_ground: ReplicatedFieldHandler<u8>,
     pub water_depth: ReplicatedFieldHandler<u8>,
-    base: AlcFixedState,
 }
 
 impl ALCReplicatedState {

@@ -1,6 +1,5 @@
 use uuid::Uuid;
 
-use crate::hub::ReplicatedState;
 use crate::serialize::{ReplicatedFieldHandler, ReplicatedMap};
 use crate::{EntityRef, Marshaler};
 
@@ -41,16 +40,10 @@ pub struct GameInviteData {
     pub expires_at: u64,
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("CE526687-CA4B-4647-A599-EC026FDC0C6D")]
-#[type_registry(1994)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("CE526687-CA4B-4647-A599-EC026FDC0C6D")]
+#[::nw_network::type_registry(1994)]
 pub struct GroupsComponentReplicatedState {
     pub group_id: ReplicatedFieldHandler<Uuid>,
     pub raid_id: ReplicatedFieldHandler<u64>,
@@ -75,6 +68,4 @@ pub struct GroupsComponentReplicatedState {
     pub game_invite_data: ReplicatedFieldHandler<GameInviteData>,
     #[replicated_state(group = 1)]
     pub is_group_pristine: ReplicatedFieldHandler<bool>,
-
-    pub hub: ReplicatedState,
 }

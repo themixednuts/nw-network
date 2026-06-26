@@ -1,8 +1,4 @@
-use crate::hub::ReplicatedState;
-use crate::serialize::{
-    MarshalerError, MaskChain, ReadBuffer, ReplicatedFieldHandler, ReplicatedMap, ReplicatedVec,
-    WriteBuffer,
-};
+use crate::serialize::{ReplicatedFieldHandler, ReplicatedMap, ReplicatedVec};
 use crate::{CharacterAttributeType, Marshaler};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Marshaler)]
@@ -41,23 +37,15 @@ pub struct PersistentAttributeData {
     pub unspent_attribute_points: u32,
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ChunkMarshaler,
-    nw_network_derive::AzRtti,
-    nw_network_derive::Fragment,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("464EBD37-105F-4790-8C59-C46EBB4C57A6")]
-#[type_registry(129)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("464EBD37-105F-4790-8C59-C46EBB4C57A6")]
+#[::nw_network::type_registry(129)]
 pub struct AttributeComponentReplicatedState {
     pub attributes: ReplicatedFieldHandler<CharacterAttributes>,
     pub attribute_bonuses: ReplicatedMap<CharacterAttributeType, u32>,
     pub placing_bonuses: ReplicatedVec<u32, 5>,
     pub persistent_attribute_data: ReplicatedFieldHandler<PersistentAttributeData>,
-    pub hub: ReplicatedState,
 }
 
 impl AttributeComponentReplicatedState {
@@ -76,63 +64,4 @@ impl AttributeComponentReplicatedState {
         self.persistent_attribute_data
             .set_value(snapshot.persistent_attribute_data);
     }
-
-    fn unmarshal_fields(&mut self, rb: &mut ReadBuffer) -> Result<(), MarshalerError> {
-        let descriptor_mask = rb.read_u8()?;
-        if (descriptor_mask & 0x01) == 0 {
-            return Ok(());
-        }
-
-        let masks = MaskChain::unmarshal(rb)?;
-        if masks.is_field_set(0) {
-            self.attributes = ReplicatedFieldHandler::<CharacterAttributes>::unmarshal(rb)?;
-        }
-        if masks.is_field_set(1) {
-            self.attribute_bonuses = ReplicatedMap::unmarshal(rb)?;
-        }
-        if masks.is_field_set(2) {
-            self.placing_bonuses = ReplicatedVec::unmarshal(rb)?;
-        }
-        if masks.is_field_set(3) {
-            self.persistent_attribute_data =
-                ReplicatedFieldHandler::<PersistentAttributeData>::unmarshal(rb)?;
-        }
-
-        Ok(())
-    }
-
-    fn marshal_fields(&self, wb: &mut WriteBuffer) {
-        let dirty = [
-            self.attributes.has_field_payload(),
-            self.attribute_bonuses.has_field_payload(),
-            self.placing_bonuses.has_field_payload(),
-            self.persistent_attribute_data.has_field_payload(),
-        ];
-        let any_dirty = dirty.iter().any(|dirty| *dirty);
-        wb.write_u8(u8::from(any_dirty));
-        if !any_dirty {
-            return;
-        }
-
-        MaskChain::from_dirty_fields(&dirty).marshal(wb);
-        if self.attributes.has_field_payload() {
-            self.attributes.marshal(wb);
-        }
-        if self.attribute_bonuses.has_field_payload() {
-            self.attribute_bonuses.marshal(wb);
-        }
-        if self.placing_bonuses.has_field_payload() {
-            self.placing_bonuses.marshal(wb);
-        }
-        if self.persistent_attribute_data.has_field_payload() {
-            self.persistent_attribute_data.marshal(wb);
-        }
-    }
 }
-
-crate::impl_hub_fragment!(
-    AttributeComponentReplicatedState,
-    hub = hub,
-    marshal = marshal_fields,
-    unmarshal = unmarshal_fields,
-);

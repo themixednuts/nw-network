@@ -2,7 +2,6 @@ use arrayvec::ArrayVec;
 use uuid::Uuid;
 
 use crate::Marshaler;
-use crate::hub::ReplicatedState;
 use crate::serialize::{ReplicatedFieldHandler, ReplicatedVec};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Marshaler)]
@@ -47,23 +46,15 @@ pub struct ObjectiveInteractorSnapshot {
     pub community_goals: Vec<CommunityGoalParams>,
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("2205CFE8-2403-42C7-81F7-5DEDB58E9ECE")]
-#[type_registry(3829)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("2205CFE8-2403-42C7-81F7-5DEDB58E9ECE")]
+#[::nw_network::type_registry(3829)]
 pub struct ObjectiveInteractorComponentReplicatedState {
     pub objective_provider_id: ReplicatedFieldHandler<Uuid>,
     pub expiration_time: ReplicatedFieldHandler<u64>,
     pub mission_params: ReplicatedVec<MissionParam>,
     pub community_goals: ReplicatedFieldHandler<Vec<CommunityGoalParams>>,
-
-    pub hub: ReplicatedState,
 }
 
 impl ObjectiveInteractorComponentReplicatedState {

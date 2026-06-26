@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use glam::Vec2;
 
-use crate::hub::ReplicatedState;
 use crate::serialize::{
     Codec, DefaultMarshaler, Marshaler, MarshalerError, ReadBuffer, ReplicatedContainer,
     ReplicatedFieldHandler, ReplicatedMap, VlqU64, WIRE_VEC_CAP, WriteBuffer,
@@ -54,29 +53,23 @@ impl Codec<GameModeParticipantStatus> for GameModeParticipantStatusByte {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, nw_network_derive::Marshaler)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ::nw_network::Marshaler)]
 pub struct GameModeReplicatedEvent {
     pub field_00: u32,
     pub field_08: u64,
     pub field_10: u32,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, nw_network_derive::Marshaler)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, ::nw_network::Marshaler)]
 pub struct GameModeMapIcon {
     pub icon_id: u32,
     pub position: Vec2,
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("78EA6535-BB84-4D6A-A5A3-747AF2F5167C")]
-#[type_registry(2343)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("78EA6535-BB84-4D6A-A5A3-747AF2F5167C")]
+#[::nw_network::type_registry(2343)]
 pub struct GameModeReplicatedState {
     pub cur_script_state_id: ReplicatedFieldHandler<i8>,
     pub cur_script_id: ReplicatedFieldHandler<Crc32>,
@@ -108,8 +101,6 @@ pub struct GameModeReplicatedState {
     pub tile_visited: GameModeIndexedByteMap,
     pub icons: ReplicatedMap<VlqU64, GameModeMapIcon>,
     pub linked_mode: ReplicatedFieldHandler<bool>,
-
-    pub hub: ReplicatedState,
 }
 
 #[cfg(test)]

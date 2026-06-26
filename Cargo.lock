@@ -1488,10 +1488,22 @@ dependencies = [
 [[package]]
 name = "nw-asset"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git?rev=10c597dc9cb6594d6295cbe7f4db471841ba2358#10c597dc9cb6594d6295cbe7f4db471841ba2358"
+source = "git+https://github.com/themixednuts/nw-tools.git?rev=07173e4e17f16a7c6ae2f0a7fccaaf7b8e20d96a#07173e4e17f16a7c6ae2f0a7fccaaf7b8e20d96a"
 dependencies = [
- "nw-filesystem",
- "nw-pak",
+ "nw-filesystem 0.1.0 (git+https://github.com/themixednuts/nw-tools.git?rev=07173e4e17f16a7c6ae2f0a7fccaaf7b8e20d96a)",
+ "nw-pak 0.1.0 (git+https://github.com/themixednuts/nw-tools.git?rev=07173e4e17f16a7c6ae2f0a7fccaaf7b8e20d96a)",
+ "sha1",
+ "thiserror",
+ "uuid",
+]
+
+[[package]]
+name = "nw-asset"
+version = "0.1.0"
+source = "git+https://github.com/themixednuts/nw-tools.git?rev=b439b812b0ce647f36e55aba9d5e3ea6610ee9b2#b439b812b0ce647f36e55aba9d5e3ea6610ee9b2"
+dependencies = [
+ "nw-filesystem 0.1.0 (git+https://github.com/themixednuts/nw-tools.git?rev=b439b812b0ce647f36e55aba9d5e3ea6610ee9b2)",
+ "nw-pak 0.1.0 (git+https://github.com/themixednuts/nw-tools.git?rev=b439b812b0ce647f36e55aba9d5e3ea6610ee9b2)",
  "sha1",
  "thiserror",
  "uuid",
@@ -1500,7 +1512,15 @@ dependencies = [
 [[package]]
 name = "nw-filesystem"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git?rev=10c597dc9cb6594d6295cbe7f4db471841ba2358#10c597dc9cb6594d6295cbe7f4db471841ba2358"
+source = "git+https://github.com/themixednuts/nw-tools.git?rev=07173e4e17f16a7c6ae2f0a7fccaaf7b8e20d96a#07173e4e17f16a7c6ae2f0a7fccaaf7b8e20d96a"
+dependencies = [
+ "thiserror",
+]
+
+[[package]]
+name = "nw-filesystem"
+version = "0.1.0"
+source = "git+https://github.com/themixednuts/nw-tools.git?rev=b439b812b0ce647f36e55aba9d5e3ea6610ee9b2#b439b812b0ce647f36e55aba9d5e3ea6610ee9b2"
 dependencies = [
  "thiserror",
 ]
@@ -1508,7 +1528,18 @@ dependencies = [
 [[package]]
 name = "nw-jobs"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git?rev=10c597dc9cb6594d6295cbe7f4db471841ba2358#10c597dc9cb6594d6295cbe7f4db471841ba2358"
+source = "git+https://github.com/themixednuts/nw-tools.git?rev=07173e4e17f16a7c6ae2f0a7fccaaf7b8e20d96a#07173e4e17f16a7c6ae2f0a7fccaaf7b8e20d96a"
+dependencies = [
+ "rayon",
+ "signal-hook",
+ "thiserror",
+ "tracing",
+]
+
+[[package]]
+name = "nw-jobs"
+version = "0.1.0"
+source = "git+https://github.com/themixednuts/nw-tools.git?rev=b439b812b0ce647f36e55aba9d5e3ea6610ee9b2#b439b812b0ce647f36e55aba9d5e3ea6610ee9b2"
 dependencies = [
  "rayon",
  "signal-hook",
@@ -1532,8 +1563,8 @@ dependencies = [
  "inventory",
  "nw-network-derive",
  "nw-network-types",
- "nw-resources",
- "nw-serialize-codegen",
+ "nw-resources 0.1.0 (git+https://github.com/themixednuts/nw-tools.git?rev=b439b812b0ce647f36e55aba9d5e3ea6610ee9b2)",
+ "nw-serialize-codegen 0.1.0 (git+https://github.com/themixednuts/nw-tools.git?rev=b439b812b0ce647f36e55aba9d5e3ea6610ee9b2)",
  "serde",
  "serde_json",
  "thiserror",
@@ -1562,8 +1593,8 @@ dependencies = [
  "bevy_reflect",
  "bevy_transform",
  "blake3",
- "nw-resources",
- "nw-serialize-codegen",
+ "nw-resources 0.1.0 (git+https://github.com/themixednuts/nw-tools.git?rev=07173e4e17f16a7c6ae2f0a7fccaaf7b8e20d96a)",
+ "nw-serialize-codegen 0.1.0 (git+https://github.com/themixednuts/nw-tools.git?rev=07173e4e17f16a7c6ae2f0a7fccaaf7b8e20d96a)",
  "serde",
  "serde_json",
  "sha1",
@@ -1574,12 +1605,28 @@ dependencies = [
 [[package]]
 name = "nw-objectstream"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git?rev=10c597dc9cb6594d6295cbe7f4db471841ba2358#10c597dc9cb6594d6295cbe7f4db471841ba2358"
+source = "git+https://github.com/themixednuts/nw-tools.git?rev=07173e4e17f16a7c6ae2f0a7fccaaf7b8e20d96a#07173e4e17f16a7c6ae2f0a7fccaaf7b8e20d96a"
 dependencies = [
  "arcstr",
  "crc32fast",
  "hex",
- "nw-asset",
+ "nw-asset 0.1.0 (git+https://github.com/themixednuts/nw-tools.git?rev=07173e4e17f16a7c6ae2f0a7fccaaf7b8e20d96a)",
+ "quick-xml",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "uuid",
+]
+
+[[package]]
+name = "nw-objectstream"
+version = "0.1.0"
+source = "git+https://github.com/themixednuts/nw-tools.git?rev=b439b812b0ce647f36e55aba9d5e3ea6610ee9b2#b439b812b0ce647f36e55aba9d5e3ea6610ee9b2"
+dependencies = [
+ "arcstr",
+ "crc32fast",
+ "hex",
+ "nw-asset 0.1.0 (git+https://github.com/themixednuts/nw-tools.git?rev=b439b812b0ce647f36e55aba9d5e3ea6610ee9b2)",
  "quick-xml",
  "serde",
  "serde_json",
@@ -1590,13 +1637,29 @@ dependencies = [
 [[package]]
 name = "nw-pak"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git?rev=10c597dc9cb6594d6295cbe7f4db471841ba2358#10c597dc9cb6594d6295cbe7f4db471841ba2358"
+source = "git+https://github.com/themixednuts/nw-tools.git?rev=07173e4e17f16a7c6ae2f0a7fccaaf7b8e20d96a#07173e4e17f16a7c6ae2f0a7fccaaf7b8e20d96a"
 dependencies = [
  "crc32fast",
  "flate2",
  "memmap2",
- "nw-filesystem",
- "nw-jobs",
+ "nw-filesystem 0.1.0 (git+https://github.com/themixednuts/nw-tools.git?rev=07173e4e17f16a7c6ae2f0a7fccaaf7b8e20d96a)",
+ "nw-jobs 0.1.0 (git+https://github.com/themixednuts/nw-tools.git?rev=07173e4e17f16a7c6ae2f0a7fccaaf7b8e20d96a)",
+ "rayon",
+ "thiserror",
+ "time",
+ "zip",
+]
+
+[[package]]
+name = "nw-pak"
+version = "0.1.0"
+source = "git+https://github.com/themixednuts/nw-tools.git?rev=b439b812b0ce647f36e55aba9d5e3ea6610ee9b2#b439b812b0ce647f36e55aba9d5e3ea6610ee9b2"
+dependencies = [
+ "crc32fast",
+ "flate2",
+ "memmap2",
+ "nw-filesystem 0.1.0 (git+https://github.com/themixednuts/nw-tools.git?rev=b439b812b0ce647f36e55aba9d5e3ea6610ee9b2)",
+ "nw-jobs 0.1.0 (git+https://github.com/themixednuts/nw-tools.git?rev=b439b812b0ce647f36e55aba9d5e3ea6610ee9b2)",
  "rayon",
  "thiserror",
  "time",
@@ -1606,20 +1669,54 @@ dependencies = [
 [[package]]
 name = "nw-resources"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git?rev=10c597dc9cb6594d6295cbe7f4db471841ba2358#10c597dc9cb6594d6295cbe7f4db471841ba2358"
+source = "git+https://github.com/themixednuts/nw-tools.git?rev=07173e4e17f16a7c6ae2f0a7fccaaf7b8e20d96a#07173e4e17f16a7c6ae2f0a7fccaaf7b8e20d96a"
+
+[[package]]
+name = "nw-resources"
+version = "0.1.0"
+source = "git+https://github.com/themixednuts/nw-tools.git?rev=b439b812b0ce647f36e55aba9d5e3ea6610ee9b2#b439b812b0ce647f36e55aba9d5e3ea6610ee9b2"
 
 [[package]]
 name = "nw-serialize-codegen"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git?rev=10c597dc9cb6594d6295cbe7f4db471841ba2358#10c597dc9cb6594d6295cbe7f4db471841ba2358"
+source = "git+https://github.com/themixednuts/nw-tools.git?rev=07173e4e17f16a7c6ae2f0a7fccaaf7b8e20d96a#07173e4e17f16a7c6ae2f0a7fccaaf7b8e20d96a"
 dependencies = [
  "anyhow",
  "blake3",
  "clap",
  "gofmt",
  "heck 0.5.0",
- "nw-jobs",
- "nw-objectstream",
+ "nw-jobs 0.1.0 (git+https://github.com/themixednuts/nw-tools.git?rev=07173e4e17f16a7c6ae2f0a7fccaaf7b8e20d96a)",
+ "nw-objectstream 0.1.0 (git+https://github.com/themixednuts/nw-tools.git?rev=07173e4e17f16a7c6ae2f0a7fccaaf7b8e20d96a)",
+ "oxc_allocator",
+ "oxc_codegen",
+ "oxc_parser",
+ "oxc_span",
+ "prettyplease",
+ "proc-macro2",
+ "quote",
+ "rust-embed",
+ "serde",
+ "serde_json",
+ "syn",
+ "thiserror",
+ "treesitter-types-cpp",
+ "treesitter-types-go",
+ "uuid",
+]
+
+[[package]]
+name = "nw-serialize-codegen"
+version = "0.1.0"
+source = "git+https://github.com/themixednuts/nw-tools.git?rev=b439b812b0ce647f36e55aba9d5e3ea6610ee9b2#b439b812b0ce647f36e55aba9d5e3ea6610ee9b2"
+dependencies = [
+ "anyhow",
+ "blake3",
+ "clap",
+ "gofmt",
+ "heck 0.5.0",
+ "nw-jobs 0.1.0 (git+https://github.com/themixednuts/nw-tools.git?rev=b439b812b0ce647f36e55aba9d5e3ea6610ee9b2)",
+ "nw-objectstream 0.1.0 (git+https://github.com/themixednuts/nw-tools.git?rev=b439b812b0ce647f36e55aba9d5e3ea6610ee9b2)",
  "oxc_allocator",
  "oxc_codegen",
  "oxc_parser",

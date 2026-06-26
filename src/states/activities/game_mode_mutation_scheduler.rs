@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use crate::Marshaler;
-use crate::hub::ReplicatedState;
 use crate::serialize::{ReplicatedFieldHandler, ReplicatedMap};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Marshaler)]
@@ -18,21 +17,13 @@ pub struct GameModeMutationSnapshot {
     pub cadence_start_time: u64,
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("D0D4C4D1-5489-4AE8-941D-4DB70E2A8AB9")]
-#[type_registry(2201)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("D0D4C4D1-5489-4AE8-941D-4DB70E2A8AB9")]
+#[::nw_network::type_registry(2201)]
 pub struct GameModeMutationSchedulerReplicatedState {
     pub game_mode_mutation_sets: ReplicatedMap<u32, GameModeMutationSet, 0x4000>,
     pub mutation_cadence_start_time: ReplicatedFieldHandler<u64>,
-
-    pub hub: ReplicatedState,
 }
 
 impl GameModeMutationSchedulerReplicatedState {

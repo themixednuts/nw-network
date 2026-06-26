@@ -1,16 +1,9 @@
-use crate::hub::ReplicatedState;
 use crate::serialize::ReplicatedFieldHandler;
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("80A502FD-67EB-4A1B-87E3-B85004919249")]
-#[type_registry(3152)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("80A502FD-67EB-4A1B-87E3-B85004919249")]
+#[::nw_network::type_registry(3152)]
 pub struct FactionComponentReplicatedState {
     #[replicated_state(group = 1)]
     pub pvp_flag_pending: ReplicatedFieldHandler<bool>,
@@ -42,6 +35,4 @@ pub struct FactionComponentReplicatedState {
     pub pvp_value: ReplicatedFieldHandler<f32>,
     #[replicated_state(group = 3)]
     pub is_accumulating_pvp_value: ReplicatedFieldHandler<bool>,
-
-    pub hub: ReplicatedState,
 }

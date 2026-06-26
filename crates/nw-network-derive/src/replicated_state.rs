@@ -2,7 +2,12 @@ use std::collections::BTreeMap;
 
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{Data, DeriveInput, Field, Fields, Ident, LitInt, LitStr, Type};
+use syn::{
+    Data, DeriveInput, Field, Fields, Ident, ItemStruct, LitInt, LitStr, Type, parse::Parser,
+    parse_quote,
+};
+
+use crate::state_storage::inject_named_field;
 
 struct Opts {
     category: Option<String>,
@@ -19,25 +24,44 @@ struct BaseField {
     ident: Ident,
 }
 
-pub fn derive(input: &DeriveInput) -> syn::Result<TokenStream> {
-    let opts = parse_opts(input)?;
+pub fn attribute(args: TokenStream, input: TokenStream) -> syn::Result<TokenStream> {
+    let opts = parse_opts(args)?;
+    let mut item = syn::parse2::<ItemStruct>(input)?;
+    inject_named_field(
+        &mut item,
+        Ident::new("hub", proc_macro2::Span::call_site()),
+        parse_quote! {
+            pub(crate) hub: ::nw_network::hub::ReplicatedState
+        },
+    )?;
 
+    let derive_input: DeriveInput = parse_quote!(#item);
+    let impls = expand(&derive_input, opts)?;
+    strip_replicated_state_field_attrs(&mut item);
+
+    Ok(quote! {
+        #item
+        #impls
+    })
+}
+
+fn expand(input: &DeriveInput, opts: Opts) -> syn::Result<TokenStream> {
     let Data::Struct(data) = &input.data else {
         return Err(syn::Error::new_spanned(
             input,
-            "#[derive(ReplicatedState)] only supports structs",
+            "#[replicated_state] only supports structs",
         ));
     };
     let Fields::Named(fields) = &data.fields else {
         return Err(syn::Error::new_spanned(
             &data.fields,
-            "#[derive(ReplicatedState)] requires named fields",
+            "#[replicated_state] requires named fields",
         ));
     };
 
     let mut groups: BTreeMap<usize, Vec<FieldInfo>> = BTreeMap::new();
     for field in &fields.named {
-        if field_is_base(field) {
+        if field_is_replicated_state_storage(field) {
             continue;
         }
         if field_is_skipped(field) {
@@ -57,7 +81,7 @@ pub fn derive(input: &DeriveInput) -> syn::Result<TokenStream> {
     if groups.is_empty() {
         return Err(syn::Error::new_spanned(
             input,
-            "#[derive(ReplicatedState)] requires at least one field",
+            "#[replicated_state] requires at least one field",
         ));
     }
 
@@ -106,50 +130,64 @@ pub fn derive(input: &DeriveInput) -> syn::Result<TokenStream> {
     })
 }
 
-fn parse_opts(input: &DeriveInput) -> syn::Result<Opts> {
+fn parse_opts(args: TokenStream) -> syn::Result<Opts> {
     let mut opts = Opts {
         category: None,
         world_position: None,
     };
 
-    for attr in &input.attrs {
-        if !attr.path().is_ident("replicated_state") {
-            continue;
+    let parser = syn::meta::parser(|meta| {
+        if meta.path.is_ident("facet") {
+            Err(meta.error(
+                "replicated_state does not own facet metadata; it emits fragment and marshaler glue only",
+            ))
+        } else if meta.path.is_ident("message") {
+            Err(meta.error(
+                "`message` is unsupported on replicated_state; it emits fragment and marshaler glue only",
+            ))
+        } else if meta.path.is_ident("category") {
+            let value = meta.value()?;
+            let lit: LitStr = value.parse()?;
+            opts.category = Some(lit.value());
+            Ok(())
+        } else if meta.path.is_ident("world_position") {
+            let value = meta.value()?;
+            let lit: LitStr = value.parse()?;
+            opts.world_position = Some(lit.value());
+            Ok(())
+        } else {
+            Err(meta.error("unsupported replicated_state attribute"))
         }
-
-        attr.parse_nested_meta(|meta| {
-            if meta.path.is_ident("facet") {
-                Err(meta.error(
-                    "ReplicatedState does not own facet metadata; this derive emits fragment and marshaler glue only",
-                ))
-            } else if meta.path.is_ident("message") {
-                Err(meta.error(
-                    "`message` is unsupported on ReplicatedState; this derive emits fragment and marshaler glue only",
-                ))
-            } else if meta.path.is_ident("category") {
-                let value = meta.value()?;
-                let lit: LitStr = value.parse()?;
-                opts.category = Some(lit.value());
-                Ok(())
-            } else if meta.path.is_ident("world_position") {
-                let value = meta.value()?;
-                let lit: LitStr = value.parse()?;
-                opts.world_position = Some(lit.value());
-                Ok(())
-            } else {
-                Err(meta.error("unsupported replicated_state attribute"))
-            }
-        })?;
-    }
+    });
+    parser.parse2(args)?;
 
     Ok(opts)
+}
+
+fn strip_replicated_state_field_attrs(item: &mut ItemStruct) {
+    let Fields::Named(fields) = &mut item.fields else {
+        return;
+    };
+    for field in &mut fields.named {
+        field
+            .attrs
+            .retain(|attr| !attr.path().is_ident("replicated_state"));
+    }
 }
 
 fn field_is_skipped(field: &syn::Field) -> bool {
     field_has_attr(field, "skip")
 }
 
-fn field_is_base(field: &Field) -> bool {
+fn field_has_replicated_state_storage_attr(field: &Field) -> bool {
+    field_has_attr(field, "base")
+}
+
+fn field_is_replicated_state_storage(field: &Field) -> bool {
+    field_has_replicated_state_storage_attr(field) || field_is_replicated_state_storage_type(field)
+}
+
+fn field_is_replicated_state_storage_type(field: &Field) -> bool {
     let Type::Path(type_path) = &field.ty else {
         return false;
     };
@@ -164,14 +202,14 @@ fn expand_fragment_registration(input: &DeriveInput, ident: &Ident) -> syn::Resu
     let has_type_registry = input
         .attrs
         .iter()
-        .any(|attr| attr.path().is_ident("type_registry"));
+        .any(|attr| attr_path_ends_with(attr.path(), "type_registry"));
     if !has_type_registry {
         return Ok(quote! {});
     }
     if !input.generics.params.is_empty() {
         return Err(syn::Error::new_spanned(
             ident,
-            "fragment registration from #[derive(ReplicatedState)] does not support generic types",
+            "fragment registration from #[replicated_state] does not support generic types",
         ));
     }
 
@@ -200,6 +238,8 @@ fn field_has_attr(field: &Field, name: &str) -> bool {
                 let value = meta.value()?;
                 let _: LitStr = value.parse()?;
                 Ok(())
+            } else if meta.path.is_ident("base") {
+                Ok(())
             } else {
                 Err(meta.error("unsupported replicated_state field attribute"))
             }
@@ -211,13 +251,27 @@ fn field_has_attr(field: &Field, name: &str) -> bool {
     false
 }
 
+fn attr_path_ends_with(path: &syn::Path, name: &str) -> bool {
+    path.segments
+        .last()
+        .is_some_and(|segment| segment.ident == name)
+}
+
 fn find_base_field<'a, I>(ident: &Ident, fields: I) -> syn::Result<BaseField>
 where
     I: Iterator<Item = &'a Field>,
 {
     let mut base = None;
     for field in fields {
-        if !field_is_base(field) {
+        if field_has_replicated_state_storage_attr(field)
+            && !field_is_replicated_state_storage_type(field)
+        {
+            return Err(syn::Error::new_spanned(
+                field,
+                "#[replicated_state(base)] requires a `nw_network::hub::ReplicatedState` field",
+            ));
+        }
+        if !field_is_replicated_state_storage(field) {
             continue;
         }
         let Some(field_ident) = &field.ident else {
@@ -237,7 +291,7 @@ where
     let Some(base_field) = base else {
         return Err(syn::Error::new_spanned(
             ident,
-            "#[derive(ReplicatedState)] requires an embedded \
+            "#[replicated_state] requires an embedded \
              `nw_network::hub::ReplicatedState` base field",
         ));
     };
@@ -274,6 +328,8 @@ fn parse_field_attrs(field: &syn::Field) -> syn::Result<FieldAttrs> {
                 name = value.parse()?;
                 Ok(())
             } else if meta.path.is_ident("skip") {
+                Ok(())
+            } else if meta.path.is_ident("base") {
                 Ok(())
             } else {
                 Err(meta.error("unsupported replicated_state field attribute"))
@@ -340,10 +396,20 @@ fn expand_generated_contents(
     let unmarshal_chunks = (0..=(max_descriptor / 8)).map(|chunk_idx| {
         let chunk_start = chunk_idx * 8;
         let chunk_end = chunk_start + 8;
-        let groups_in_chunk = groups
-            .iter()
-            .filter(|(group_idx, _)| **group_idx >= chunk_start && **group_idx < chunk_end)
-            .map(|(group_idx, fields)| unmarshal_group(group_idx, fields));
+        let groups_in_chunk = (chunk_start..chunk_end)
+            .filter(|group_idx| *group_idx <= max_descriptor)
+            .map(|group_idx| {
+                if let Some(fields) = groups.get(&group_idx) {
+                    return unmarshal_group(&group_idx, fields);
+                }
+
+                let group_bit = 1u8 << (group_idx % 8);
+                quote! {
+                    if (descriptor_mask & #group_bit) != 0 {
+                        ::nw_network::serialize::MaskChain::skip(rb)?;
+                    }
+                }
+            });
         quote! {
             let descriptor_mask = rb.read_u8()?;
             #(#groups_in_chunk)*
@@ -735,6 +801,16 @@ fn expand_fragment(
     };
 
     Ok(quote! {
+        impl #impl_generics #ident #ty_generics #where_clause {
+            pub fn replicated_state(&self) -> &::nw_network::hub::ReplicatedState {
+                &self.#base_ident
+            }
+
+            pub fn replicated_state_mut(&mut self) -> &mut ::nw_network::hub::ReplicatedState {
+                &mut self.#base_ident
+            }
+        }
+
         impl #impl_generics ::nw_network::hub::DynFragment
         for #ident #ty_generics #where_clause
         {
@@ -904,4 +980,19 @@ fn expand_fragment(
             }
         }
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use quote::quote;
+
+    use super::*;
+
+    #[test]
+    fn rejects_manual_option() {
+        let Err(err) = parse_opts(quote!(manual)) else {
+            panic!("manual replicated_state option should be rejected");
+        };
+        assert!(err.to_string().contains("unsupported replicated_state"));
+    }
 }

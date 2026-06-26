@@ -1,4 +1,5 @@
 use darling::{FromDeriveInput, FromField, FromVariant};
+use syn::spanned::Spanned;
 use syn::{Ident, Path};
 
 /// Container-level attributes for the Marshaler derive
@@ -126,5 +127,116 @@ impl MarshalerVariant {
     /// otherwise the variant's positional index.
     pub fn discriminant_value(&self, default_index: u64) -> u64 {
         self.discriminant.unwrap_or(default_index)
+    }
+}
+
+impl MarshalerOpts {
+    pub fn validate(&self) -> syn::Result<()> {
+        match &self.data {
+            darling::ast::Data::Struct(fields) => validate_fields(fields.iter()),
+            darling::ast::Data::Enum(variants) => {
+                for variant in variants {
+                    validate_fields(variant.fields.iter())?;
+                }
+                Ok(())
+            }
+        }
+    }
+}
+
+fn validate_fields<'a>(fields: impl IntoIterator<Item = &'a MarshalerField>) -> syn::Result<()> {
+    for field in fields {
+        field.validate()?;
+    }
+    Ok(())
+}
+
+impl MarshalerField {
+    fn validate(&self) -> syn::Result<()> {
+        let mut modes = Vec::new();
+        if let Some(ty) = &self.codec {
+            modes.push(("codec", ty.span()));
+        }
+        if let Some(ty) = &self.r#as {
+            modes.push(("as", ty.span()));
+        }
+        if let Some(path) = &self.with {
+            modes.push(("with", path.span()));
+        }
+        if let Some(path) = &self.unmarshal_with {
+            modes.push(("unmarshal_with", path.span()));
+        }
+
+        if self.skip && !modes.is_empty() {
+            return Err(syn::Error::new(
+                modes[0].1,
+                "#[marshal(skip)] cannot be combined with marshal conversion attributes",
+            ));
+        }
+
+        let has_codec = self.codec.is_some();
+        let has_as = self.r#as.is_some();
+        let has_custom = self.with.is_some() || self.unmarshal_with.is_some();
+        let active_modes = usize::from(has_codec) + usize::from(has_as) + usize::from(has_custom);
+        if active_modes > 1 {
+            return Err(syn::Error::new(
+                modes[1].1,
+                "#[marshal(...)] accepts only one wire conversion mode: codec, as, or custom with/unmarshal_with",
+            ));
+        }
+
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use darling::FromDeriveInput;
+    use syn::DeriveInput;
+
+    use super::MarshalerOpts;
+
+    fn parse(input: DeriveInput) -> syn::Result<MarshalerOpts> {
+        let opts = MarshalerOpts::from_derive_input(&input)
+            .map_err(|err| syn::Error::new(proc_macro2::Span::call_site(), err.to_string()))?;
+        opts.validate()?;
+        Ok(opts)
+    }
+
+    #[test]
+    fn marshal_codec_and_as_conflict() {
+        let err = parse(syn::parse_quote! {
+            struct Value {
+                #[marshal(codec = "Codec", as = "Wire")]
+                field: u32,
+            }
+        })
+        .unwrap_err();
+
+        assert!(err.to_string().contains("only one wire conversion mode"));
+    }
+
+    #[test]
+    fn marshal_custom_pair_is_one_mode() {
+        parse(syn::parse_quote! {
+            struct Value {
+                #[marshal(with = "write_field", unmarshal_with = "read_field")]
+                field: u32,
+            }
+        })
+        .unwrap();
+    }
+
+    #[test]
+    fn marshal_skip_and_conversion_conflict() {
+        let err = parse(syn::parse_quote! {
+            struct Value {
+                #[marshal(skip, codec = "Codec")]
+                field: u32,
+            }
+        })
+        .unwrap_err();
+
+        assert!(err.to_string().contains("skip"));
     }
 }

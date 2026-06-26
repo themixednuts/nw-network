@@ -1,5 +1,5 @@
 use crate::Marshaler;
-use crate::hub::{ReplicatedState, SequenceNumber};
+use crate::hub::SequenceNumber;
 use crate::serialize::{Change, ReplicatedFieldHandler, ReplicatedVec, VlqU64};
 
 const CONTAINER_ITEM_MAX_COUNT: usize = 0x1f4;
@@ -36,24 +36,16 @@ impl Default for ContainerSnapshot {
     }
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("EF1A20F2-F6CF-439F-A1AC-63460F803134")]
-#[type_registry(1755)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("EF1A20F2-F6CF-439F-A1AC-63460F803134")]
+#[::nw_network::type_registry(1755)]
 pub struct ContainerComponentReplicatedState {
     pub container: ReplicatedVec<ContainerItemDescriptor, CONTAINER_ITEM_MAX_COUNT>,
     pub item_class: ReplicatedFieldHandler<ContainerItemClasses>,
     pub bonus_max_encumbrance: ReplicatedFieldHandler<u32>,
     pub can_transfer_items: ReplicatedFieldHandler<bool>,
     pub container_was_emptied: ReplicatedFieldHandler<bool>,
-
-    pub hub: ReplicatedState,
 }
 
 impl ContainerComponentReplicatedState {

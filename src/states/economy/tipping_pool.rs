@@ -1,5 +1,4 @@
 use crate::Marshaler;
-use crate::hub::ReplicatedState;
 use crate::serialize::ReplicatedVec;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Marshaler)]
@@ -17,23 +16,15 @@ pub struct TippingPoolSnapshot {
     pub point_entries: ReplicatedVec<TippingPoolPointEntry, 1000>,
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("F7B56641-F8C3-41A9-83B2-13AC4F9843F9")]
-#[type_registry(3681)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("F7B56641-F8C3-41A9-83B2-13AC4F9843F9")]
+#[::nw_network::type_registry(3681)]
 pub struct TippingPoolComponentReplicatedState {
     pub pool_ids: ReplicatedVec<u32, 50>,
     pub pool_counts: ReplicatedVec<u16, 50>,
     pub pool_categories: ReplicatedVec<u8, 50>,
     pub point_entries: ReplicatedVec<TippingPoolPointEntry, 1000>,
-
-    pub hub: ReplicatedState,
 }
 
 impl TippingPoolComponentReplicatedState {

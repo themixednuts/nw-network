@@ -498,6 +498,21 @@ impl VlqU64Marshaler {
     }
 }
 
+/// `VlqU64Marshaler` is also a [`Codec<u64>`] policy for source-shaped
+/// replicated containers and fields whose native value is `u64` but whose wire
+/// encoding is VLQ.
+///
+/// [`Codec<u64>`]: super::marshaler::Codec
+impl super::marshaler::Codec<u64> for VlqU64Marshaler {
+    fn marshal(value: &u64, wb: &mut WriteBuffer) {
+        VlqU64Marshaler.marshal(wb, *value);
+    }
+
+    fn unmarshal(rb: &mut ReadBuffer) -> Result<u64, MarshalerError> {
+        VlqU64Marshaler.unmarshal(rb)
+    }
+}
+
 /// Newtype wrapper around `u64` whose [`Marshaler`] impl emits the
 /// 1..=9-byte VLQ encoding. Use as the field type when the wire format is a
 /// standalone VLQ-u64 (for example sequence numbers consumed mid-struct)
@@ -707,6 +722,35 @@ mod wrapper_tests {
             let mut rb = ReadBuffer::new(CARRIER_ENDIAN, &wrapper_bytes);
             let decoded = VlqU64::unmarshal(&mut rb).unwrap();
             assert_eq!(decoded.get(), v);
+            assert_eq!(rb.left(), 0);
+        }
+    }
+
+    #[test]
+    fn vlq_u64_policy_codec_matches_wrapper() {
+        for &value in &[
+            0u64,
+            0x7f,
+            0x80,
+            0x3fff,
+            0x4000,
+            0x001f_ffff,
+            0x1000_0000,
+            0x0002_0000_0000_0000,
+            u64::MAX,
+        ] {
+            let mut wb_policy = WriteBuffer::new(CARRIER_ENDIAN);
+            <VlqU64Marshaler as crate::serialize::Codec<u64>>::marshal(&value, &mut wb_policy);
+
+            let mut wb_wrapper = WriteBuffer::new(CARRIER_ENDIAN);
+            VlqU64::new(value).marshal(&mut wb_wrapper);
+
+            assert_eq!(wb_policy.as_slice(), wb_wrapper.as_slice());
+
+            let mut rb = ReadBuffer::new(CARRIER_ENDIAN, wb_policy.as_slice());
+            let decoded =
+                <VlqU64Marshaler as crate::serialize::Codec<u64>>::unmarshal(&mut rb).unwrap();
+            assert_eq!(decoded, value);
             assert_eq!(rb.left(), 0);
         }
     }

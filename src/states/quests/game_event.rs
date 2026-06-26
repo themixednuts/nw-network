@@ -1,7 +1,6 @@
 use arrayvec::ArrayVec;
 
 use crate::Marshaler;
-use crate::hub::ReplicatedState;
 use crate::serialize::ReplicatedVec;
 
 #[derive(Debug, Clone, Default, PartialEq, Marshaler)]
@@ -58,21 +57,13 @@ pub struct GameEventSnapshot {
     pub daily_bonuses_used: Vec<DailyBonusUsed>,
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("8B6ADD1E-927D-42BF-B2C7-C9D1665AB82D")]
-#[type_registry(497)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("8B6ADD1E-927D-42BF-B2C7-C9D1665AB82D")]
+#[::nw_network::type_registry(497)]
 pub struct GameEventComponentReplicatedState {
     pub game_events: ReplicatedVec<GameEventData, 10>,
     pub daily_bonuses_used: ReplicatedVec<DailyBonusUsed, 5>,
-
-    pub hub: ReplicatedState,
 }
 
 impl GameEventComponentReplicatedState {

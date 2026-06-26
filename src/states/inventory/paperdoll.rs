@@ -1,5 +1,5 @@
 use crate::Marshaler;
-use crate::hub::{ReplicatedState, SequenceNumber};
+use crate::hub::SequenceNumber;
 use crate::serialize::{
     MarshalerError, ReadBuffer, ReplicatedFieldHandler, ReplicatedMap, ReplicatedVec,
     VlqU16Marshaler, VlqU32, WriteBuffer,
@@ -114,16 +114,10 @@ pub struct PaperdollSnapshot {
     pub main_hand_option2_loaded_ammo_data: Option<LoadedAmmoData>,
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("B258A60E-FC21-40CF-8B86-57B7F6083D32")]
-#[type_registry(3183)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("B258A60E-FC21-40CF-8B86-57B7F6083D32")]
+#[::nw_network::type_registry(3183)]
 pub struct PaperdollComponentReplicatedState {
     #[replicated_state(group = 1)]
     pub visible_durability: ReplicatedVec<u32>,
@@ -161,8 +155,6 @@ pub struct PaperdollComponentReplicatedState {
     pub visible_item_visual_data: ReplicatedVec<ItemVisualData>,
     #[replicated_state(group = 2)]
     pub loadout_swap_increment: ReplicatedFieldHandler<u8>,
-
-    pub hub: ReplicatedState,
 }
 
 impl PaperdollComponentReplicatedState {

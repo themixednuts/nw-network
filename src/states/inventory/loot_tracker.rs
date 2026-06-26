@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use crate::Marshaler;
-use crate::hub::ReplicatedState;
 use crate::serialize::{ReplicatedFieldHandler, ReplicatedMap, ReplicatedVec};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Marshaler)]
@@ -54,16 +53,10 @@ pub struct LootTrackerSnapshot {
     pub loot_diverts: Vec<LootDivertEntry>,
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("756DEAE5-A1F0-4863-BE20-B44D871C46A1")]
-#[type_registry(982)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("756DEAE5-A1F0-4863-BE20-B44D871C46A1")]
+#[::nw_network::type_registry(982)]
 pub struct LootTrackerComponentReplicatedState {
     pub loot_data_map: ReplicatedMap<LootTrackerKey, LootRollData>,
     pub loot_collectibles: ReplicatedVec<u64>,
@@ -71,8 +64,6 @@ pub struct LootTrackerComponentReplicatedState {
     pub slayer_script_data_map: ReplicatedMap<LootTrackerKey, SlayerScriptLootData>,
     pub loot_divert_map: ReplicatedMap<u32, LootDivertMapValue>,
     pub loot_limit_data_map: ReplicatedMap<u32, LootLimitStateData>,
-
-    pub hub: ReplicatedState,
 }
 
 impl LootTrackerComponentReplicatedState {

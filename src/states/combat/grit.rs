@@ -1,18 +1,11 @@
-use crate::hub::ReplicatedState;
 use crate::serialize::{HalfF32Marshaler, ReplicatedFieldHandler};
 
 pub type GritHalfFloatField = ReplicatedFieldHandler<f32, HalfF32Marshaler>;
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("C17BC1B3-AB97-402D-98DF-86C2A260D09E")]
-#[type_registry(17)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("C17BC1B3-AB97-402D-98DF-86C2A260D09E")]
+#[::nw_network::type_registry(17)]
 pub struct GritReplicatedState {
     pub current: GritHalfFloatField,
     pub max: GritHalfFloatField,
@@ -24,6 +17,4 @@ pub struct GritReplicatedState {
     pub elsrm: GritHalfFloatField,
     pub total_stagger_damage: GritHalfFloatField,
     pub last: GritHalfFloatField,
-
-    pub hub: ReplicatedState,
 }

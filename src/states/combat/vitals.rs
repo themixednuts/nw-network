@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use crate::Marshaler;
-use crate::hub::ReplicatedState;
 use crate::serialize::{HalfF32, ReplicatedFieldHandler, ReplicatedMap};
 
 #[derive(Debug, Clone, Default, PartialEq, Marshaler)]
@@ -27,16 +26,10 @@ pub struct ColdAfflictionData {
     pub active: bool,
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("0E721C70-2CDB-4E85-BAE4-D545FDC6D25B")]
-#[type_registry(15)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("0E721C70-2CDB-4E85-BAE4-D545FDC6D25B")]
+#[::nw_network::type_registry(15)]
 pub struct VitalsComponentReplicatedState {
     pub health_amount: ReplicatedFieldHandler<f32>,
     pub stamina_amount: ReplicatedFieldHandler<f32>,
@@ -62,8 +55,6 @@ pub struct VitalsComponentReplicatedState {
     pub invulnerability: ReplicatedFieldHandler<u8>,
     pub display_immune_when_invulnerable: ReplicatedFieldHandler<u8>,
     pub max_health: ReplicatedFieldHandler<u16>,
-
-    pub hub: ReplicatedState,
 }
 
 impl VitalsComponentReplicatedState {

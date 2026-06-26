@@ -1,5 +1,4 @@
 use crate::Marshaler;
-use crate::hub::ReplicatedState;
 use crate::serialize::{ReplicatedFieldHandler, ReplicatedMap};
 
 type ItemManagementItemDescriptor = super::item_transform::ItemTransformItemDescriptor;
@@ -28,23 +27,15 @@ pub struct ItemManagementSnapshot {
     pub slot_count_map: ReplicatedMap<ItemManagementStorageKey, u32>,
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("37F7555D-8476-410A-9753-850945075374")]
-#[type_registry(2938)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("37F7555D-8476-410A-9753-850945075374")]
+#[::nw_network::type_registry(2938)]
 pub struct ItemManagementComponentReplicatedState {
     pub global_item_map: ReplicatedMap<ItemManagementStorageKey, ItemStorageItems>,
     pub overflow_item_count: ReplicatedFieldHandler<u32>,
     pub weight_map: ReplicatedMap<ItemManagementStorageKey, u32>,
     pub slot_count_map: ReplicatedMap<ItemManagementStorageKey, u32>,
-
-    pub hub: ReplicatedState,
 }
 
 impl ItemManagementComponentReplicatedState {

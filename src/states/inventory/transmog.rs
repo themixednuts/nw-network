@@ -1,4 +1,3 @@
-use crate::hub::ReplicatedState;
 use crate::serialize::{ReplicatedFieldHandler, ReplicatedVec};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -14,24 +13,16 @@ pub struct TransmogSnapshot {
     pub inventory_services_ready: bool,
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("DEE6E179-3D80-4160-9BAD-CC5DA6B60C46")]
-#[type_registry(5691)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("DEE6E179-3D80-4160-9BAD-CC5DA6B60C46")]
+#[::nw_network::type_registry(5691)]
 pub struct TransmogComponentReplicatedState {
     pub captured_armor_appearances: ReplicatedVec<u64>,
     pub captured_weapon_appearances: ReplicatedVec<u64>,
     pub owned_armor_appearances: ReplicatedVec<u64>,
     pub owned_weapon_appearances: ReplicatedVec<u64>,
     pub inventory_services_ready: ReplicatedFieldHandler<bool>,
-
-    pub hub: ReplicatedState,
 }
 
 impl TransmogComponentReplicatedState {

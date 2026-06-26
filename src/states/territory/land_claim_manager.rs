@@ -2,7 +2,6 @@ use glam::{Vec3, Vec4};
 use uuid::Uuid;
 
 use crate::Marshaler;
-use crate::hub::ReplicatedState;
 use crate::serialize::{ReplicatedFieldHandler, ReplicatedVec};
 
 #[derive(Debug, Clone, Default, PartialEq, Marshaler)]
@@ -72,16 +71,10 @@ pub struct LandClaimSnapshot {
 }
 
 /// Territory-wide land-claim replicated state.
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("ABBA1776-6E4C-4BA6-A831-6F4052AFC9C0")]
-#[type_registry(3086)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("ABBA1776-6E4C-4BA6-A831-6F4052AFC9C0")]
+#[::nw_network::type_registry(3086)]
 pub struct LandClaimManagerComponentReplicatedState {
     pub fcp_lock_timers: ReplicatedVec<u16>,
     pub fcp_lock_anchor: ReplicatedFieldHandler<u64>,
@@ -101,8 +94,6 @@ pub struct LandClaimManagerComponentReplicatedState {
     pub replicated_progression: ReplicatedVec<LandClaimProgressionData>,
     pub replicated_owner_data: ReplicatedVec<LandClaimOwnerData>,
     pub replicated_war_dec_threshold_met_faction: ReplicatedVec<u8>,
-
-    pub hub: ReplicatedState,
 }
 
 impl LandClaimManagerComponentReplicatedState {

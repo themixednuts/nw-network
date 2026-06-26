@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
 use crate::Marshaler;
-use crate::hub::ReplicatedState;
-use crate::serialize::{Change, MarshalerError, MaskChain, ReadBuffer, ReplicatedMap, WriteBuffer};
+use crate::serialize::{Change, ReplicatedMap};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Marshaler)]
 pub struct StatMultiplierValue {
@@ -18,24 +17,19 @@ pub struct StatMultiplierSnapshot {
     pub remote_multiplier_table: ReplicatedMap<u8, StatMultiplierValue>,
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ChunkMarshaler,
-    nw_network_derive::AzRtti,
-    nw_network_derive::Fragment,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("DDD46896-8DAD-4EE5-836E-341A72D44403")]
-#[type_registry(1525)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("DDD46896-8DAD-4EE5-836E-341A72D44403")]
+#[::nw_network::type_registry(1525)]
 pub struct StatMultiplierTableComponentReplicatedState {
+    #[replicated_state(group = 1)]
     pub multiplier_table: ReplicatedMap<u8, StatMultiplierValue>,
+    #[replicated_state(group = 1)]
     pub stamina_cost_reduction_multipliers: ReplicatedMap<u32, u32>,
+    #[replicated_state(group = 1)]
     pub xp_increase_multipliers: ReplicatedMap<u32, u32>,
+    #[replicated_state(group = 2)]
     pub remote_multiplier_table: ReplicatedMap<u8, StatMultiplierValue>,
-
-    pub hub: ReplicatedState,
 }
 
 impl StatMultiplierTableComponentReplicatedState {
@@ -77,73 +71,4 @@ impl StatMultiplierTableComponentReplicatedState {
         }
         state
     }
-
-    fn unmarshal_fields(&mut self, rb: &mut ReadBuffer) -> Result<(), MarshalerError> {
-        let descriptor_mask = rb.read_u8()?;
-        if (descriptor_mask & 0x01) != 0 {
-            MaskChain::skip(rb)?;
-        }
-        if (descriptor_mask & 0x02) != 0 {
-            let masks = MaskChain::unmarshal(rb)?;
-            if masks.is_field_set(0) {
-                self.multiplier_table = ReplicatedMap::unmarshal(rb)?;
-            }
-            if masks.is_field_set(1) {
-                self.stamina_cost_reduction_multipliers = ReplicatedMap::unmarshal(rb)?;
-            }
-            if masks.is_field_set(2) {
-                self.xp_increase_multipliers = ReplicatedMap::unmarshal(rb)?;
-            }
-        }
-        if (descriptor_mask & 0x04) != 0 {
-            let masks = MaskChain::unmarshal(rb)?;
-            if masks.is_field_set(0) {
-                self.remote_multiplier_table = ReplicatedMap::unmarshal(rb)?;
-            }
-        }
-        Ok(())
-    }
-
-    fn marshal_fields(&self, wb: &mut WriteBuffer) {
-        let group1_dirty = [
-            self.multiplier_table.has_field_payload(),
-            self.stamina_cost_reduction_multipliers.has_field_payload(),
-            self.xp_increase_multipliers.has_field_payload(),
-        ];
-        let group2_dirty = [self.remote_multiplier_table.has_field_payload()];
-        let mut descriptor_mask = 0u8;
-        if group1_dirty.iter().any(|dirty| *dirty) {
-            descriptor_mask |= 0x02;
-        }
-        if group2_dirty.iter().any(|dirty| *dirty) {
-            descriptor_mask |= 0x04;
-        }
-        wb.write_u8(descriptor_mask);
-
-        if (descriptor_mask & 0x02) != 0 {
-            MaskChain::from_dirty_fields(&group1_dirty).marshal(wb);
-            if self.multiplier_table.has_field_payload() {
-                self.multiplier_table.marshal(wb);
-            }
-            if self.stamina_cost_reduction_multipliers.has_field_payload() {
-                self.stamina_cost_reduction_multipliers.marshal(wb);
-            }
-            if self.xp_increase_multipliers.has_field_payload() {
-                self.xp_increase_multipliers.marshal(wb);
-            }
-        }
-        if (descriptor_mask & 0x04) != 0 {
-            MaskChain::from_dirty_fields(&group2_dirty).marshal(wb);
-            if self.remote_multiplier_table.has_field_payload() {
-                self.remote_multiplier_table.marshal(wb);
-            }
-        }
-    }
 }
-
-crate::impl_hub_fragment!(
-    StatMultiplierTableComponentReplicatedState,
-    hub = hub,
-    marshal = marshal_fields,
-    unmarshal = unmarshal_fields,
-);

@@ -27,6 +27,7 @@ pub fn derive(input: &DeriveInput) -> syn::Result<TokenStream> {
     }
 
     let mut opts = MarshalerOpts::from_derive_input(input).map_err(|err| darling_to_syn(&err))?;
+    opts.validate()?;
     opts.generics = generics::add_marshaler_bounds(&opts.generics);
 
     let ident = &opts.ident;

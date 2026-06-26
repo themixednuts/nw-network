@@ -1,4 +1,3 @@
-use crate::hub::ReplicatedState;
 use crate::serialize::{Change, ReplicatedMap};
 
 pub type ItemTransformItemDescriptor = super::item_descriptor::ReplicatedItemDescriptor;
@@ -15,21 +14,13 @@ pub struct ItemTransformSnapshot {
     pub owned_items: Vec<OwnedItemEntry>,
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("A7933D94-4E0B-4711-BE2D-EA22000CCF06")]
-#[type_registry(5437)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("A7933D94-4E0B-4711-BE2D-EA22000CCF06")]
+#[::nw_network::type_registry(5437)]
 pub struct ItemTransformComponentReplicatedState {
     #[replicated_state(group = 1)]
     pub owned_items: ReplicatedMap<u16, ItemTransformItemDescriptor>,
-
-    pub hub: ReplicatedState,
 }
 
 impl ItemTransformComponentReplicatedState {

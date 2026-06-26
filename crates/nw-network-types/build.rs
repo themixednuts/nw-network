@@ -8,11 +8,12 @@ use std::{
 use anyhow::{Context, Result, bail};
 use nw_resources::EmbeddedResource;
 use nw_serialize_codegen::{
-    CodegenContext, NETWORK_RUST_EMITTER_VERSION, NetworkRustEmitter, NetworkSchema,
-    RustCodegenPlanner, RustSourceEmitter, RustStandaloneProjectFile, SerializeCodegenRootMode,
-    SerializeCodegenRootSelection, SerializeContextCompileInputs, SerializeContextCompiler,
-    SerializeContextDocument, complete_known_missing_reflected_bodies, module_descriptor_capture,
-    module_descriptors_root, module_name_from_resource_name, resolve_codegen_root_type_ids,
+    CodegenContext, NETWORK_RUST_EMITTER_VERSION, NetworkFieldOverrideFile, NetworkRustEmitter,
+    NetworkSchema, RustCodegenPlanner, RustSourceEmitter, RustStandaloneProjectFile,
+    SerializeCodegenRootMode, SerializeCodegenRootSelection, SerializeContextCompileInputs,
+    SerializeContextCompiler, SerializeContextDocument, complete_known_missing_reflected_bodies,
+    module_descriptor_capture, module_descriptors_root, module_name_from_resource_name,
+    resolve_codegen_root_type_ids,
 };
 use serde::Deserialize;
 use serde_json::Value;
@@ -25,13 +26,21 @@ fn main() -> Result<()> {
     let build_script = manifest_dir.join("build.rs");
     let selection_file = manifest_dir.join("codegen/selection.json");
     let network_schema_file = manifest_dir.join("codegen/network-schema.json");
+    let network_field_overrides_file =
+        manifest_dir.join("../../codegen/network-field-overrides.json");
     let context = CodegenContext::automatic();
 
     rerun_if_changed(&build_script);
     rerun_if_changed(&selection_file);
     rerun_if_changed(&network_schema_file);
+    rerun_if_changed(&network_field_overrides_file);
 
-    let input_hash = input_hash(&build_script, &selection_file, &network_schema_file)?;
+    let input_hash = input_hash(
+        &build_script,
+        &selection_file,
+        &network_schema_file,
+        &network_field_overrides_file,
+    )?;
     let out_dir = PathBuf::from(env::var_os("OUT_DIR").context("OUT_DIR")?);
     let output_root = out_dir.join("nw_network");
     let stamp_path = output_root.join(".input-hash");
@@ -74,7 +83,27 @@ fn main() -> Result<()> {
     );
     let project = RustSourceEmitter::emit_standalone_project(&rust_unit, &context)
         .with_context(|| "emit nw-network standalone Rust crate")?;
-    let network_schema = load_network_schema(&network_schema_file)?;
+    let mut network_schema = load_network_schema(&network_schema_file)?;
+    if network_field_overrides_file.is_file() {
+        let network_field_overrides = load_network_field_overrides(&network_field_overrides_file)?;
+        let override_report = network_schema.merge_field_overrides(
+            &network_field_overrides,
+            Some(network_field_overrides_file.display().to_string()),
+        );
+        if override_report.unmatched_type_count != 0
+            || override_report.ambiguous_type_count != 0
+            || override_report.unmatched_field_count != 0
+            || override_report.ambiguous_field_count != 0
+        {
+            bail!(
+                "network field overrides did not resolve cleanly: {} unmatched type(s), {} ambiguous type(s), {} unmatched field(s), {} ambiguous field(s)",
+                override_report.unmatched_type_count,
+                override_report.ambiguous_type_count,
+                override_report.unmatched_field_count,
+                override_report.ambiguous_field_count
+            );
+        }
+    }
     let network_output = NetworkRustEmitter::emit_descriptors(&network_schema)
         .context("emit network schema descriptor Rust")?;
     let mut files = project.files;
@@ -138,6 +167,7 @@ fn input_hash(
     build_script: &Path,
     selection_file: &Path,
     network_schema_file: &Path,
+    network_field_overrides_file: &Path,
 ) -> Result<String> {
     let mut hash = blake3::Hasher::new();
     hash.update(CODEGEN_VERSION.as_bytes());
@@ -150,6 +180,13 @@ fn input_hash(
         network_schema_file,
         &mut hash,
     )?;
+    if network_field_overrides_file.is_file() {
+        hash_file(
+            "codegen/network-field-overrides.json",
+            network_field_overrides_file,
+            &mut hash,
+        )?;
+    }
     for resource in nw_resources::module_descriptors() {
         hash_resource(resource.path, resource.bytes, &mut hash);
     }
@@ -157,6 +194,11 @@ fn input_hash(
 }
 
 fn load_network_schema(path: &Path) -> Result<NetworkSchema> {
+    let bytes = fs::read(path).with_context(|| format!("read {}", path.display()))?;
+    serde_json::from_slice(&bytes).with_context(|| format!("parse {}", path.display()))
+}
+
+fn load_network_field_overrides(path: &Path) -> Result<NetworkFieldOverrideFile> {
     let bytes = fs::read(path).with_context(|| format!("read {}", path.display()))?;
     serde_json::from_slice(&bytes).with_context(|| format!("parse {}", path.display()))
 }

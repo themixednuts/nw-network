@@ -4,7 +4,7 @@ use std::collections::BTreeSet;
 
 use crate::{
     hub::{TypeIndex, fragment_registration_by_type_index, registered_fragment_type_indices},
-    network_schema::{NETWORK_TYPES, NetworkTypeDescriptor, NetworkTypeKind, type_by_type_index},
+    network_schema::{NETWORK_TYPES, NetworkTypeDescriptor, type_by_type_index},
 };
 
 /// Coverage buckets for compact state-fragment type indices.
@@ -51,7 +51,7 @@ pub fn validate_state_fragment_type_indices(
             coverage.unknown_type_indices.push(type_index);
             continue;
         };
-        if descriptor.kind != NetworkTypeKind::ReplicatedState {
+        if !descriptor.is_replicated_state() {
             coverage.non_replicated_state_type_indices.push(type_index);
             continue;
         }
@@ -112,7 +112,7 @@ pub fn replicated_state_port_statuses() -> Vec<ReplicatedStatePortStatus> {
     let registered = BTreeSet::from_iter(registered_fragment_type_indices());
     NETWORK_TYPES
         .iter()
-        .filter(|descriptor| descriptor.kind == NetworkTypeKind::ReplicatedState)
+        .filter(|descriptor| descriptor.is_replicated_state())
         .map(|descriptor| replicated_state_port_status(descriptor, &registered))
         .collect()
 }

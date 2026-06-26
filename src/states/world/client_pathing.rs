@@ -1,7 +1,6 @@
 use arrayvec::ArrayVec;
 use bevy_math::Vec3;
 
-use crate::hub::ReplicatedState;
 use crate::serialize::{
     HalfF32, Marshaler, MarshalerError, ReadBuffer, ReplicatedFieldHandler, VlqU32Marshaler,
     WriteBuffer,
@@ -75,20 +74,12 @@ impl Marshaler for ClientPathingCorridorPaths {
     }
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("A32A95F6-9EF4-4139-8FC3-98C712910DAD")]
-#[type_registry(5915)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("A32A95F6-9EF4-4139-8FC3-98C712910DAD")]
+#[::nw_network::type_registry(5915)]
 pub struct ClientPathingComponentReplicatedState {
     pub corridor_paths: ReplicatedFieldHandler<ClientPathingCorridorPaths>,
-
-    pub hub: ReplicatedState,
 }
 
 fn marshal_corridor_path(path: &ClientPathingCorridorPath, wb: &mut WriteBuffer) {

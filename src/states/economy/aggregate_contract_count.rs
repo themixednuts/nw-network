@@ -1,16 +1,9 @@
-use crate::hub::ReplicatedState;
 use crate::serialize::{ReplicatedFieldHandler, ReplicatedMap};
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("BF75653B-B1DF-4DBE-840D-0236A69DA247")]
-#[type_registry(3791)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("BF75653B-B1DF-4DBE-840D-0236A69DA247")]
+#[::nw_network::type_registry(3791)]
 pub struct AggregateContractCountComponentReplicatedState {
     pub total_buy_contracts: ReplicatedFieldHandler<u32>,
     pub total_sell_contracts: ReplicatedFieldHandler<u32>,
@@ -30,6 +23,4 @@ pub struct AggregateContractCountComponentReplicatedState {
     pub sell_group_counts: ReplicatedMap<u32, u8>,
     #[replicated_state(group = 1)]
     pub sell_item_counts: ReplicatedMap<u32, u8>,
-
-    pub hub: ReplicatedState,
 }

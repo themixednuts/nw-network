@@ -111,7 +111,7 @@ impl From<ComponentId> for u64 {
 /// Game-data reference carried as one UUID.
 #[repr(transparent)]
 #[derive(
-    Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash, nw_network_derive::Marshaler,
+    Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash, ::nw_network::Marshaler,
 )]
 pub struct GdeRef(Uuid);
 

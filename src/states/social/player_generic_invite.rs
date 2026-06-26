@@ -1,6 +1,5 @@
 use uuid::Uuid;
 
-use crate::hub::ReplicatedState;
 use crate::serialize::ReplicatedFieldHandler;
 use crate::types::{Crc32, TimePoint};
 
@@ -15,16 +14,10 @@ impl crate::Marshaler for PlayerGenericInviteParticipants {
     }
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("A02118E0-94AB-4945-B421-1FABFB0C4806")]
-#[type_registry(3408)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("A02118E0-94AB-4945-B421-1FABFB0C4806")]
+#[::nw_network::type_registry(3408)]
 pub struct PlayerGenericInviteReplicatedState {
     pub invite_id: ReplicatedFieldHandler<Uuid>,
     #[replicated_state(group = 1)]
@@ -35,6 +28,4 @@ pub struct PlayerGenericInviteReplicatedState {
     pub invite_participants: ReplicatedFieldHandler<PlayerGenericInviteParticipants>,
     #[replicated_state(group = 1)]
     pub expiry_time_point: ReplicatedFieldHandler<TimePoint>,
-
-    pub hub: ReplicatedState,
 }

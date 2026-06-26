@@ -1,4 +1,3 @@
-use crate::hub::ReplicatedState;
 use crate::serialize::{ReplicatedFieldHandler, ReplicatedVec};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -8,16 +7,10 @@ pub struct SocialCollectionsSnapshot {
     pub social_blocks: ReplicatedVec<String>,
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("92FE39A5-1948-4EE4-A49F-B02EA344DC57")]
-#[type_registry(4176)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("92FE39A5-1948-4EE4-A49F-B02EA344DC57")]
+#[::nw_network::type_registry(4176)]
 pub struct SocialReplicatedState {
     #[replicated_state(group = 1)]
     pub war_data: ReplicatedFieldHandler<Vec<u32>>,
@@ -38,8 +31,6 @@ pub struct SocialReplicatedState {
     pub player_title_id: ReplicatedFieldHandler<u32>,
     pub pronoun_type: ReplicatedFieldHandler<u8>,
     pub chatting_state_message_type: ReplicatedFieldHandler<u32>,
-
-    pub hub: ReplicatedState,
 }
 
 impl SocialReplicatedState {

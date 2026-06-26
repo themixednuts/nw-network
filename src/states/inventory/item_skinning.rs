@@ -1,5 +1,4 @@
 use crate::Marshaler;
-use crate::hub::ReplicatedState;
 use crate::serialize::{ReplicatedMap, ReplicatedVec};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Marshaler)]
@@ -24,23 +23,15 @@ pub struct ItemSkinningSnapshot {
     pub skin_dyes: Vec<SkinDyeEntry>,
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("E1EBCA63-1759-477C-BBE7-61B8A471F5BB")]
-#[type_registry(3765)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("E1EBCA63-1759-477C-BBE7-61B8A471F5BB")]
+#[::nw_network::type_registry(3765)]
 pub struct ItemSkinningComponentReplicatedState {
     #[replicated_state(group = 1)]
     pub enabled_item_skins: ReplicatedVec<u64>,
     #[replicated_state(group = 1)]
     pub skin_dye_data: ReplicatedMap<u32, ItemSkinDyeData>,
-
-    pub hub: ReplicatedState,
 }
 
 impl ItemSkinningComponentReplicatedState {

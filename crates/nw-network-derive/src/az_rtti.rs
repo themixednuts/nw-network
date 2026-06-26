@@ -1,15 +1,25 @@
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::punctuated::Punctuated;
-use syn::{DeriveInput, Expr, ExprAssign, ExprLit, Lit, LitStr, Meta, Token};
+use syn::{DeriveInput, Expr, ExprAssign, ExprLit, Lit, LitStr, Token, parse::Parser};
 
 struct Opts {
     type_id: Option<u128>,
     type_name: Option<LitStr>,
 }
 
-pub fn derive(input: &DeriveInput) -> syn::Result<TokenStream> {
-    let opts = parse_opts(input)?;
+pub fn attribute(args: TokenStream, input: TokenStream) -> syn::Result<TokenStream> {
+    let item = syn::parse2::<DeriveInput>(input)?;
+    let opts = parse_args(args)?;
+    let impls = expand(&item, opts)?;
+
+    Ok(quote! {
+        #item
+        #impls
+    })
+}
+
+fn expand(input: &DeriveInput, opts: Opts) -> syn::Result<TokenStream> {
     let ident = &input.ident;
     let type_id = opts
         .type_id
@@ -27,29 +37,15 @@ pub fn derive(input: &DeriveInput) -> syn::Result<TokenStream> {
     })
 }
 
-fn parse_opts(input: &DeriveInput) -> syn::Result<Opts> {
+fn parse_args(args: TokenStream) -> syn::Result<Opts> {
     let mut opts = Opts {
         type_id: None,
         type_name: None,
     };
-
-    for attr in &input.attrs {
-        if !attr.path().is_ident("az_rtti") {
-            continue;
-        }
-
-        let Meta::List(list) = &attr.meta else {
-            return Err(syn::Error::new_spanned(
-                attr,
-                "#[az_rtti(\"...\")] requires arguments",
-            ));
-        };
-        let args = list.parse_args_with(Punctuated::<Expr, Token![,]>::parse_terminated)?;
-        for (index, expr) in args.iter().enumerate() {
-            parse_arg(&mut opts, expr, index)?;
-        }
+    let args = Punctuated::<Expr, Token![,]>::parse_terminated.parse2(args)?;
+    for (index, expr) in args.iter().enumerate() {
+        parse_arg(&mut opts, expr, index)?;
     }
-
     Ok(opts)
 }
 

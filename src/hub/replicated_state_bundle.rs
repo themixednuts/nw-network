@@ -49,18 +49,9 @@ fn capped_len_u32(len: usize) -> u32 {
     u32::try_from(len).expect("wire length cap fits in u32")
 }
 
-#[derive(
-    nw_network_derive::Marshaler,
-    Debug,
-    Clone,
-    Default,
-    PartialEq,
-    Eq,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("64CEE0FB-B878-47B3-8377-B45A9C9BA884")]
-#[type_registry(18)]
+#[derive(::nw_network::Marshaler, Debug, Clone, Default, PartialEq, Eq)]
+#[::nw_network::az_rtti("64CEE0FB-B878-47B3-8377-B45A9C9BA884")]
+#[::nw_network::type_registry(18)]
 pub struct ReplicationPerformanceData {
     pub collection_period_ms: u16,
     pub count_bundles: u32,
@@ -123,14 +114,12 @@ impl AddAssign<&Self> for ReplicationPerformanceData {
     }
 }
 
-#[derive(
-    Debug, Clone, Default, PartialEq, Eq, nw_network_derive::AzRtti, nw_network_derive::TypeRegistry,
-)]
-#[az_rtti(
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[::nw_network::az_rtti(
     uuid = "FE59B513-CEB7-4BC2-80E6-545A8C492591",
     name = "Amazon::Hub::ReplicationControl"
 )]
-#[type_registry(9)]
+#[::nw_network::type_registry(9)]
 pub struct ReplicationControl {
     pub seq: SequenceNumber,
     pub client_context_instance_id: u8,
@@ -446,11 +435,9 @@ impl Marshaler for ReplicationControlData {
     }
 }
 
-#[derive(
-    Debug, Clone, Default, PartialEq, Eq, nw_network_derive::AzRtti, nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("8A40AEC2-AE07-4F92-9BF3-78FC0CC94FDF")]
-#[type_registry(8)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[::nw_network::az_rtti("8A40AEC2-AE07-4F92-9BF3-78FC0CC94FDF")]
+#[::nw_network::type_registry(8)]
 pub struct ReplicatedStateBundle {
     pub seq: SequenceNumber,
     pub client_context_instance_id: u8,
@@ -1330,15 +1317,9 @@ mod tests {
     use super::*;
     use crate::hub::{DynFragment, Fragment, FragmentBase};
 
-    #[derive(
-        nw_network_derive::Marshaler,
-        Debug,
-        Default,
-        nw_network_derive::AzRtti,
-        nw_network_derive::TypeRegistry,
-    )]
-    #[az_rtti("11111111-1111-4111-8111-111111111111")]
-    #[type_registry(65_000)]
+    #[derive(::nw_network::Marshaler, Debug, Default)]
+    #[::nw_network::az_rtti("11111111-1111-4111-8111-111111111111")]
+    #[::nw_network::type_registry(65_000)]
     struct EmptyFragment {
         #[marshal(skip)]
         base: FragmentBase,
@@ -1364,15 +1345,9 @@ mod tests {
 
     impl Fragment for EmptyFragment {}
 
-    #[derive(
-        Debug,
-        Default,
-        nw_network_derive::AzRtti,
-        nw_network_derive::TypeRegistry,
-        nw_network_derive::Fragment,
-    )]
-    #[az_rtti("33333333-3333-4333-8333-333333333333")]
-    #[type_registry(64_990)]
+    #[derive(Debug, Default, ::nw_network::Fragment)]
+    #[::nw_network::az_rtti("33333333-3333-4333-8333-333333333333")]
+    #[::nw_network::type_registry(64_990)]
     struct FullBodyFragment {
         base: FragmentBase,
         contents: u8,

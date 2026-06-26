@@ -51,7 +51,15 @@ pub fn derive(input: &DeriveInput) -> syn::Result<TokenStream> {
         let Some(ident) = &field.ident else {
             continue;
         };
-        if let Some(const_args) = fixed_replicated_state_const_args(&field.ty)? {
+        let is_marked_base = field_has_fixed_state_base_attr(field)?;
+        let const_args = fixed_replicated_state_const_args(&field.ty)?;
+        if is_marked_base && const_args.is_none() {
+            return Err(syn::Error::new_spanned(
+                field,
+                "#[fixed_state(base)] requires a `nw_network::hub::FixedReplicatedState<...>` field",
+            ));
+        }
+        if let Some(const_args) = const_args {
             if base_field.is_some() {
                 return Err(syn::Error::new_spanned(
                     field,
@@ -240,6 +248,32 @@ fn parse_field_attrs(field: &Field) -> syn::Result<FieldAttrs> {
     }
 
     Ok(attrs)
+}
+
+fn field_has_fixed_state_base_attr(field: &Field) -> syn::Result<bool> {
+    let mut found = false;
+    for attr in &field.attrs {
+        if !attr.path().is_ident("fixed_state") {
+            continue;
+        }
+
+        attr.parse_nested_meta(|meta| {
+            if meta.path.is_ident("base") {
+                found = true;
+                Ok(())
+            } else if meta.path.is_ident("skip") {
+                Ok(())
+            } else if meta.path.is_ident("group") {
+                let value = meta.value()?;
+                let _: LitInt = value.parse()?;
+                Ok(())
+            } else {
+                Err(meta.error("unsupported fixed_state field attribute"))
+            }
+        })?;
+    }
+
+    Ok(found)
 }
 
 fn fixed_replicated_state_const_args(base_ty: &Type) -> syn::Result<Option<ConstArgs>> {

@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use nw_network::generated::states::RaidDataComponentReplicatedState as GeneratedRaidDataComponentReplicatedState;
 use nw_network::network_schema::identity::RaidDataComponentReplicatedState;
 use nw_network::{
-    NetworkFieldConfidence, NetworkTypeIdentity, NetworkTypeKind, NetworkWireShape,
+    NetworkFieldConfidence, NetworkTypeCapability, NetworkTypeIdentity, NetworkWireShape,
     field_for_type_index, fields_for_type_index,
     generated::messages::{
         RegisterFragmentAccessMsg, ReplicateClientFragmentUpdateMsg, UnregisterFragmentAccessMsg,
@@ -27,8 +27,8 @@ fn generated_schema_resolves_known_state_and_message_types() {
         raid_state.name,
         Some("Javelin::RaidDataComponentReplicatedState")
     );
-    assert_eq!(raid_state.kind, NetworkTypeKind::ReplicatedState);
-    assert!(raid_state.is_field_registered);
+    assert!(raid_state.is_replicated_state());
+    assert!(raid_state.has_registered_fields());
 
     let fields = fields_for_type_index(28).expect("raid state fields");
     assert!(fields.iter().any(|field| {
@@ -58,7 +58,7 @@ fn generated_schema_resolves_known_state_and_message_types() {
         force_migrate.name,
         Some("MB::ServerContext::ForceMigrateActorMsg")
     );
-    assert_eq!(force_migrate.kind, NetworkTypeKind::Message);
+    assert!(force_migrate.is_direct_message());
     assert_eq!(
         name_for_type_index(67),
         Some("MB::ServerContext::ForceMigrateActorMsg")
@@ -72,9 +72,13 @@ fn generated_identity_marker_resolves_descriptor_metadata() {
         RaidDataComponentReplicatedState::NAME,
         "Javelin::RaidDataComponentReplicatedState"
     );
-    assert_eq!(
-        RaidDataComponentReplicatedState::KIND,
-        NetworkTypeKind::ReplicatedState
+    assert!(
+        RaidDataComponentReplicatedState::CAPABILITIES
+            .contains(&NetworkTypeCapability::ReplicatedState)
+    );
+    assert!(
+        RaidDataComponentReplicatedState::CAPABILITIES
+            .contains(&NetworkTypeCapability::RegisteredFields)
     );
     assert_eq!(
         RaidDataComponentReplicatedState::descriptor().name,

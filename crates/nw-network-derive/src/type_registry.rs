@@ -1,10 +1,20 @@
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::punctuated::Punctuated;
-use syn::{DeriveInput, Expr, ExprLit, Lit, Meta, Token};
+use syn::{DeriveInput, Expr, ExprLit, Lit, Token, parse::Parser};
 
-pub fn derive(input: &DeriveInput) -> syn::Result<TokenStream> {
-    let type_index = parse_type_index(input)?;
+pub fn attribute(args: TokenStream, input: TokenStream) -> syn::Result<TokenStream> {
+    let item = syn::parse2::<DeriveInput>(input)?;
+    let type_index = parse_type_index_args(args)?;
+    let impls = expand(&item, type_index)?;
+
+    Ok(quote! {
+        #item
+        #impls
+    })
+}
+
+fn expand(input: &DeriveInput, type_index: u32) -> syn::Result<TokenStream> {
     if type_index == 0 {
         return Err(syn::Error::new_spanned(
             input,
@@ -24,28 +34,16 @@ pub fn derive(input: &DeriveInput) -> syn::Result<TokenStream> {
     })
 }
 
-fn parse_type_index(input: &DeriveInput) -> syn::Result<u32> {
+fn parse_type_index_args(args: TokenStream) -> syn::Result<u32> {
+    let args = Punctuated::<Expr, Token![,]>::parse_terminated.parse2(args)?;
     let mut type_index = None;
-    for attr in &input.attrs {
-        if !attr.path().is_ident("type_registry") {
-            continue;
-        }
-
-        let Meta::List(list) = &attr.meta else {
-            return Err(syn::Error::new_spanned(
-                attr,
-                "#[type_registry(...)] requires arguments",
-            ));
-        };
-        let args = list.parse_args_with(Punctuated::<Expr, Token![,]>::parse_terminated)?;
-        for (index, expr) in args.iter().enumerate() {
-            if type_index.is_none() {
-                type_index = Some(parse_arg(expr, index)?);
-            }
+    for (index, expr) in args.iter().enumerate() {
+        if type_index.is_none() {
+            type_index = Some(parse_arg(expr, index)?);
         }
     }
-
-    type_index.ok_or_else(|| syn::Error::new_spanned(input, "#[type_registry(...)] is required"))
+    type_index
+        .ok_or_else(|| syn::Error::new(proc_macro2::Span::call_site(), "type_index is required"))
 }
 
 fn parse_arg(expr: &Expr, index: usize) -> syn::Result<u32> {

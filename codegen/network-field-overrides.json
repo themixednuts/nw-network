@@ -25,7 +25,7 @@
       "fieldIndex": 2,
       "field": "spawnedEntityIdsBySpawnerId",
       "nativeType": "MB::ReplicatedMapFieldHandler<AZ::Crc32, AZ::EntityId>",
-      "rustType": "::nw_network::serialize::ReplicatedMap<::nw_network::Crc32, ::nw_network::EntityId>",
+      "rustType": "::nw_network::serialize::ReplicatedContainer<::std::collections::HashMap<::nw_network::Crc32, ::nw_network::EntityId>, { ::nw_network::serialize::WIRE_VEC_CAP }, ::nw_network::serialize::DefaultMarshaler<::nw_network::Crc32>, ::nw_network::serialize::DefaultMarshaler<::nw_network::EntityId>>",
       "wireShapeSource": "field-override:SlayerScriptReplicatedState",
       "confidence": "high"
     }

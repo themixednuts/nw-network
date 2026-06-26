@@ -1,5 +1,4 @@
 use crate::Marshaler;
-use crate::hub::ReplicatedState;
 use crate::serialize::ReplicatedFieldHandler;
 
 /// Generated door-state value carried as one byte in replicated state.
@@ -44,18 +43,10 @@ impl From<DoorState> for u8 {
     }
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("8D68FB93-B087-474F-9B5B-3FE33A8434AE")]
-#[type_registry(2330)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("8D68FB93-B087-474F-9B5B-3FE33A8434AE")]
+#[::nw_network::type_registry(2330)]
 pub struct DoorComponentReplicatedState {
     pub door_state: ReplicatedFieldHandler<DoorState>,
-
-    pub hub: ReplicatedState,
 }

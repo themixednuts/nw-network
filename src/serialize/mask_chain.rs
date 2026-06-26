@@ -1,7 +1,7 @@
 //!
 //! Each byte holds 7 field-presence bits in positions 0–6; bit 7 is a
 //! **continuation marker**. Set means "another byte follows in this
-//! masks and inside `#[derive(ReplicatedState)]` group field masks.
+//! masks and inside `#[replicated_state]` group field masks.
 //!
 //! Before this module the same loop was hand-rolled at every callsite —
 //! `loop { let m = rb.read_u8()?; masks.push(m); if (m & 0x80) == 0 { break; } }`

@@ -1,5 +1,4 @@
 use crate::Marshaler;
-use crate::hub::ReplicatedState;
 use crate::serialize::ReplicatedFieldHandler;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Marshaler)]
@@ -47,16 +46,10 @@ impl PlayerAppearanceSnapshot {
     }
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("6C597946-2506-4385-8FB4-882FB6A98D5D")]
-#[type_registry(1195)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("6C597946-2506-4385-8FB4-882FB6A98D5D")]
+#[::nw_network::type_registry(1195)]
 pub struct PlayerAppearanceComponentReplicatedState {
     pub player_gender: ReplicatedFieldHandler<u8>,
     pub player_race: ReplicatedFieldHandler<u8>,
@@ -72,8 +65,6 @@ pub struct PlayerAppearanceComponentReplicatedState {
     pub player_tattoo_color: ReplicatedFieldHandler<u8>,
     pub icon_n_data: ReplicatedFieldHandler<PlayerAppearanceIconData>,
     pub appearance_change_flag: ReplicatedFieldHandler<u8>,
-
-    pub hub: ReplicatedState,
 }
 
 impl PlayerAppearanceComponentReplicatedState {

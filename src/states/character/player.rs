@@ -66,15 +66,10 @@ pub struct PlayerIdentitySnapshot {
     pub player_connected: bool,
 }
 
-#[derive(
-    Debug,
-    Clone,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("BDDDA784-A6E7-416B-A041-449920D90FB6")]
-#[type_registry(3935)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone)]
+#[::nw_network::az_rtti("BDDDA784-A6E7-416B-A041-449920D90FB6")]
+#[::nw_network::type_registry(3935)]
 pub struct PlayerComponentReplicatedState {
     #[replicated_state(group = 1)]
     pub login_match_id: ReplicatedFieldHandler<String>,
@@ -138,8 +133,6 @@ pub struct PlayerComponentReplicatedState {
     pub platform_account_id: ReplicatedFieldHandler<u64>,
     #[replicated_state(group = 2)]
     pub platform_type: ReplicatedFieldHandler<u8>,
-
-    pub hub: ReplicatedState,
 }
 
 fn guild_id_equal_even_if_invalid(left: &Uuid, right: &Uuid) -> bool {

@@ -1,18 +1,11 @@
 use uuid::Uuid;
 
-use crate::hub::ReplicatedState;
 use crate::serialize::{ReplicatedFieldHandler, ReplicatedMap, VlqU64};
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("7DD20E73-9E5C-4753-8B94-2AEF87A82D37")]
-#[type_registry(2406)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("7DD20E73-9E5C-4753-8B94-2AEF87A82D37")]
+#[::nw_network::type_registry(2406)]
 pub struct PlayerArenaReplicatedState {
     pub is_in_arena: ReplicatedFieldHandler<bool>,
     pub is_queued_for_dungeon: ReplicatedFieldHandler<bool>,
@@ -31,6 +24,4 @@ pub struct PlayerArenaReplicatedState {
     pub single_player_instance_state: ReplicatedFieldHandler<u8>,
     pub single_player_dungeon_time: ReplicatedFieldHandler<u64>,
     pub game_mode_idx: ReplicatedFieldHandler<u8>,
-
-    pub hub: ReplicatedState,
 }

@@ -1,16 +1,9 @@
-use crate::hub::ReplicatedState;
 use crate::serialize::{ReplicatedFieldHandler, ReplicatedVec};
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    nw_network_derive::ReplicatedState,
-    nw_network_derive::AzRtti,
-    nw_network_derive::TypeRegistry,
-)]
-#[az_rtti("2C91F563-3901-413D-941E-0CEF9366896D")]
-#[type_registry(4896)]
+#[::nw_network::replicated_state]
+#[derive(Debug, Clone, Default)]
+#[::nw_network::az_rtti("2C91F563-3901-413D-941E-0CEF9366896D")]
+#[::nw_network::type_registry(4896)]
 pub struct MusicalPerformanceReplicatedState {
     pub performers: ReplicatedVec<u64>,
     pub radius: ReplicatedFieldHandler<f32>,
@@ -61,6 +54,4 @@ pub struct MusicalPerformanceReplicatedState {
     pub performer_seed_2: ReplicatedFieldHandler<u64>,
     #[replicated_state(group = 7)]
     pub performer_seed_3: ReplicatedFieldHandler<u64>,
-
-    pub hub: ReplicatedState,
 }
