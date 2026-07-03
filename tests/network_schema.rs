@@ -173,15 +173,15 @@ fn state_fragment_type_coverage_distinguishes_schema_and_decoder_gaps() {
     assert_eq!(coverage.non_replicated_state_type_indices, vec![67, 164]);
     assert_eq!(
         coverage.unregistered_replicated_state_type_indices,
-        vec![1647, 3451]
+        vec![2947]
     );
     assert_eq!(
         coverage.registered_replicated_state_type_indices,
-        vec![11, 28, 333, 670, 2443, 2768, 2947, 4276]
+        vec![11, 28, 333, 670, 1647, 2443, 2768, 3451, 4276]
     );
     assert_eq!(
         coverage.field_shape_incomplete_replicated_state_type_indices,
-        vec![1647, 2768, 3451]
+        vec![1647, 2768, 2947, 3451]
     );
     assert_eq!(
         coverage.generation_ready_unregistered_replicated_state_type_indices,
