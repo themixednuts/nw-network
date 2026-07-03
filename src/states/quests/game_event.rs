@@ -1,7 +1,11 @@
+//! Game-event progression, rewards, and daily bonus replication.
+
+use crate::{az_rtti, replicated_state, type_registry};
+
 use arrayvec::ArrayVec;
 
 use crate::Marshaler;
-use crate::serialize::ReplicatedVec;
+use crate::serialize::ReplicatedContainer;
 
 #[derive(Debug, Clone, Default, PartialEq, Marshaler)]
 #[expect(
@@ -57,19 +61,20 @@ pub struct GameEventSnapshot {
     pub daily_bonuses_used: Vec<DailyBonusUsed>,
 }
 
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("8B6ADD1E-927D-42BF-B2C7-C9D1665AB82D")]
-#[::nw_network::type_registry(497)]
+#[az_rtti("8B6ADD1E-927D-42BF-B2C7-C9D1665AB82D")]
+#[type_registry(497)]
 pub struct GameEventComponentReplicatedState {
-    pub game_events: ReplicatedVec<GameEventData, 10>,
-    pub daily_bonuses_used: ReplicatedVec<DailyBonusUsed, 5>,
+    pub game_events: ReplicatedContainer<Vec<GameEventData>, 10>,
+    pub daily_bonuses_used: ReplicatedContainer<Vec<DailyBonusUsed>, 5>,
 }
 
 impl GameEventComponentReplicatedState {
     pub fn apply_snapshot(&mut self, snapshot: GameEventSnapshot) {
-        self.game_events = ReplicatedVec::new(snapshot.game_events_sequence, snapshot.game_events);
-        self.daily_bonuses_used = ReplicatedVec::new(
+        self.game_events =
+            ReplicatedContainer::new(snapshot.game_events_sequence, snapshot.game_events);
+        self.daily_bonuses_used = ReplicatedContainer::new(
             snapshot.daily_bonuses_used_sequence,
             snapshot.daily_bonuses_used,
         );

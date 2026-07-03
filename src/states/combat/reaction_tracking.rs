@@ -1,3 +1,7 @@
+//! Reaction animation and displacement tracking replication.
+
+use crate::{az_rtti, replicated_state, type_registry};
+
 use crate::serialize::{HalfF32, ReplicatedFieldHandler};
 use crate::{GdeId, Marshaler};
 
@@ -8,10 +12,10 @@ pub struct ReactionHalfVec3 {
     pub y: HalfF32,
 }
 
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("058AD715-52F1-4DEE-8E9E-059319B6EDD3")]
-#[::nw_network::type_registry(1927)]
+#[az_rtti("058AD715-52F1-4DEE-8E9E-059319B6EDD3")]
+#[type_registry(1927)]
 pub struct ReactionTrackingReplicatedState {
     pub reaction_ref_count: ReplicatedFieldHandler<u8>,
     pub damaging_gdeid: ReplicatedFieldHandler<Option<GdeId>>,

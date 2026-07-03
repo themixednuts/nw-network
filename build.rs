@@ -7,41 +7,60 @@ use std::{
 use anyhow::{Context, Result, bail};
 use nw_resources::EmbeddedResource;
 use nw_serialize_codegen::{
-    CodegenContext, NETWORK_RUST_EMITTER_VERSION, NetworkFieldOverrideFile,
-    NetworkReplicatedStateEmitOptions, NetworkRustEmitter, NetworkSchema, SerializeCodegenRootMode,
-    SerializeCodegenRootSelection, SerializeCodegenUnit, SerializeContextCompileInputs,
-    SerializeContextCompiler, SerializeContextDocument, complete_known_missing_reflected_bodies,
-    module_descriptor_capture, module_descriptors_root, module_name_from_resource_name,
-    resolve_codegen_root_type_ids,
+    CodegenContext, NETWORK_RUST_EMITTER_VERSION, NetworkConfidence, NetworkEvidence,
+    NetworkEvidenceKind, NetworkField, NetworkFieldOverrideFile, NetworkMessageSignature,
+    NetworkReplicatedStateEmitOptions, NetworkRustEmitter, NetworkSchema, NetworkType,
+    SerializeCodegenItemKind, SerializeCodegenRootMode, SerializeCodegenRootSelection,
+    SerializeCodegenUnit, SerializeContextCompileInputs, SerializeContextCompiler,
+    SerializeContextDocument, complete_known_missing_reflected_bodies, module_descriptor_capture,
+    module_descriptors_root, module_name_from_resource_name, resolve_codegen_root_type_ids,
 };
 use serde::Deserialize;
 use serde_json::Value;
 
 const CODEGEN_VERSION: &str = "nw-network-generated-payloads-v3";
 
+const MANUAL_SOURCE_MARSHALERS: &[&str] = &[
+    "AfflictionData",
+    "DyeData",
+    "GDEID",
+    "RecipeCooldownData",
+    "RemoteServerContextRef",
+    "RemoteServerFacetRef<GameModeParticipantComponentServerFacet >",
+    "RemoteServerFacetRef<HousingPlotComponentServerFacet >",
+    "RemoteServerGDERef",
+    "RemoteTypelessServerFacetRef",
+    "TimePoint",
+    "WallClockTimePoint",
+];
+
 fn main() -> Result<()> {
     let manifest_dir =
         PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").context("CARGO_MANIFEST_DIR")?);
     let build_script = manifest_dir.join("build.rs");
-    let registered_state_selection_file = manifest_dir.join("codegen/generated-states.json");
+    let generated_state_denylist_file = manifest_dir.join("codegen/generated-state-denylist.json");
     let network_field_overrides_file = manifest_dir.join("codegen/network-field-overrides.json");
     let generated_type_selection_file =
         manifest_dir.join("crates/nw-network-types/codegen/selection.json");
     let network_schema_file =
         manifest_dir.join("crates/nw-network-types/codegen/network-schema.json");
+    let message_signatures_file =
+        manifest_dir.join("crates/nw-network-types/codegen/message-signatures.json");
 
     rerun_if_changed(&build_script);
-    rerun_if_changed(&registered_state_selection_file);
+    rerun_if_changed(&generated_state_denylist_file);
     rerun_if_changed(&network_field_overrides_file);
     rerun_if_changed(&generated_type_selection_file);
     rerun_if_changed(&network_schema_file);
+    rerun_if_changed(&message_signatures_file);
 
     let input_hash = input_hash(
         &build_script,
-        &registered_state_selection_file,
+        &generated_state_denylist_file,
         &network_field_overrides_file,
         &generated_type_selection_file,
         &network_schema_file,
+        &message_signatures_file,
     )?;
     let out_dir = PathBuf::from(env::var_os("OUT_DIR").context("OUT_DIR")?);
     let output_root = out_dir.join("nw_network");
@@ -65,6 +84,25 @@ fn main() -> Result<()> {
     }
 
     let mut network_schema = load_network_schema(&network_schema_file)?;
+    let message_signatures = load_message_signatures(&message_signatures_file)?;
+    apply_message_signature_field_overrides(&mut network_schema, &message_signatures);
+    let signature_report = network_schema.merge_message_signatures(
+        &message_signatures,
+        Some(message_signatures_file.display().to_string()),
+    );
+    if signature_report.unmatched_message_count != 0
+        || signature_report.ambiguous_message_count != 0
+        || signature_report.field_index_mismatch_count != 0
+        || signature_report.field_name_conflict_count != 0
+    {
+        bail!(
+            "network message signatures did not resolve cleanly: {} unmatched message(s), {} ambiguous message(s), {} field-index mismatch(es), {} field-name conflict(s)",
+            signature_report.unmatched_message_count,
+            signature_report.ambiguous_message_count,
+            signature_report.field_index_mismatch_count,
+            signature_report.field_name_conflict_count
+        );
+    }
     let network_field_overrides = load_network_field_overrides(&network_field_overrides_file)?;
     let override_report = network_schema.merge_field_overrides(
         &network_field_overrides,
@@ -83,22 +121,30 @@ fn main() -> Result<()> {
             override_report.ambiguous_field_count
         );
     }
-    let registered_state_selection =
-        StateSelectionFile::from_path(&registered_state_selection_file)?;
+    let generated_types = selected_generated_type_unit(&generated_type_selection_file)
+        .context("compile selected generated network data types")?;
+    network_schema.merge_serialize_codegen_unit(
+        &generated_types,
+        Some(generated_type_selection_file.display().to_string()),
+    );
+    let generated_state_denylist =
+        GeneratedStateDenylistFile::from_path(&generated_state_denylist_file)?;
     let replicated_state_type_indices = replicated_state_type_indices(&network_schema);
+    let denied_type_indices = generated_state_denylist.denied_type_indices;
     let output = NetworkRustEmitter::emit_replicated_states_with_options(
         &network_schema,
         replicated_state_type_indices,
-        NetworkReplicatedStateEmitOptions::register_only(registered_state_selection.type_indices),
+        NetworkReplicatedStateEmitOptions::deny_type_registry(denied_type_indices),
     )
     .context("emit generated replicated states")?;
     let message_output =
         NetworkRustEmitter::emit_messages(&network_schema).context("emit generated messages")?;
-    let generated_types = selected_generated_type_unit(&generated_type_selection_file)
-        .context("compile selected generated network data types")?;
-    let conversion_output =
-        NetworkRustEmitter::emit_marshaler_conversions(generated_types.items.iter())
-            .context("emit generated marshaler conversions")?;
+    let conversion_items = generated_types.items.iter().filter(|item| {
+        item.kind != SerializeCodegenItemKind::Struct
+            || !MANUAL_SOURCE_MARSHALERS.contains(&item.source_name.as_str())
+    });
+    let conversion_output = NetworkRustEmitter::emit_marshaler_conversions(conversion_items)
+        .context("emit generated marshaler conversions")?;
 
     fs::create_dir_all(&output_root)
         .with_context(|| format!("create {}", output_root.display()))?;
@@ -131,11 +177,11 @@ fn main() -> Result<()> {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct StateSelectionFile {
-    type_indices: Vec<u32>,
+struct GeneratedStateDenylistFile {
+    denied_type_indices: Vec<u32>,
 }
 
-impl StateSelectionFile {
+impl GeneratedStateDenylistFile {
     fn from_path(path: &Path) -> Result<Self> {
         let bytes = fs::read(path).with_context(|| format!("read {}", path.display()))?;
         serde_json::from_slice(&bytes).with_context(|| format!("parse {}", path.display()))
@@ -145,6 +191,119 @@ impl StateSelectionFile {
 fn load_network_field_overrides(path: &Path) -> Result<NetworkFieldOverrideFile> {
     let bytes = fs::read(path).with_context(|| format!("read {}", path.display()))?;
     serde_json::from_slice(&bytes).with_context(|| format!("parse {}", path.display()))
+}
+
+fn load_message_signatures(path: &Path) -> Result<Vec<NetworkMessageSignature>> {
+    let bytes = fs::read(path).with_context(|| format!("read {}", path.display()))?;
+    let root = serde_json::from_slice::<Value>(&bytes)
+        .with_context(|| format!("parse {}", path.display()))?;
+    if root.is_array() {
+        return serde_json::from_value(root).with_context(|| format!("parse {}", path.display()));
+    }
+    if let Some(messages) = root.get("messages") {
+        return serde_json::from_value(messages.clone())
+            .with_context(|| format!("parse {}", path.display()));
+    }
+    bail!(
+        "message signatures JSON {} must be an array or an object with `messages`",
+        path.display()
+    )
+}
+
+fn apply_message_signature_field_overrides(
+    schema: &mut NetworkSchema,
+    signatures: &[NetworkMessageSignature],
+) {
+    for signature in signatures {
+        if signature.fields.is_empty() {
+            continue;
+        }
+
+        let candidates = schema
+            .types
+            .iter()
+            .enumerate()
+            .filter(|(_, network_type)| message_signature_identity_matches(network_type, signature))
+            .map(|(index, _)| index)
+            .collect::<Vec<_>>();
+        let [network_type_index] = candidates.as_slice() else {
+            continue;
+        };
+
+        schema.types[*network_type_index].fields = network_fields_from_signature(signature);
+    }
+}
+
+fn message_signature_identity_matches(
+    network_type: &NetworkType,
+    signature: &NetworkMessageSignature,
+) -> bool {
+    let has_identity = signature.type_id.is_some() || signature.type_index.is_some();
+    if has_identity {
+        if let Some(type_id) = signature.type_id
+            && network_type.type_id != Some(type_id)
+        {
+            return false;
+        }
+        if let Some(type_index) = signature.type_index
+            && network_type.type_index != Some(type_index)
+        {
+            return false;
+        }
+        return true;
+    }
+
+    if let Some(name) = signature.name.as_deref()
+        && network_type.name.as_deref() != Some(name)
+        && network_type.registration_type_name.as_deref() != Some(name)
+    {
+        return false;
+    }
+    true
+}
+
+fn network_fields_from_signature(signature: &NetworkMessageSignature) -> Vec<NetworkField> {
+    let source = signature
+        .source
+        .clone()
+        .unwrap_or_else(|| "message-signature-notes".to_owned());
+    signature
+        .fields
+        .iter()
+        .map(|field| NetworkField {
+            index: field.index,
+            name: Some(field.name.clone()),
+            name_address: None,
+            group: None,
+            registration_kind: None,
+            filter_group_attribute: None,
+            handler_offset: None,
+            handler_expression: None,
+            handler_vtable: None,
+            native_type: field.native_type.clone(),
+            source_type_name: None,
+            source_type_id: None,
+            rust_type: field.rust_type.clone(),
+            storage_expression: None,
+            storage_offset: None,
+            raw_byte_length: None,
+            wire_shape: field.wire_shape,
+            wire_shape_source: field.wire_shape.map(|_| source.clone()),
+            constructor_writes: Vec::new(),
+            unmarshal_evidence: None,
+            nested_type_shape: None,
+            serialize: None,
+            callsite: None,
+            confidence: NetworkConfidence::High,
+            evidence: vec![NetworkEvidence {
+                kind: NetworkEvidenceKind::MessageSource,
+                source: source.clone(),
+                address: None,
+                detail: Some(field.name.clone()),
+                confidence: NetworkConfidence::High,
+            }],
+        })
+        .collect()
 }
 
 #[derive(Debug, Deserialize)]
@@ -190,18 +349,19 @@ fn rerun_if_changed(path: &Path) {
 
 fn input_hash(
     build_script: &Path,
-    registered_state_selection_file: &Path,
+    generated_state_denylist_file: &Path,
     network_field_overrides_file: &Path,
     generated_type_selection_file: &Path,
     network_schema_file: &Path,
+    message_signatures_file: &Path,
 ) -> Result<String> {
     let mut hash = blake3::Hasher::new();
     hash.update(CODEGEN_VERSION.as_bytes());
     hash.update(NETWORK_RUST_EMITTER_VERSION.as_bytes());
     hash_file("build.rs", build_script, &mut hash)?;
     hash_file(
-        "codegen/generated-states.json",
-        registered_state_selection_file,
+        "codegen/generated-state-denylist.json",
+        generated_state_denylist_file,
         &mut hash,
     )?;
     hash_file(
@@ -217,6 +377,11 @@ fn input_hash(
     hash_file(
         "crates/nw-network-types/codegen/network-schema.json",
         network_schema_file,
+        &mut hash,
+    )?;
+    hash_file(
+        "crates/nw-network-types/codegen/message-signatures.json",
+        message_signatures_file,
         &mut hash,
     )?;
     hash_resource("serialize.json", nw_resources::SERIALIZE_JSON, &mut hash);

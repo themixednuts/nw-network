@@ -1,6 +1,33 @@
 {
   "fields": [
     {
+      "typeIndex": 13,
+      "fieldIndex": 0,
+      "field": "position",
+      "nativeType": "MB::ReplicatedFieldHandler<AZ::Vector3, PositionAnchorMarshaler>",
+      "rustType": "::nw_network::serialize::ReplicatedFieldHandler<(f32, f32, f32), ::nw_network::serialize::PositionAnchorMarshaler>",
+      "wireShapeSource": "field-override:PositionInTheWorldReplicatedState.position",
+      "confidence": "high"
+    },
+    {
+      "typeIndex": 13,
+      "fieldIndex": 1,
+      "field": "rotation",
+      "nativeType": "MB::ReplicatedFieldHandler<AZ::Quaternion, GridMate::QuatCompNormMarshaler>",
+      "rustType": "::nw_network::serialize::ReplicatedFieldHandler<::nw_network::serialize::QuatCompNorm>",
+      "wireShapeSource": "field-override:PositionInTheWorldReplicatedState.rotation",
+      "confidence": "high"
+    },
+    {
+      "typeIndex": 13,
+      "fieldIndex": 2,
+      "field": "scale",
+      "nativeType": "MB::ReplicatedFieldHandler<AZ::Vector3, MB::PositionInTheWorldReplicatedState::NonUniformScaleCompMarshaler>",
+      "rustType": "::nw_network::serialize::ReplicatedFieldHandler<glam::Vec3, ::nw_network::serialize::NonUniformScaleCompMarshaler>",
+      "wireShapeSource": "ghidra:PositionInTheWorldReplicatedState.scale tagged helper",
+      "confidence": "high"
+    },
+    {
       "typeIndex": 3362,
       "fieldIndex": 0,
       "field": "curScriptStateId",
@@ -25,8 +52,143 @@
       "fieldIndex": 2,
       "field": "spawnedEntityIdsBySpawnerId",
       "nativeType": "MB::ReplicatedMapFieldHandler<AZ::Crc32, AZ::EntityId>",
-      "rustType": "::nw_network::serialize::ReplicatedContainer<::std::collections::HashMap<::nw_network::Crc32, ::nw_network::EntityId>, { ::nw_network::serialize::WIRE_VEC_CAP }, ::nw_network::serialize::DefaultMarshaler<::nw_network::Crc32>, ::nw_network::serialize::DefaultMarshaler<::nw_network::EntityId>>",
+      "rustType": "::nw_network::serialize::ReplicatedContainer<::nw_network::serialize::IndexMap<::nw_network::Crc32, ::nw_network::EntityId>, { ::nw_network::serialize::WIRE_VEC_CAP }, ::nw_network::serialize::DefaultMarshaler<::nw_network::Crc32>, ::nw_network::serialize::DefaultMarshaler<::nw_network::EntityId>>",
       "wireShapeSource": "field-override:SlayerScriptReplicatedState",
+      "confidence": "high"
+    },
+    {
+      "typeIndex": 3780,
+      "fieldIndex": 0,
+      "field": "globalMapData",
+      "nativeType": "MB::ReplicatedContainer<AZ::u64, GlobalMapData>",
+      "rustType": "::nw_network::serialize::ReplicatedFieldHandler<::nw_network::states::world::GlobalMapDataMap>",
+      "wireShapeSource": "field-override:GlobalMapData_TypeInfo",
+      "confidence": "high"
+    },
+    {
+      "typeIndex": 5620,
+      "fieldIndex": 15,
+      "field": "remoteDyeData",
+      "nativeType": "DyeData",
+      "rustType": "::nw_network::serialize::ReplicatedFieldHandler<::nw_network::source::DyeData>",
+      "wireShapeSource": "field-override:MountComponentReplicatedState.remoteDyeData",
+      "confidence": "high"
+    },
+    {
+      "typeIndex": 2932,
+      "fieldIndex": 4,
+      "field": "gencds",
+      "nativeType": "MB::ReplicatedContainer<AZ::u64, ReplicatedGeneralCooldown>",
+      "rustType": "::nw_network::serialize::ReplicatedContainer<::std::vec::Vec<::nw_network::states::combat::ReplicatedGeneralCooldown>, { ::nw_network::serialize::WIRE_VEC_CAP }, ::nw_network::serialize::DefaultMarshaler<::nw_network::serialize::VlqU64>, ::nw_network::serialize::DefaultMarshaler<::nw_network::states::combat::ReplicatedGeneralCooldown>>",
+      "wireShapeSource": "field-override:CooldownTimersComponentReplicatedState.gencds",
+      "confidence": "high"
+    },
+    {
+      "typeIndex": 2768,
+      "fieldIndex": 1,
+      "field": "ownedHouses",
+      "nativeType": "MB::ReplicatedContainer<AZ::u64, ReplicatedOwnedHouseData>",
+      "rustType": "::nw_network::serialize::ReplicatedContainer<::std::vec::Vec<::nw_network::states::housing::ReplicatedOwnedHouseData>, { ::nw_network::serialize::WIRE_VEC_CAP }, ::nw_network::serialize::DefaultMarshaler<::nw_network::serialize::VlqU64>, ::nw_network::serialize::DefaultMarshaler<::nw_network::states::housing::ReplicatedOwnedHouseData>>",
+      "wireShapeSource": "field-override:PlayerHousingReplicatedState.ownedHouses",
+      "confidence": "high"
+    },
+    {
+      "typeIndex": 3147,
+      "fieldIndex": 16,
+      "field": "guildMembersCharacterIdString",
+      "nativeType": "MB::ReplicatedContainer<AZ::u64, AZStd::string, Amazon::Pervasives::VlqU64Marshaler, Amazon::Pervasives::Marshaller<AZStd::string>>",
+      "rustType": "::nw_network::serialize::ReplicatedContainer<::std::vec::Vec<::std::string::String>, { ::nw_network::serialize::WIRE_VEC_CAP }, ::nw_network::serialize::DefaultMarshaler<::nw_network::serialize::VlqU64>, ::nw_network::serialize::DefaultMarshaler<::std::string::String>>",
+      "wireShapeSource": "field-override:GuildsComponentReplicatedState.guildMembersCharacterIdString",
+      "confidence": "high"
+    },
+    {
+      "typeIndex": 3147,
+      "fieldIndex": 17,
+      "field": "guildMembersRank",
+      "nativeType": "MB::ReplicatedContainer<AZ::u64, AZ::u16, Amazon::Pervasives::VlqU64Marshaler, Amazon::Pervasives::Marshaller<AZ::u16>>",
+      "rustType": "::nw_network::serialize::ReplicatedContainer<::std::vec::Vec<u16>, { ::nw_network::serialize::WIRE_VEC_CAP }, ::nw_network::serialize::DefaultMarshaler<::nw_network::serialize::VlqU64>, ::nw_network::serialize::DefaultMarshaler<u16>>",
+      "wireShapeSource": "field-override:GuildsComponentReplicatedState.guildMembersRank",
+      "confidence": "high"
+    },
+    {
+      "typeIndex": 3147,
+      "fieldIndex": 18,
+      "field": "guildMembersOnlineStatus",
+      "nativeType": "MB::ReplicatedContainer<AZ::u64, AZ::u8, Amazon::Pervasives::VlqU64Marshaler, Amazon::Pervasives::Marshaller<AZ::u8>>",
+      "rustType": "::nw_network::serialize::ReplicatedContainer<::std::vec::Vec<u8>, { ::nw_network::serialize::WIRE_VEC_CAP }, ::nw_network::serialize::DefaultMarshaler<::nw_network::serialize::VlqU64>, ::nw_network::serialize::DefaultMarshaler<u8>>",
+      "wireShapeSource": "field-override:GuildsComponentReplicatedState.guildMembersOnlineStatus",
+      "confidence": "high"
+    },
+    {
+      "typeIndex": 3147,
+      "fieldIndex": 19,
+      "field": "guildMembersLastOnlineTime",
+      "nativeType": "MB::ReplicatedContainer<AZ::u64, AZ::u64, Amazon::Pervasives::VlqU64Marshaler, Amazon::Pervasives::Marshaller<AZ::u64>>",
+      "rustType": "::nw_network::serialize::ReplicatedContainer<::std::vec::Vec<u64>, { ::nw_network::serialize::WIRE_VEC_CAP }, ::nw_network::serialize::DefaultMarshaler<::nw_network::serialize::VlqU64>, ::nw_network::serialize::DefaultMarshaler<u64>>",
+      "wireShapeSource": "field-override:GuildsComponentReplicatedState.guildMembersLastOnlineTime",
+      "confidence": "high"
+    },
+    {
+      "typeIndex": 3147,
+      "fieldIndex": 21,
+      "field": "guildInfluenceData",
+      "nativeType": "MB::ReplicatedContainer<AZ::u64, ReplicatedGuildInfluence, Amazon::Pervasives::VlqU64Marshaler, Amazon::Pervasives::Marshaller<ReplicatedGuildInfluence>>",
+      "rustType": "::nw_network::serialize::ReplicatedContainer<::std::vec::Vec<::nw_network::states::social::ReplicatedGuildInfluence>, { ::nw_network::serialize::WIRE_VEC_CAP }, ::nw_network::serialize::DefaultMarshaler<::nw_network::serialize::VlqU64>, ::nw_network::serialize::DefaultMarshaler<::nw_network::states::social::ReplicatedGuildInfluence>>",
+      "wireShapeSource": "field-override:GuildsComponentReplicatedState.guildInfluenceData",
+      "confidence": "high"
+    },
+    {
+      "typeIndex": 3147,
+      "fieldIndex": 22,
+      "field": "eligibleTerritoryWars",
+      "nativeType": "MB::ReplicatedContainer<AZ::u64, EligibleTerritoryWar, Amazon::Pervasives::VlqU64Marshaler, Amazon::Pervasives::Marshaller<EligibleTerritoryWar>>",
+      "rustType": "::nw_network::serialize::ReplicatedContainer<::std::vec::Vec<::nw_network::states::social::EligibleTerritoryWar>, { ::nw_network::serialize::WIRE_VEC_CAP }, ::nw_network::serialize::DefaultMarshaler<::nw_network::serialize::VlqU64>, ::nw_network::serialize::DefaultMarshaler<::nw_network::states::social::EligibleTerritoryWar>>",
+      "wireShapeSource": "field-override:GuildsComponentReplicatedState.eligibleTerritoryWars",
+      "confidence": "high"
+    },
+    {
+      "typeIndex": 4176,
+      "fieldIndex": 0,
+      "field": "warData",
+      "nativeType": "MB::ReplicatedContainer<AZ::Uuid, WarDataValue>",
+      "rustType": "::nw_network::serialize::ReplicatedContainer<::nw_network::serialize::IndexMap<::uuid::Uuid, ::nw_network::states::territory::WarDataValue>, { ::nw_network::serialize::WIRE_VEC_CAP }, ::nw_network::serialize::DefaultMarshaler<::uuid::Uuid>, ::nw_network::serialize::DefaultMarshaler<::nw_network::states::territory::WarDataValue>>",
+      "wireShapeSource": "field-override:SocialReplicatedState.warData",
+      "confidence": "high"
+    },
+    {
+      "typeIndex": 4176,
+      "fieldIndex": 4,
+      "field": "friends",
+      "nativeType": "MB::ReplicatedContainer<AZ::u64, AZStd::string, Amazon::Pervasives::VlqU64Marshaler, Amazon::Pervasives::Marshaller<AZStd::string>>",
+      "rustType": "::nw_network::serialize::ReplicatedContainer<::std::vec::Vec<::std::string::String>, { ::nw_network::serialize::WIRE_VEC_CAP }, ::nw_network::serialize::DefaultMarshaler<::nw_network::serialize::VlqU64>, ::nw_network::serialize::DefaultMarshaler<::std::string::String>>",
+      "wireShapeSource": "field-override:SocialReplicatedState.friends",
+      "confidence": "high"
+    },
+    {
+      "typeIndex": 4176,
+      "fieldIndex": 5,
+      "field": "friendInvites",
+      "nativeType": "MB::ReplicatedContainer<AZ::u64, AZStd::string, Amazon::Pervasives::VlqU64Marshaler, Amazon::Pervasives::Marshaller<AZStd::string>>",
+      "rustType": "::nw_network::serialize::ReplicatedContainer<::std::vec::Vec<::std::string::String>, { ::nw_network::serialize::WIRE_VEC_CAP }, ::nw_network::serialize::DefaultMarshaler<::nw_network::serialize::VlqU64>, ::nw_network::serialize::DefaultMarshaler<::std::string::String>>",
+      "wireShapeSource": "field-override:SocialReplicatedState.friendInvites",
+      "confidence": "high"
+    },
+    {
+      "typeIndex": 4176,
+      "fieldIndex": 6,
+      "field": "socialBlocks",
+      "nativeType": "MB::ReplicatedContainer<AZ::u64, AZStd::string, Amazon::Pervasives::VlqU64Marshaler, Amazon::Pervasives::Marshaller<AZStd::string>>",
+      "rustType": "::nw_network::serialize::ReplicatedContainer<::std::vec::Vec<::std::string::String>, { ::nw_network::serialize::WIRE_VEC_CAP }, ::nw_network::serialize::DefaultMarshaler<::nw_network::serialize::VlqU64>, ::nw_network::serialize::DefaultMarshaler<::std::string::String>>",
+      "wireShapeSource": "field-override:SocialReplicatedState.socialBlocks",
+      "confidence": "high"
+    },
+    {
+      "typeIndex": 4236,
+      "fieldIndex": 4,
+      "field": "m_territoryStatusEffects",
+      "nativeType": "MB::ReplicatedContainer<AZ::u64, TerritoryStatusEffect, Amazon::Pervasives::VlqU64Marshaler, Amazon::Pervasives::Marshaller<TerritoryStatusEffect>>",
+      "rustType": "::nw_network::serialize::ReplicatedContainer<::std::vec::Vec<::nw_network::states::combat::TerritoryStatusEffect>, { ::nw_network::serialize::WIRE_VEC_CAP }, ::nw_network::serialize::DefaultMarshaler<::nw_network::serialize::VlqU64>, ::nw_network::serialize::DefaultMarshaler<::nw_network::states::combat::TerritoryStatusEffect>>",
+      "wireShapeSource": "field-override:StatusEffectsComponentReplicatedState.territoryStatusEffects",
       "confidence": "high"
     }
   ]

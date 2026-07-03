@@ -1,11 +1,15 @@
-use crate::serialize::{ReplicatedFieldHandler, ReplicatedVec};
+//! Musical performance song-selection and location replication.
 
-#[::nw_network::replicated_state]
+use crate::{az_rtti, replicated_state, type_registry};
+
+use crate::serialize::{ReplicatedContainer, ReplicatedFieldHandler};
+
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("2C91F563-3901-413D-941E-0CEF9366896D")]
-#[::nw_network::type_registry(4896)]
+#[az_rtti("2C91F563-3901-413D-941E-0CEF9366896D")]
+#[type_registry(4896)]
 pub struct MusicalPerformanceReplicatedState {
-    pub performers: ReplicatedVec<u64>,
+    pub performers: ReplicatedContainer<Vec<u64>>,
     pub radius: ReplicatedFieldHandler<f32>,
     pub zone_type: ReplicatedFieldHandler<u32>,
     pub selected_song: ReplicatedFieldHandler<u32>,
@@ -21,24 +25,24 @@ pub struct MusicalPerformanceReplicatedState {
     #[replicated_state(group = 1)]
     pub selected_reward_id: ReplicatedFieldHandler<u64>,
     #[replicated_state(group = 1)]
-    pub performer_score: ReplicatedVec<u32>,
+    pub performer_score: ReplicatedContainer<Vec<u32>>,
     #[replicated_state(group = 1)]
     pub performance_score: ReplicatedFieldHandler<f32>,
 
     #[replicated_state(group = 2)]
-    pub performance_pages: ReplicatedVec<u16>,
+    pub performance_pages: ReplicatedContainer<Vec<u16>>,
     #[replicated_state(group = 2)]
     pub song_book_filter_type: ReplicatedFieldHandler<u8>,
     #[replicated_state(group = 2)]
     pub song_book_filter_type_id: ReplicatedFieldHandler<u32>,
     #[replicated_state(group = 2)]
-    pub song_book_overrides: ReplicatedVec<u32>,
+    pub song_book_overrides: ReplicatedContainer<Vec<u32>>,
     #[replicated_state(group = 2)]
     pub reward_filter_type: ReplicatedFieldHandler<u8>,
     #[replicated_state(group = 2)]
     pub reward_filter_type_id: ReplicatedFieldHandler<u32>,
     #[replicated_state(group = 2)]
-    pub reward_overrides: ReplicatedVec<u32>,
+    pub reward_overrides: ReplicatedContainer<Vec<u32>>,
     #[replicated_state(group = 2)]
     pub rank: ReplicatedFieldHandler<u16>,
     #[replicated_state(group = 2)]

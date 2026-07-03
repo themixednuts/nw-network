@@ -1,9 +1,15 @@
-//! Container codecs.
+//! Container codecs and count policies for protocol collections.
 //!
-//! Default Rust containers use VLQ32 lengths. The explicit
-//! [`ContainerMarshaler`] and [`MapContainerMarshaler`] policies use raw
-//! `u16` lengths. Elements are serialized in iteration order; use
-//! [`IndexMap`] or [`IndexSet`] when byte order needs to be deterministic.
+//! Blanket [`Marshaler`] impls for Rust
+//! containers (`Vec`, `String`, maps, sets, `ArrayVec`, and `ArrayString`)
+//! write a VLQ32 element or byte count before the entries. The explicit
+//! [`ContainerMarshaler`] and [`MapContainerMarshaler`] policy codecs instead
+//! write a raw carrier-endian `u16` count.
+//!
+//! Fields choose the policy required by their wire format: use the blanket
+//! impls for VLQ-counted collections and policy codecs for fixed `u16`
+//! counted slots. Entries are serialized in iteration order; use [`IndexMap`]
+//! or [`IndexSet`] when byte order needs to be deterministic.
 
 use super::{
     buffer::{ReadBuffer, WriteBuffer},
@@ -436,7 +442,7 @@ impl<T: Marshaler, const N: usize> Marshaler for [T; N] {
 
 /// `IndexSet<T>` encoded as: VLQ32 length, then `T` elements in iteration order.
 ///
-/// insertion/wire order after unmarshal.
+/// `IndexSet` preserves insertion/wire order after unmarshal.
 impl<T> Marshaler for IndexSet<T>
 where
     T: Marshaler + Eq + Hash,
@@ -466,7 +472,7 @@ where
 
 /// `IndexMap<K, V>` encoded as: VLQ32 length, then pairs `K`, `V` in iteration order.
 ///
-/// insertion/wire order after unmarshal.
+/// `IndexMap` preserves insertion/wire order after unmarshal.
 impl<K, V> Marshaler for IndexMap<K, V>
 where
     K: Marshaler + Eq + Hash,
@@ -501,7 +507,8 @@ where
 /// `HashSet<T>` encoded as: VLQ32 length, then `T` elements in iteration order.
 ///
 /// This matches the generic count-plus-entry byte shape, but it is not
-/// protocol fields.
+/// deterministic enough for byte-locked protocol fields. Use `IndexSet` or
+/// `BTreeSet` when the wire order must be stable.
 impl<T, S> Marshaler for HashSet<T, S>
 where
     T: Marshaler + Eq + Hash,
@@ -560,7 +567,8 @@ where
 /// `HashMap<K, V>` encoded as: VLQ32 length, then pairs `K`, `V` in iteration order.
 ///
 /// This matches the generic count-plus-entry byte shape, but it is not
-/// protocol fields.
+/// deterministic enough for byte-locked protocol fields. Use `IndexMap` or
+/// `BTreeMap` when the wire order must be stable.
 impl<K, V, S> Marshaler for HashMap<K, V, S>
 where
     K: Marshaler + Eq + Hash,

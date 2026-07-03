@@ -1,5 +1,9 @@
+//! Mount ownership, dye, summon, and mount-mode replication.
+
+use crate::{az_rtti, replicated_state, type_registry};
+
 use crate::Marshaler;
-use crate::serialize::{ReplicatedFieldHandler, ReplicatedMap};
+use crate::serialize::{IndexMap, ReplicatedContainer, ReplicatedFieldHandler};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Marshaler)]
 pub struct MountDyeData {
@@ -18,10 +22,10 @@ pub struct PersistentMountDataValue {
     pub name: String,
 }
 
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("2C20C9F7-2500-496A-89E2-5ADA1053B5C2")]
-#[::nw_network::type_registry(5620)]
+#[az_rtti("2C20C9F7-2500-496A-89E2-5ADA1053B5C2")]
+#[type_registry(5620)]
 pub struct MountComponentReplicatedState {
     #[replicated_state(group = 2)]
     pub mount_id: ReplicatedFieldHandler<u32>,
@@ -36,7 +40,7 @@ pub struct MountComponentReplicatedState {
     #[replicated_state(group = 1)]
     pub summon_authorization: ReplicatedFieldHandler<SummonAuthorization>,
     #[replicated_state(group = 1)]
-    pub persistent_mount_data: ReplicatedMap<u32, PersistentMountDataValue>,
+    pub persistent_mount_data: ReplicatedContainer<IndexMap<u32, PersistentMountDataValue>>,
     #[replicated_state(group = 1)]
     pub stamina_cur: ReplicatedFieldHandler<f32>,
     #[replicated_state(group = 1)]

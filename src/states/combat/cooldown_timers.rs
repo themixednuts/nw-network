@@ -1,5 +1,9 @@
-use crate::serialize::{ReplicatedFieldHandler, ReplicatedMap, VlqU64};
-use crate::{GeneralCooldownType, Marshaler};
+//! General and conditional cooldown timer replication.
+
+use crate::{az_rtti, replicated_state, type_registry};
+
+use crate::Marshaler;
+use crate::serialize::{IndexMap, ReplicatedContainer, ReplicatedFieldHandler};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Marshaler)]
 pub struct CooldownTimerWindow {
@@ -16,8 +20,8 @@ pub struct ConditionalCooldownData {
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Marshaler)]
 pub struct ReplicatedGeneralCooldown {
-    pub cooldown_type: GeneralCooldownType,
-    pub cooldown_crc: u32,
+    pub data_1: u32,
+    pub data_2: u32,
     pub expires_at: u64,
 }
 
@@ -43,25 +47,25 @@ impl TryFrom<u8> for CooldownMapKind {
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CooldownTimerSnapshot {
-    pub cooldown_map_1: ReplicatedMap<u32, CooldownTimerWindow>,
-    pub cooldown_map_2: ReplicatedMap<u32, CooldownTimerWindow>,
-    pub cooldown_map_3: ReplicatedMap<u32, CooldownTimerWindow>,
-    pub conditional_cooldowns: ReplicatedMap<u32, ConditionalCooldownData>,
-    pub general_cooldowns: ReplicatedMap<VlqU64, ReplicatedGeneralCooldown>,
+    pub cooldown_map_1: ReplicatedContainer<IndexMap<u32, CooldownTimerWindow>>,
+    pub cooldown_map_2: ReplicatedContainer<IndexMap<u32, CooldownTimerWindow>>,
+    pub cooldown_map_3: ReplicatedContainer<IndexMap<u32, CooldownTimerWindow>>,
+    pub conditional_cooldowns: ReplicatedContainer<IndexMap<u32, ConditionalCooldownData>>,
+    pub general_cooldowns: ReplicatedContainer<Vec<ReplicatedGeneralCooldown>>,
     pub next_daily_cooldown_micros: u64,
     pub next_weekly_cooldown_micros: u64,
 }
 
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("6D45EB20-95FE-4420-96C5-3F9367A3FC5C")]
-#[::nw_network::type_registry(2932)]
+#[az_rtti("6D45EB20-95FE-4420-96C5-3F9367A3FC5C")]
+#[type_registry(2932)]
 pub struct CooldownTimersComponentReplicatedState {
-    pub cooldown_map_1: ReplicatedMap<u32, CooldownTimerWindow>,
-    pub cooldown_map_2: ReplicatedMap<u32, CooldownTimerWindow>,
-    pub cooldown_map_3: ReplicatedMap<u32, CooldownTimerWindow>,
-    pub conditional_cooldowns: ReplicatedMap<u32, ConditionalCooldownData>,
-    pub general_cooldowns: ReplicatedMap<VlqU64, ReplicatedGeneralCooldown>,
+    pub cooldown_map_1: ReplicatedContainer<IndexMap<u32, CooldownTimerWindow>>,
+    pub cooldown_map_2: ReplicatedContainer<IndexMap<u32, CooldownTimerWindow>>,
+    pub cooldown_map_3: ReplicatedContainer<IndexMap<u32, CooldownTimerWindow>>,
+    pub conditional_cooldowns: ReplicatedContainer<IndexMap<u32, ConditionalCooldownData>>,
+    pub general_cooldowns: ReplicatedContainer<Vec<ReplicatedGeneralCooldown>>,
     pub next_daily_cooldown: ReplicatedFieldHandler<u64>,
     pub next_weekly_cooldown: ReplicatedFieldHandler<u64>,
 }

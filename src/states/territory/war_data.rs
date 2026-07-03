@@ -1,10 +1,12 @@
-use std::collections::HashMap;
+//! War declaration, schedule, participant, and influence-race replication.
+
+use crate::{az_rtti, replicated_state, type_registry};
 
 use arrayvec::ArrayVec;
 use uuid::Uuid;
 
 use crate::Marshaler;
-use crate::serialize::{ReplicatedMap, ReplicatedVec};
+use crate::serialize::{IndexMap, ReplicatedContainer};
 
 /// Fixed-cap list used by war-data participant blocks.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Marshaler)]
@@ -82,29 +84,30 @@ pub struct WarDataSnapshot {
     pub schedule_adjustments_sequence: u64,
     pub influence_race_data_sequence: u64,
     pub war_data: Vec<WarDataValue>,
-    pub schedule_adjustments: HashMap<u16, WarScheduleAdjustmentReplicatedState>,
-    pub influence_race_data: HashMap<u16, InfluenceRaceData>,
+    pub schedule_adjustments: IndexMap<u16, WarScheduleAdjustmentReplicatedState>,
+    pub influence_race_data: IndexMap<u16, InfluenceRaceData>,
 }
 
 /// Replicated war-data state.
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("87072E57-BD7A-43DE-B221-382343AC0B43")]
-#[::nw_network::type_registry(1739)]
+#[az_rtti("87072E57-BD7A-43DE-B221-382343AC0B43")]
+#[type_registry(1739)]
 pub struct WarDataComponentReplicatedState {
-    pub war_data: ReplicatedVec<WarDataValue>,
-    pub war_schedule_adjustments: ReplicatedMap<u16, WarScheduleAdjustmentReplicatedState>,
-    pub influence_race_data: ReplicatedMap<u16, InfluenceRaceData>,
+    pub war_data: ReplicatedContainer<Vec<WarDataValue>>,
+    pub war_schedule_adjustments:
+        ReplicatedContainer<IndexMap<u16, WarScheduleAdjustmentReplicatedState>>,
+    pub influence_race_data: ReplicatedContainer<IndexMap<u16, InfluenceRaceData>>,
 }
 
 impl WarDataComponentReplicatedState {
     pub fn apply_snapshot(&mut self, snapshot: WarDataSnapshot) {
-        self.war_data = ReplicatedVec::new(snapshot.war_data_sequence, snapshot.war_data);
-        self.war_schedule_adjustments = ReplicatedMap::new(
+        self.war_data = ReplicatedContainer::new(snapshot.war_data_sequence, snapshot.war_data);
+        self.war_schedule_adjustments = ReplicatedContainer::new(
             snapshot.schedule_adjustments_sequence,
             snapshot.schedule_adjustments,
         );
-        self.influence_race_data = ReplicatedMap::new(
+        self.influence_race_data = ReplicatedContainer::new(
             snapshot.influence_race_data_sequence,
             snapshot.influence_race_data,
         );

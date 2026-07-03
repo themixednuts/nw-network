@@ -1,6 +1,10 @@
+//! Buildable-grid side activity replication.
+
+use crate::{az_rtti, replicated_state, type_registry};
+
 use crate::serialize::{
-    Codec, ConversionMarshaler, Marshaler, MarshalerError, ReadBuffer, ReplicatedMap, VlqU64,
-    WriteBuffer,
+    Codec, ConversionMarshaler, IndexMap, Marshaler, MarshalerError, ReadBuffer,
+    ReplicatedContainer, VlqU64, WriteBuffer,
 };
 use crate::types::GridSides;
 
@@ -33,13 +37,15 @@ impl Marshaler for BuildableGridSideActive {
     }
 }
 
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("FFABCADB-4B64-41C2-B159-A3A6980F44D0")]
-#[::nw_network::type_registry(2134)]
+#[az_rtti("FFABCADB-4B64-41C2-B159-A3A6980F44D0")]
+#[type_registry(2134)]
 pub struct BuildableGridComponentReplicatedState {
-    pub grid_sides_active:
-        ReplicatedMap<VlqU64, BuildableGridSideActive, MAX_BUILDABLE_GRID_SIDE_CHANGES>,
+    pub grid_sides_active: ReplicatedContainer<
+        IndexMap<VlqU64, BuildableGridSideActive>,
+        MAX_BUILDABLE_GRID_SIDE_CHANGES,
+    >,
 }
 
 #[cfg(test)]

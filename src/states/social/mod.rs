@@ -1,3 +1,5 @@
+//! Social, chat, group, guild, and invite replicated state modules.
+
 pub mod chat;
 pub mod groups;
 pub mod guilds;
@@ -8,7 +10,8 @@ pub mod temporary_affiliation;
 pub use crate::types::{TemporaryAffiliationRelationship, TemporaryAffiliationType};
 pub use chat::{ChatMuteEntry, ChatMutes, ChatMutesReplicatedState, ChatReplicatedState};
 pub use groups::{
-    GameInviteData, GroupFinderApplicationData, GroupInviteData, GroupsComponentReplicatedState,
+    GameInviteData, GroupFinderApplicationData, GroupInviteData, GroupMemberHouseId,
+    GroupsComponentReplicatedState,
 };
 pub use guilds::{
     EligibleTerritoryWar, GuildCrestColor, GuildCrestData, GuildInviteSenderData,

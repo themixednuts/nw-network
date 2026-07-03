@@ -1,6 +1,8 @@
 use std::{
     collections::BTreeSet,
-    env, fs,
+    env,
+    fmt::Write as _,
+    fs,
     io::{self, Read},
     path::{Component, Path, PathBuf},
 };
@@ -8,12 +10,13 @@ use std::{
 use anyhow::{Context, Result, bail};
 use nw_resources::EmbeddedResource;
 use nw_serialize_codegen::{
-    CodegenContext, NETWORK_RUST_EMITTER_VERSION, NetworkFieldOverrideFile, NetworkRustEmitter,
-    NetworkSchema, RustCodegenPlanner, RustSourceEmitter, RustStandaloneProjectFile,
-    SerializeCodegenRootMode, SerializeCodegenRootSelection, SerializeContextCompileInputs,
-    SerializeContextCompiler, SerializeContextDocument, complete_known_missing_reflected_bodies,
-    module_descriptor_capture, module_descriptors_root, module_name_from_resource_name,
-    resolve_codegen_root_type_ids,
+    CodegenContext, NETWORK_RUST_EMITTER_VERSION, NetworkConfidence, NetworkEvidence,
+    NetworkEvidenceKind, NetworkField, NetworkFieldOverrideFile, NetworkMessageSignature,
+    NetworkRustEmitter, NetworkSchema, NetworkType, RustCodegenPlanner, RustSourceEmitter,
+    RustStandaloneProjectFile, SerializeCodegenRootMode, SerializeCodegenRootSelection,
+    SerializeContextCompileInputs, SerializeContextCompiler, SerializeContextDocument,
+    complete_known_missing_reflected_bodies, module_descriptor_capture, module_descriptors_root,
+    module_name_from_resource_name, resolve_codegen_root_type_ids,
 };
 use serde::Deserialize;
 use serde_json::Value;
@@ -26,6 +29,7 @@ fn main() -> Result<()> {
     let build_script = manifest_dir.join("build.rs");
     let selection_file = manifest_dir.join("codegen/selection.json");
     let network_schema_file = manifest_dir.join("codegen/network-schema.json");
+    let message_signatures_file = manifest_dir.join("codegen/message-signatures.json");
     let network_field_overrides_file =
         manifest_dir.join("../../codegen/network-field-overrides.json");
     let context = CodegenContext::automatic();
@@ -33,12 +37,14 @@ fn main() -> Result<()> {
     rerun_if_changed(&build_script);
     rerun_if_changed(&selection_file);
     rerun_if_changed(&network_schema_file);
+    rerun_if_changed(&message_signatures_file);
     rerun_if_changed(&network_field_overrides_file);
 
     let input_hash = input_hash(
         &build_script,
         &selection_file,
         &network_schema_file,
+        &message_signatures_file,
         &network_field_overrides_file,
     )?;
     let out_dir = PathBuf::from(env::var_os("OUT_DIR").context("OUT_DIR")?);
@@ -84,6 +90,25 @@ fn main() -> Result<()> {
     let project = RustSourceEmitter::emit_standalone_project(&rust_unit, &context)
         .with_context(|| "emit nw-network standalone Rust crate")?;
     let mut network_schema = load_network_schema(&network_schema_file)?;
+    let message_signatures = load_message_signatures(&message_signatures_file)?;
+    apply_message_signature_field_overrides(&mut network_schema, &message_signatures);
+    let signature_report = network_schema.merge_message_signatures(
+        &message_signatures,
+        Some(message_signatures_file.display().to_string()),
+    );
+    if signature_report.unmatched_message_count != 0
+        || signature_report.ambiguous_message_count != 0
+        || signature_report.field_index_mismatch_count != 0
+        || signature_report.field_name_conflict_count != 0
+    {
+        bail!(
+            "network message signatures did not resolve cleanly: {} unmatched message(s), {} ambiguous message(s), {} field-index mismatch(es), {} field-name conflict(s)",
+            signature_report.unmatched_message_count,
+            signature_report.ambiguous_message_count,
+            signature_report.field_index_mismatch_count,
+            signature_report.field_name_conflict_count
+        );
+    }
     if network_field_overrides_file.is_file() {
         let network_field_overrides = load_network_field_overrides(&network_field_overrides_file)?;
         let override_report = network_schema.merge_field_overrides(
@@ -104,12 +129,21 @@ fn main() -> Result<()> {
             );
         }
     }
+    network_schema.merge_serialize_codegen_unit(
+        &completed.emitted,
+        Some(selection_file.display().to_string()),
+    );
     let network_output = NetworkRustEmitter::emit_descriptors(&network_schema)
         .context("emit network schema descriptor Rust")?;
+    let network_registry_source = network_registry_source(&network_schema);
     let mut files = project.files;
     files.push(RustStandaloneProjectFile {
         path: "src/network_schema.rs".to_owned(),
         source: network_output.source,
+    });
+    files.push(RustStandaloneProjectFile {
+        path: "src/network_registry.rs".to_owned(),
+        source: network_registry_source,
     });
     let mut report = serde_json::to_string_pretty(&network_output.report)
         .context("serialize network schema Rust generation report")?;
@@ -167,6 +201,7 @@ fn input_hash(
     build_script: &Path,
     selection_file: &Path,
     network_schema_file: &Path,
+    message_signatures_file: &Path,
     network_field_overrides_file: &Path,
 ) -> Result<String> {
     let mut hash = blake3::Hasher::new();
@@ -178,6 +213,11 @@ fn input_hash(
     hash_file(
         "codegen/network-schema.json",
         network_schema_file,
+        &mut hash,
+    )?;
+    hash_file(
+        "codegen/message-signatures.json",
+        message_signatures_file,
         &mut hash,
     )?;
     if network_field_overrides_file.is_file() {
@@ -198,9 +238,206 @@ fn load_network_schema(path: &Path) -> Result<NetworkSchema> {
     serde_json::from_slice(&bytes).with_context(|| format!("parse {}", path.display()))
 }
 
+fn load_message_signatures(path: &Path) -> Result<Vec<NetworkMessageSignature>> {
+    let bytes = fs::read(path).with_context(|| format!("read {}", path.display()))?;
+    let root = serde_json::from_slice::<Value>(&bytes)
+        .with_context(|| format!("parse {}", path.display()))?;
+    if root.is_array() {
+        return serde_json::from_value(root).with_context(|| format!("parse {}", path.display()));
+    }
+    if let Some(messages) = root.get("messages") {
+        return serde_json::from_value(messages.clone())
+            .with_context(|| format!("parse {}", path.display()));
+    }
+    bail!(
+        "message signatures JSON {} must be an array or an object with `messages`",
+        path.display()
+    )
+}
+
 fn load_network_field_overrides(path: &Path) -> Result<NetworkFieldOverrideFile> {
     let bytes = fs::read(path).with_context(|| format!("read {}", path.display()))?;
     serde_json::from_slice(&bytes).with_context(|| format!("parse {}", path.display()))
+}
+
+fn network_registry_source(schema: &NetworkSchema) -> String {
+    let mut entries = schema
+        .types
+        .iter()
+        .filter_map(|network_type| {
+            let registry_index = network_type.registry_index?;
+            if registry_index == 0 {
+                return None;
+            }
+            Some((
+                registry_index,
+                network_type.type_id?,
+                network_type.type_index?,
+                network_type.name.as_deref(),
+            ))
+        })
+        .collect::<Vec<_>>();
+    entries.sort_by_key(|(registry_index, _, _, _)| *registry_index);
+
+    let mut source = String::new();
+    source.push_str("use uuid::Uuid;\n\n");
+    source.push_str("#[derive(Debug, Clone, Copy, PartialEq, Eq)]\n");
+    source.push_str("pub struct NetworkRegistryEntry {\n");
+    source.push_str("    pub registry_index: u32,\n");
+    source.push_str("    pub type_id: Uuid,\n");
+    source.push_str("    pub type_index: u32,\n");
+    source.push_str("    pub name: Option<&'static str>,\n");
+    source.push_str("}\n\n");
+    source.push_str("pub const NETWORK_REGISTRY: &[NetworkRegistryEntry] = &[\n");
+    for (registry_index, type_id, type_index, name) in entries {
+        let name = match name {
+            Some(name) => format!("Some({name:?})"),
+            None => "None".to_owned(),
+        };
+        let _ = writeln!(
+            source,
+            "    NetworkRegistryEntry {{ registry_index: {registry_index}u32, type_id: Uuid::from_u128(0x{:032x}), type_index: {type_index}u32, name: {name} }},",
+            type_id.as_u128(),
+        );
+    }
+    source.push_str("];\n\n");
+    source.push_str("#[must_use]\n");
+    source.push_str(
+        "pub fn registry_entry_by_registry_index(registry_index: u32) -> Option<&'static NetworkRegistryEntry> {\n",
+    );
+    source.push_str(
+        "    NETWORK_REGISTRY.iter().find(|entry| entry.registry_index == registry_index)\n",
+    );
+    source.push_str("}\n\n");
+    source.push_str("#[must_use]\n");
+    source.push_str("pub fn registry_entry_by_type_id(type_id: Uuid) -> Option<&'static NetworkRegistryEntry> {\n");
+    source.push_str("    NETWORK_REGISTRY.iter().find(|entry| entry.type_id == type_id)\n");
+    source.push_str("}\n\n");
+    source.push_str("#[must_use]\n");
+    source.push_str("pub fn registry_entry_by_type_index(type_index: u32) -> Option<&'static NetworkRegistryEntry> {\n");
+    source.push_str("    NETWORK_REGISTRY.iter().find(|entry| entry.type_index == type_index)\n");
+    source.push_str("}\n\n");
+    source.push_str("#[must_use]\n");
+    source.push_str("pub fn registry_index_for_type_id(type_id: Uuid) -> Option<u32> {\n");
+    source.push_str("    registry_entry_by_type_id(type_id).map(|entry| entry.registry_index)\n");
+    source.push_str("}\n\n");
+    source.push_str("#[must_use]\n");
+    source.push_str("pub fn registry_index_for_type_index(type_index: u32) -> Option<u32> {\n");
+    source.push_str(
+        "    registry_entry_by_type_index(type_index).map(|entry| entry.registry_index)\n",
+    );
+    source.push_str("}\n\n");
+    source.push_str("#[must_use]\n");
+    source.push_str("pub fn type_index_for_registry_index(registry_index: u32) -> Option<u32> {\n");
+    source.push_str(
+        "    registry_entry_by_registry_index(registry_index).map(|entry| entry.type_index)\n",
+    );
+    source.push_str("}\n\n");
+    source.push_str("#[must_use]\n");
+    source.push_str(
+        "pub fn name_for_registry_index(registry_index: u32) -> Option<&'static str> {\n",
+    );
+    source.push_str(
+        "    registry_entry_by_registry_index(registry_index).and_then(|entry| entry.name)\n",
+    );
+    source.push_str("}\n");
+    source
+}
+
+fn apply_message_signature_field_overrides(
+    schema: &mut NetworkSchema,
+    signatures: &[NetworkMessageSignature],
+) {
+    for signature in signatures {
+        if signature.fields.is_empty() {
+            continue;
+        }
+
+        let candidates = schema
+            .types
+            .iter()
+            .enumerate()
+            .filter(|(_, network_type)| message_signature_identity_matches(network_type, signature))
+            .map(|(index, _)| index)
+            .collect::<Vec<_>>();
+        let [network_type_index] = candidates.as_slice() else {
+            continue;
+        };
+
+        schema.types[*network_type_index].fields = network_fields_from_signature(signature);
+    }
+}
+
+fn message_signature_identity_matches(
+    network_type: &NetworkType,
+    signature: &NetworkMessageSignature,
+) -> bool {
+    let has_identity = signature.type_id.is_some() || signature.type_index.is_some();
+    if has_identity {
+        if let Some(type_id) = signature.type_id
+            && network_type.type_id != Some(type_id)
+        {
+            return false;
+        }
+        if let Some(type_index) = signature.type_index
+            && network_type.type_index != Some(type_index)
+        {
+            return false;
+        }
+        return true;
+    }
+
+    if let Some(name) = signature.name.as_deref()
+        && network_type.name.as_deref() != Some(name)
+        && network_type.registration_type_name.as_deref() != Some(name)
+    {
+        return false;
+    }
+    true
+}
+
+fn network_fields_from_signature(signature: &NetworkMessageSignature) -> Vec<NetworkField> {
+    let source = signature
+        .source
+        .clone()
+        .unwrap_or_else(|| "message-signature-notes".to_owned());
+    signature
+        .fields
+        .iter()
+        .map(|field| NetworkField {
+            index: field.index,
+            name: Some(field.name.clone()),
+            name_address: None,
+            group: None,
+            registration_kind: None,
+            filter_group_attribute: None,
+            handler_offset: None,
+            handler_expression: None,
+            handler_vtable: None,
+            native_type: field.native_type.clone(),
+            source_type_name: None,
+            source_type_id: None,
+            rust_type: field.rust_type.clone(),
+            storage_expression: None,
+            storage_offset: None,
+            raw_byte_length: None,
+            wire_shape: field.wire_shape,
+            wire_shape_source: field.wire_shape.map(|_| source.clone()),
+            constructor_writes: Vec::new(),
+            unmarshal_evidence: None,
+            nested_type_shape: None,
+            serialize: None,
+            callsite: None,
+            confidence: NetworkConfidence::High,
+            evidence: vec![NetworkEvidence {
+                kind: NetworkEvidenceKind::MessageSource,
+                source: source.clone(),
+                address: None,
+                detail: Some(field.name.clone()),
+                confidence: NetworkConfidence::High,
+            }],
+        })
+        .collect()
 }
 
 fn embedded_module_descriptors(context: &CodegenContext) -> Result<Value> {
@@ -310,7 +547,7 @@ fn generated_source(path: &str, source: String) -> String {
             source
         };
         let mut source = without_inner_attr.replace("pub mod az;", "#[doc(hidden)]\npub mod az;");
-        source.push_str("\npub mod network_schema;\n");
+        source.push_str("\npub mod network_schema;\npub mod network_registry;\n");
         return source;
     }
     source

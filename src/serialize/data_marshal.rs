@@ -7,12 +7,13 @@ use super::{
     marshaler::{Codec, Marshaler},
     vlq::VlqU32Marshaler,
 };
+use crate::source::DyeData;
 use crate::types::{
     ActorRequestId, AfflictionData, AssetId, CharacterAttributeType, ComponentId, Crc32, EntityId,
     EntityRef, GatheringStatus, GdeId, GeneralCooldownType, PaperdollSlotAlias,
     RemoteServerContextRef, RemoteServerFacetRefGameModeParticipantComponentServerFacet,
-    RemoteServerGdeRef, RemoteTypelessServerFacetRef, ReplicationCategory, TimePoint,
-    WallClockTimePoint,
+    RemoteServerFacetRefHousingPlotComponentServerFacet, RemoteServerGdeRef,
+    RemoteTypelessServerFacetRef, ReplicationCategory, TimePoint, WallClockTimePoint,
 };
 use nw_network_types::az::uuid::Uuid as AzUuid;
 use std::marker::PhantomData;
@@ -176,14 +177,14 @@ impl Marshaler for GdeId {
 
 impl Marshaler for ActorRequestId {
     fn marshal(&self, wb: &mut WriteBuffer) {
-        self.request_id.marshal(wb);
         self.target_local_id.marshal(wb);
+        self.source_actor_ref.marshal(wb);
     }
 
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         Ok(Self {
-            request_id: u64::unmarshal(rb)?,
             target_local_id: u64::unmarshal(rb)?,
+            source_actor_ref: u64::unmarshal(rb)?,
         })
     }
 }
@@ -246,6 +247,18 @@ impl Marshaler for RemoteTypelessServerFacetRef {
 }
 
 impl Marshaler for RemoteServerFacetRefGameModeParticipantComponentServerFacet {
+    fn marshal(&self, wb: &mut WriteBuffer) {
+        self.typeless_ref.marshal(wb);
+    }
+
+    fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
+        Ok(Self {
+            typeless_ref: RemoteTypelessServerFacetRef::unmarshal(rb)?,
+        })
+    }
+}
+
+impl Marshaler for RemoteServerFacetRefHousingPlotComponentServerFacet {
     fn marshal(&self, wb: &mut WriteBuffer) {
         self.typeless_ref.marshal(wb);
     }
@@ -406,6 +419,26 @@ impl Marshaler for AfflictionData {
             max: f32::unmarshal(rb)?,
             affliction_id: i8::unmarshal(rb)?,
             is_afflicted: bool::unmarshal(rb)?,
+        })
+    }
+}
+
+impl Marshaler for DyeData {
+    const MARSHAL_SIZE: usize = 4;
+
+    fn marshal(&self, wb: &mut WriteBuffer) {
+        self.r_color_id.marshal(wb);
+        self.g_color_id.marshal(wb);
+        self.b_color_id.marshal(wb);
+        self.a_color_id.marshal(wb);
+    }
+
+    fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
+        Ok(Self {
+            r_color_id: u8::unmarshal(rb)?,
+            g_color_id: u8::unmarshal(rb)?,
+            b_color_id: u8::unmarshal(rb)?,
+            a_color_id: u8::unmarshal(rb)?,
         })
     }
 }

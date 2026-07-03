@@ -2,11 +2,14 @@ pub mod address;
 pub mod fixed_replicated_state;
 pub mod fragment;
 pub mod ids;
+pub mod movement;
 pub mod replicated_state;
 pub mod replicated_state_bundle;
 pub mod sequence_number;
 pub mod state_bundle_builder;
 pub mod state_bundle_view;
+pub mod time;
+mod type_index_only;
 
 pub use address::ActorRef;
 pub use fixed_replicated_state::{
@@ -18,14 +21,18 @@ pub use fragment::{
     DynFragment, FRAGMENT_POOL_SIZE_BYTES, Fragment, FragmentBase, FragmentCategory,
     FragmentCategoryBitset, FragmentRegistration, GroupBaselines, GroupIndex, I_FRAGMENT_TYPE_ID,
     MAXIMUM_REPLICATION_FRAGMENTS, MarshalContext, NUM_FRAGMENT_CATEGORIES,
-    consume_fragment_contents_by_type_index, decode_fragment_contents_by_type_index,
-    fragment_category_from_string, fragment_category_to_string, fragment_name_for_type_index,
+    consume_fragment_contents_by_registry_index, decode_fragment_contents_by_registry_index,
+    fragment_category_from_string, fragment_category_to_string, fragment_name_for_registry_index,
+    fragment_name_for_type_index, fragment_registration_by_registry_index,
     fragment_registration_by_type_index, fragment_registration_by_uuid,
-    fragment_type_index_by_uuid, registered_fragment_type_indices,
+    fragment_registry_index_by_uuid, fragment_type_index_by_uuid,
+    registered_fragment_registry_indices, registered_fragment_type_indices,
 };
 pub use ids::{
-    BandwidthMode, ClientActorHash, ClientContextId, FragmentKey, InterestId, TypeIndex,
+    ActorId, BandwidthMode, ClientActorHash, ClientContextId, FragmentKey, HubId, InterestId,
+    TypeIndex,
 };
+pub use movement::{CrashTarget, MigratedPersistenceMetadata, MovementInteractionId};
 pub use replicated_state::{
     ClientFilterContainer, ClientFilterContainerMarshalShim, ClientFilterField, DefaultBitsField,
     FilterValue, REPLICATED_STATE_TYPE_ID, ReplicatedDefaultBits, ReplicatedFieldInfo,
@@ -44,3 +51,4 @@ pub use replicated_state_bundle::{
 pub use sequence_number::SequenceNumber;
 pub use state_bundle_builder::StateBundleBuilder;
 pub use state_bundle_view::{StateFragmentIter, StateFragmentView};
+pub use time::{Duration, SyncedTimestamp, Timestamp};

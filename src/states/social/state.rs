@@ -1,19 +1,26 @@
-use crate::serialize::{ReplicatedFieldHandler, ReplicatedVec};
+//! Social collection replication for friends and related player lists.
+
+use crate::{az_rtti, replicated_state, type_registry};
+
+use uuid::Uuid;
+
+use crate::serialize::{IndexMap, ReplicatedContainer, ReplicatedFieldHandler};
+use crate::states::territory::WarDataValue;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct SocialCollectionsSnapshot {
-    pub friends: ReplicatedVec<String>,
-    pub friend_invites: ReplicatedVec<String>,
-    pub social_blocks: ReplicatedVec<String>,
+    pub friends: ReplicatedContainer<Vec<String>>,
+    pub friend_invites: ReplicatedContainer<Vec<String>>,
+    pub social_blocks: ReplicatedContainer<Vec<String>>,
 }
 
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("92FE39A5-1948-4EE4-A49F-B02EA344DC57")]
-#[::nw_network::type_registry(4176)]
+#[az_rtti("92FE39A5-1948-4EE4-A49F-B02EA344DC57")]
+#[type_registry(4176)]
 pub struct SocialReplicatedState {
     #[replicated_state(group = 1)]
-    pub war_data: ReplicatedFieldHandler<Vec<u32>>,
+    pub war_data: ReplicatedContainer<IndexMap<Uuid, WarDataValue>>,
     #[replicated_state(group = 1)]
     pub daily_war_as_attacker_count: ReplicatedFieldHandler<u8>,
     #[replicated_state(group = 1)]
@@ -21,11 +28,11 @@ pub struct SocialReplicatedState {
     #[replicated_state(group = 1)]
     pub last_daily_reset_time: ReplicatedFieldHandler<u64>,
     #[replicated_state(group = 1)]
-    pub friends: ReplicatedVec<String>,
+    pub friends: ReplicatedContainer<Vec<String>>,
     #[replicated_state(group = 1)]
-    pub friend_invites: ReplicatedVec<String>,
+    pub friend_invites: ReplicatedContainer<Vec<String>>,
     #[replicated_state(group = 1)]
-    pub social_blocks: ReplicatedVec<String>,
+    pub social_blocks: ReplicatedContainer<Vec<String>>,
     #[replicated_state(group = 1)]
     pub most_recent_join_character_call: ReplicatedFieldHandler<u64>,
     pub player_title_id: ReplicatedFieldHandler<u32>,

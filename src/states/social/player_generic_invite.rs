@@ -1,3 +1,7 @@
+//! Generic player invite replication.
+
+use crate::{az_rtti, replicated_state, type_registry};
+
 use uuid::Uuid;
 
 use crate::serialize::ReplicatedFieldHandler;
@@ -14,10 +18,10 @@ impl crate::Marshaler for PlayerGenericInviteParticipants {
     }
 }
 
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("A02118E0-94AB-4945-B421-1FABFB0C4806")]
-#[::nw_network::type_registry(3408)]
+#[az_rtti("A02118E0-94AB-4945-B421-1FABFB0C4806")]
+#[type_registry(3408)]
 pub struct PlayerGenericInviteReplicatedState {
     pub invite_id: ReplicatedFieldHandler<Uuid>,
     #[replicated_state(group = 1)]

@@ -1,10 +1,14 @@
+//! Generic gathering component state replication.
+
+use crate::{az_rtti, replicated_state, type_registry};
+
 use crate::serialize::ReplicatedFieldHandler;
 use crate::{GatheringStatus, GdeId};
 
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("0091234C-7DDA-45FC-99EE-D44859C02A7F")]
-#[::nw_network::type_registry(81)]
+#[az_rtti("0091234C-7DDA-45FC-99EE-D44859C02A7F")]
+#[type_registry(81)]
 pub struct GatheringComponentReplicatedState {
     pub status: ReplicatedFieldHandler<GatheringStatus>,
     pub amt_remaining: ReplicatedFieldHandler<f32>,

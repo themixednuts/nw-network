@@ -1,6 +1,7 @@
 use std::fmt;
 
 use crate::serialize::{Marshaler, MarshalerError, ReadBuffer, WriteBuffer};
+use uuid::Uuid;
 
 macro_rules! id {
     (
@@ -98,4 +99,14 @@ id!(
 id!(
     /// Server-selected bandwidth mode carried in a state-bundle header.
     BandwidthMode(u8)
+);
+
+id!(
+    /// Stable actor identity carried by actor movement and routing messages.
+    ActorId(Uuid)
+);
+
+id!(
+    /// Hub identity used by cross-hub routing and movement coordination.
+    HubId(u32)
 );

@@ -1,0 +1,42 @@
+[package]
+name = "nw-gridmate"
+version = "0.1.0"
+edition = "2024"
+description = "GridMate-compatible transport and Bevy integration for nw-network."
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/themixednuts/nw-network"
+readme = "../../README.md"
+keywords = ["network", "gridmate", "bevy"]
+
+[features]
+default = ["client"]
+client = []
+server = ["client"]
+
+[dependencies]
+async-channel = "2.5"
+async-io = "2.6"
+async-lock = "3.4"
+bevy_app = "0.19"
+bevy_ecs = "0.19"
+bevy_tasks = "0.19"
+bytes = "1"
+dashmap = "6.1"
+derive_more = { version = "2", features = ["deref", "display", "from", "into"] }
+foreign-types = "0.3"
+futures-lite = "2.6"
+futures-timer = "3"
+futures-util = "0.3"
+hex = "0.4"
+lzzzz = "2"
+num_enum = "0.7"
+openssl = "0.10"
+openssl-sys = "0.9"
+smallvec = "1.15"
+thiserror = "2"
+tracing = "0.1"
+uuid = { version = "1", features = ["v4", "v7", "serde"] }
+nw-network = { path = "../.." }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_Networking_WinSock", "Win32_System_IO"] }

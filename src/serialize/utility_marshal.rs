@@ -7,17 +7,12 @@ use super::{
 };
 use uuid::Uuid;
 
-/// "absent value" wire shape for u32 fields that don't have a separate
+/// Sentinel encoding for optional `u32` fields that do not have a separate
 /// has-value byte.
 ///
-/// Used at field sites via `#[marshal(as = "Sentinel")]` (e.g. throughout
-/// `messages/contracts.rs`); the field stays typed as `Option<u32>` and
-/// round-trips through `From<Option<u32>>` / `From<Sentinel>`.
-///
-/// Was previously `Sentinel<T>` with a single concrete `Sentinel<u32>`
-/// instantiation; the generic parameter was unused polymorphism, since
-/// `u32::MAX`-as-None is an integer-specific wire idiom that does not
-/// generalize to other types.
+/// The field stays typed as `Option<u32>` and round-trips through
+/// `From<Option<u32>>` / `From<Sentinel>`. `u32::MAX` represents `None`; every
+/// other value represents `Some(value)`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
 pub struct Sentinel(pub Option<u32>);
 
@@ -60,6 +55,8 @@ impl Marshaler for Sentinel {
 
 // UUID marshaled as 16 raw bytes
 impl Marshaler for Uuid {
+    const MARSHAL_SIZE: usize = 16;
+
     fn marshal(&self, wb: &mut WriteBuffer) {
         wb.write_bytes(self.as_bytes());
     }
@@ -70,16 +67,12 @@ impl Marshaler for Uuid {
     }
 }
 
-/// fields.
+/// Native-endian raw sequence number for fields that carry an unconverted
+/// host-order `u64`.
 ///
-/// Distinct from the default `Marshaler<u64>` impl, which encodes 8 bytes
-/// in big-endian (carrier order). This base-state sequence is an outlier:
-/// host-side `u64`, so on our LE x86 client the on-wire bytes are LE too.
-/// Round-trip with [`Marshaler<u64>`]'s default would silently change the wire
-/// shape from LE (server-emitted) to BE.
-///
-/// Use as the field type whenever a wire `u64` was previously decoded with
-/// recipe into a single named type.
+/// Distinct from the default `Marshaler<u64>` impl, which encodes 8 bytes in
+/// carrier endian. Use this type only for protocol slots whose wire shape is
+/// the platform-native byte order of a raw sequence counter.
 #[derive(
     Debug, Clone, Copy, Default, PartialEq, Eq, Hash, derive_more::From, derive_more::Into,
 )]
@@ -102,8 +95,8 @@ impl Marshaler for RawSequenceNumber {
 
 /// 16-bit half-precision float wire encoding for an `f32` payload.
 ///
-/// effect / replicated-field float slots where a full 32-bit IEEE 754 single is
-/// overkill.
+/// Use for compact scalar fields where a full 32-bit IEEE 754 single is
+/// unnecessary.
 ///
 /// Use at field sites via `#[marshal(as = "HalfF32")]`; the field stays
 /// typed as `f32` and round-trips through `From<f32>` / `From<HalfF32>`.
@@ -157,7 +150,7 @@ impl<T: Marshaler> Marshaler for Box<T> {
     }
 }
 
-/// Fixed word-count bitset encoded as little-endian `u64` words.
+/// Fixed word-count bitset encoded as carrier-endian `u64` words.
 ///
 /// Const-generic over the **word count** (`WORDS`), not the bit count,
 /// because stable Rust can't yet compute `WORDS = (BITS + 63) / 64` at

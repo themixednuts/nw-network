@@ -755,8 +755,10 @@ mod wrapper_tests {
         }
     }
 
-    /// inner integer, and `Display`. These are what makes the wrapper usable
-    /// as a drop-in field type.
+    /// Verifies the `VlqU32` wrapper's field-type ergonomics.
+    ///
+    /// `Deref`, equality with the inner integer, and `Display` are what make
+    /// the wrapper usable as a drop-in field type.
     #[test]
     fn vlq_u32_newtype_traits() {
         let v: VlqU32 = 42_u32.into();

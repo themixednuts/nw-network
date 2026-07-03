@@ -1,13 +1,17 @@
-use crate::serialize::{ReplicatedFieldHandler, ReplicatedVec};
+//! Seasonal reward, task, and tracked-stat replication.
+
+use crate::{az_rtti, replicated_state, type_registry};
+
+use crate::serialize::{ReplicatedContainer, ReplicatedFieldHandler};
 
 pub type SeasonsRewardsTaskIds = Vec<u32>;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct SeasonsRewardsSnapshot {
     pub card_template: u8,
-    pub claimed_tasks: ReplicatedVec<u16>,
-    pub stamped_squares: ReplicatedVec<u16>,
-    pub wild_stamped_squares: ReplicatedVec<u16>,
+    pub claimed_tasks: ReplicatedContainer<Vec<u16>>,
+    pub stamped_squares: ReplicatedContainer<Vec<u16>>,
+    pub wild_stamped_squares: ReplicatedContainer<Vec<u16>>,
     pub reward_claimed: bool,
     pub reroll_count: u8,
     pub activities_tasks: Vec<u32>,
@@ -17,34 +21,34 @@ pub struct SeasonsRewardsSnapshot {
     pub wild_stamp_awards_this_session: u8,
     pub wild_stamp_award_remaining: u16,
     pub is_initialized: bool,
-    pub season_ids: ReplicatedVec<u32>,
-    pub season_bitmask_count: ReplicatedVec<u8>,
-    pub season_xp_by_season: ReplicatedVec<u64>,
-    pub redeem_bitmask: ReplicatedVec<u64>,
-    pub escrow_bitmask: ReplicatedVec<u64>,
-    pub foreign_escrow_bitmask: ReplicatedVec<u64>,
+    pub season_ids: ReplicatedContainer<Vec<u32>>,
+    pub season_bitmask_count: ReplicatedContainer<Vec<u8>>,
+    pub season_xp_by_season: ReplicatedContainer<Vec<u64>>,
+    pub redeem_bitmask: ReplicatedContainer<Vec<u64>>,
+    pub escrow_bitmask: ReplicatedContainer<Vec<u64>>,
+    pub foreign_escrow_bitmask: ReplicatedContainer<Vec<u64>>,
     pub first_character_connect_time: u64,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct SeasonsRewardsStatsUpdateSnapshot {
     pub initialized: bool,
-    pub group_list: ReplicatedVec<u32>,
-    pub group_count_list: ReplicatedVec<u16>,
-    pub group_stat_index: ReplicatedVec<u16>,
-    pub group_stat_value: ReplicatedVec<u32>,
+    pub group_list: ReplicatedContainer<Vec<u32>>,
+    pub group_count_list: ReplicatedContainer<Vec<u16>>,
+    pub group_stat_index: ReplicatedContainer<Vec<u16>>,
+    pub group_stat_value: ReplicatedContainer<Vec<u32>>,
 }
 
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("6F5CFE10-D60C-43C7-9C7A-2050B66DFABE")]
-#[::nw_network::type_registry(5606)]
+#[az_rtti("6F5CFE10-D60C-43C7-9C7A-2050B66DFABE")]
+#[type_registry(5606)]
 pub struct SeasonsRewardsStatsUpdateReplicatedState {
     pub initialized: ReplicatedFieldHandler<bool>,
-    pub group_list: ReplicatedVec<u32>,
-    pub group_count_list: ReplicatedVec<u16>,
-    pub group_stat_index: ReplicatedVec<u16>,
-    pub group_stat_value: ReplicatedVec<u32>,
+    pub group_list: ReplicatedContainer<Vec<u32>>,
+    pub group_count_list: ReplicatedContainer<Vec<u16>>,
+    pub group_stat_index: ReplicatedContainer<Vec<u16>>,
+    pub group_stat_value: ReplicatedContainer<Vec<u32>>,
 }
 
 impl SeasonsRewardsStatsUpdateReplicatedState {
@@ -57,15 +61,15 @@ impl SeasonsRewardsStatsUpdateReplicatedState {
     }
 }
 
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("A18C7B82-DE1E-4BCA-9852-A6F1372FBFF7")]
-#[::nw_network::type_registry(5485)]
+#[az_rtti("A18C7B82-DE1E-4BCA-9852-A6F1372FBFF7")]
+#[type_registry(5485)]
 pub struct SeasonsRewardsReplicatedState {
     pub card_template: ReplicatedFieldHandler<u8>,
-    pub claimed_tasks: ReplicatedVec<u16>,
-    pub stamped_squares: ReplicatedVec<u16>,
-    pub wild_stamped_squares: ReplicatedVec<u16>,
+    pub claimed_tasks: ReplicatedContainer<Vec<u16>>,
+    pub stamped_squares: ReplicatedContainer<Vec<u16>>,
+    pub wild_stamped_squares: ReplicatedContainer<Vec<u16>>,
     pub reward_claimed: ReplicatedFieldHandler<bool>,
     pub reroll_count: ReplicatedFieldHandler<u8>,
     pub activities_tasks: ReplicatedFieldHandler<SeasonsRewardsTaskIds>,
@@ -75,12 +79,12 @@ pub struct SeasonsRewardsReplicatedState {
     pub wild_stamp_awards_this_session: ReplicatedFieldHandler<u8>,
     pub wild_stamp_award_remaining: ReplicatedFieldHandler<u16>,
     pub is_initialized: ReplicatedFieldHandler<bool>,
-    pub season_ids: ReplicatedVec<u32>,
-    pub season_bitmask_count: ReplicatedVec<u8>,
-    pub season_xp_by_season: ReplicatedVec<u64>,
-    pub redeem_bitmask: ReplicatedVec<u64>,
-    pub escrow_bitmask: ReplicatedVec<u64>,
-    pub foreign_escrow_bitmask: ReplicatedVec<u64>,
+    pub season_ids: ReplicatedContainer<Vec<u32>>,
+    pub season_bitmask_count: ReplicatedContainer<Vec<u8>>,
+    pub season_xp_by_season: ReplicatedContainer<Vec<u64>>,
+    pub redeem_bitmask: ReplicatedContainer<Vec<u64>>,
+    pub escrow_bitmask: ReplicatedContainer<Vec<u64>>,
+    pub foreign_escrow_bitmask: ReplicatedContainer<Vec<u64>>,
     pub first_character_connect_time: ReplicatedFieldHandler<u64>,
 }
 
@@ -113,10 +117,10 @@ impl SeasonsRewardsReplicatedState {
     }
 }
 
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("737D86A4-B063-49C1-AE69-E9EFA8ED11EC")]
-#[::nw_network::type_registry(3290)]
+#[az_rtti("737D86A4-B063-49C1-AE69-E9EFA8ED11EC")]
+#[type_registry(3290)]
 pub struct SeasonsRewardsTrackedStatReplicatedState {
     pub start_time_point: ReplicatedFieldHandler<u64>,
     pub duration_at_start: ReplicatedFieldHandler<u64>,

@@ -1,10 +1,9 @@
-//! `FlatBitmask` — 8-bit-per-byte field-presence mask, no continuation marker.
+//! Fixed-width field-presence bitmasks with eight fields per byte.
 //!
-//! Sibling to [`MaskChain`](super::mask_chain::MaskChain), which uses 7
-//! field bits per byte plus a continuation bit and is self-delimiting on
-//! read. `FlatBitmask` packs 8 field bits per byte and relies on the
-//! caller to know the byte count externally — appropriate when the field
-//! count is fixed at compile time.
+//! Unlike [`MaskChain`](super::mask_chain::MaskChain), which uses seven field
+//! bits plus a continuation bit per byte, `FlatBitmask` has no terminator. The
+//! caller must know the byte count externally, which is appropriate when the
+//! field count is fixed by the surrounding protocol structure.
 //!
 //! Used by state-bundle descriptor masks and by the
 //! `marshal_replicated_fields!` macro for chunks whose field count is known
@@ -26,7 +25,10 @@ impl FlatBitmask {
     /// Field bits per byte (no continuation marker).
     pub const FIELDS_PER_BYTE: usize = 8;
 
-    /// Build from a slice of field-presence flags. Empty input emits one
+    /// Build from a slice of field-presence flags.
+    ///
+    /// Empty input emits one zero byte so a freshly-built empty mask still has
+    /// a concrete wire representation.
     #[must_use]
     pub fn from_dirty(dirty: &[bool]) -> Self {
         if dirty.is_empty() {

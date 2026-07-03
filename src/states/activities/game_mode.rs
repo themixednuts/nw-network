@@ -1,24 +1,27 @@
-use std::collections::HashMap;
+//! Game-mode instance replication for timers, participants, events, and map UI.
+
+use crate::{Marshaler, az_rtti, replicated_state, type_registry};
 
 use glam::Vec2;
 
 use crate::serialize::{
-    Codec, DefaultMarshaler, Marshaler, MarshalerError, ReadBuffer, ReplicatedContainer,
-    ReplicatedFieldHandler, ReplicatedMap, VlqU64, WIRE_VEC_CAP, WriteBuffer,
+    Codec, DefaultMarshaler, IndexMap, MarshalerError, ReadBuffer, ReplicatedContainer,
+    ReplicatedFieldHandler, VlqU64, WIRE_VEC_CAP, WriteBuffer,
 };
 use crate::types::{
     AfflictionData, Crc32, EntityId, EntityRef, GameModeParticipantStatus,
     RemoteServerFacetRefGameModeParticipantComponentServerFacet,
 };
 
-pub type GameModeIndexedByteMap = ReplicatedMap<VlqU64, u8>;
-pub type GameModeTimerMap = ReplicatedMap<Crc32, VlqU64>;
-pub type GameModeParticipantFacetRefs =
-    ReplicatedMap<VlqU64, RemoteServerFacetRefGameModeParticipantComponentServerFacet>;
-pub type GameModeParticipantCharacterIds = ReplicatedMap<VlqU64, EntityRef>;
-pub type GameModeRaidIds = ReplicatedMap<VlqU64, u64>;
+pub type GameModeIndexedByteMap = ReplicatedContainer<IndexMap<VlqU64, u8>>;
+pub type GameModeTimerMap = ReplicatedContainer<IndexMap<Crc32, VlqU64>>;
+pub type GameModeParticipantFacetRefs = ReplicatedContainer<
+    IndexMap<VlqU64, RemoteServerFacetRefGameModeParticipantComponentServerFacet>,
+>;
+pub type GameModeParticipantCharacterIds = ReplicatedContainer<IndexMap<VlqU64, EntityRef>>;
+pub type GameModeRaidIds = ReplicatedContainer<IndexMap<VlqU64, u64>>;
 pub type GameModeParticipantStatuses = ReplicatedContainer<
-    HashMap<VlqU64, GameModeParticipantStatus>,
+    IndexMap<VlqU64, GameModeParticipantStatus>,
     WIRE_VEC_CAP,
     DefaultMarshaler<VlqU64>,
     GameModeParticipantStatusByte,
@@ -53,27 +56,27 @@ impl Codec<GameModeParticipantStatus> for GameModeParticipantStatusByte {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ::nw_network::Marshaler)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Marshaler)]
 pub struct GameModeReplicatedEvent {
     pub field_00: u32,
     pub field_08: u64,
     pub field_10: u32,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, ::nw_network::Marshaler)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Marshaler)]
 pub struct GameModeMapIcon {
     pub icon_id: u32,
     pub position: Vec2,
 }
 
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("78EA6535-BB84-4D6A-A5A3-747AF2F5167C")]
-#[::nw_network::type_registry(2343)]
+#[az_rtti("78EA6535-BB84-4D6A-A5A3-747AF2F5167C")]
+#[type_registry(2343)]
 pub struct GameModeReplicatedState {
     pub cur_script_state_id: ReplicatedFieldHandler<i8>,
     pub cur_script_id: ReplicatedFieldHandler<Crc32>,
-    pub spawned_entity_ids_by_spawner_id: ReplicatedMap<Crc32, EntityId>,
+    pub spawned_entity_ids_by_spawner_id: ReplicatedContainer<IndexMap<Crc32, EntityId>>,
     pub game_mode_id: ReplicatedFieldHandler<Crc32>,
     pub game_mode_map_id: ReplicatedFieldHandler<Crc32>,
     pub participant_facet_refs: GameModeParticipantFacetRefs,
@@ -99,7 +102,7 @@ pub struct GameModeReplicatedState {
     pub map_size_in_tiles: ReplicatedFieldHandler<u16>,
     pub tile_ui_filename_id_and_rotation: GameModeIndexedByteMap,
     pub tile_visited: GameModeIndexedByteMap,
-    pub icons: ReplicatedMap<VlqU64, GameModeMapIcon>,
+    pub icons: ReplicatedContainer<IndexMap<VlqU64, GameModeMapIcon>>,
     pub linked_mode: ReplicatedFieldHandler<bool>,
 }
 

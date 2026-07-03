@@ -1,6 +1,11 @@
+//! Group, invite, and group-finder replication.
+
+use crate::{az_rtti, replicated_state, type_registry};
+
 use uuid::Uuid;
 
-use crate::serialize::{ReplicatedFieldHandler, ReplicatedMap};
+use crate::serialize::{IndexMap, ReplicatedContainer, ReplicatedFieldHandler};
+use crate::types::{RemoteServerFacetRefHousingPlotComponentServerFacet, RemoteServerGdeRef};
 use crate::{EntityRef, Marshaler};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Marshaler)]
@@ -40,10 +45,17 @@ pub struct GameInviteData {
     pub expires_at: u64,
 }
 
-#[::nw_network::replicated_state]
+/// Compact house references carried by group-data replication.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Marshaler)]
+pub struct GroupMemberHouseId {
+    pub housing_plot_remote_ref: RemoteServerFacetRefHousingPlotComponentServerFacet,
+    pub house_data_remote_ref: RemoteServerGdeRef,
+}
+
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("CE526687-CA4B-4647-A599-EC026FDC0C6D")]
-#[::nw_network::type_registry(1994)]
+#[az_rtti("CE526687-CA4B-4647-A599-EC026FDC0C6D")]
+#[type_registry(1994)]
 pub struct GroupsComponentReplicatedState {
     pub group_id: ReplicatedFieldHandler<Uuid>,
     pub raid_id: ReplicatedFieldHandler<u64>,
@@ -57,11 +69,11 @@ pub struct GroupsComponentReplicatedState {
     #[replicated_state(group = 1)]
     pub create_source: ReplicatedFieldHandler<u8>,
     #[replicated_state(group = 1)]
-    pub group_finder_applications: ReplicatedMap<Uuid, GroupFinderApplicationData>,
+    pub group_finder_applications: ReplicatedContainer<IndexMap<Uuid, GroupFinderApplicationData>>,
     #[replicated_state(group = 1)]
-    pub inbound_group_invites: ReplicatedMap<Uuid, GroupInviteData>,
+    pub inbound_group_invites: ReplicatedContainer<IndexMap<Uuid, GroupInviteData>>,
     #[replicated_state(group = 1)]
-    pub outbound_group_invites: ReplicatedMap<Uuid, GroupInviteData>,
+    pub outbound_group_invites: ReplicatedContainer<IndexMap<Uuid, GroupInviteData>>,
     #[replicated_state(group = 1)]
     pub next_eligible_abandon_game_mode_vote_time: ReplicatedFieldHandler<u64>,
     #[replicated_state(group = 1)]

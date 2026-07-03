@@ -4,6 +4,23 @@
 //! last-modified sequence, and network-data flag used by replicated-state
 //! merge. The owning state decides field presence; the handler writes only
 //! its value bytes through a field-local codec.
+//!
+//! Merge is a three-way operation between the old merged field, the incoming
+//! field, and the destination being updated. The merge stamps accepted
+//! incoming changes with the merge sequence, preserves the old sequence when
+//! the effective value has not changed, and carries default suppression forward
+//! so default-valued fields can stay absent on the wire. `has_new_network_data`
+//! is set by unmarshal or by a merge that accepts incoming data; local
+//! `set_value` and `access` calls make the field dirty for outbound
+//! replication but deliberately do not set that flag.
+//!
+//! Delta-compressed handlers split values into an absolute portion and a
+//! relative portion. Values inside the configured delta range update only the
+//! relative portion; values outside the range re-base the absolute portion and
+//! reset the relative portion. The floating/vector delta checks use strict
+//! `<` bounds so endpoint quantization buckets remain available for sentinel
+//! encodings such as the byte value `255` and the relative-position
+//! `[255, 255, 255]` marker.
 
 use super::{
     buffer::{ReadBuffer, WriteBuffer},
@@ -220,7 +237,9 @@ impl<T: Default, M: Codec<T>> ReplicatedFieldHandler<T, M> {
         Self::new(Some(value))
     }
 
-    /// returns `Option<&T>` instead of asserting `HasValue()` —
+    /// Borrow the current value, if any.
+    ///
+    /// This returns `Option<&T>` instead of asserting presence, so
     /// callers express intent at the unwrap site.
     #[must_use]
     pub fn value(&self) -> Option<&T> {
@@ -237,20 +256,26 @@ impl<T: Default, M: Codec<T>> ReplicatedFieldHandler<T, M> {
         self.last_modified
     }
 
-    /// machinery (e.g. inside `merge_and_update_sequence`) to stamp the
-    /// merged value with the merge sequence; production `set_value`
-    /// already does this for the local case.
+    /// Set the last-modified sequence directly.
+    ///
+    /// Merge machinery uses this to stamp the merged value with the merge
+    /// sequence; ordinary local writes should go through
+    /// [`set_value`](Self::set_value).
     pub fn set_last_modified(&mut self, seq: impl Into<SequenceNumber>) {
         self.last_modified = seq.into();
     }
 
+    /// Returns whether this field contains incoming network data that has not
+    /// yet been acknowledged by the owner.
     #[must_use]
     pub fn has_new_network_data(&self) -> bool {
         self.has_new_network_data
     }
 
-    /// after a successful marshal pass so subsequent passes don't
-    /// re-emit the same value.
+    /// Clear the incoming-network-data flag.
+    ///
+    /// Owners call this after consuming the merged network value so subsequent
+    /// passes do not report the same incoming change again.
     pub fn reset_has_new_network_data(&mut self) {
         self.has_new_network_data = false;
     }
@@ -320,7 +345,9 @@ impl<T: Default + PartialEq + Clone, M: Codec<T>> ReplicatedFieldHandler<T, M> {
     ///
     /// If `new_value` equals the default value, the value is stored but the
     /// field is marked invalid so replication can suppress it. Otherwise the
-    /// field is marked `ValidNonSequence`.
+    /// field is marked `ValidNonSequence`. Local writes do not set
+    /// [`has_new_network_data`](Self::has_new_network_data); that flag is only
+    /// for inbound network data.
     pub fn set_value(&mut self, new_value: T) {
         if matches!(self.default_value.as_ref(), Some(d) if self.values_equal(d, &new_value)) {
             // Equals default — keep the value but suppress replication.
@@ -384,9 +411,13 @@ impl<T: Default + PartialEq + Clone, M: Codec<T>> ReplicatedFieldHandler<T, M> {
         self.last_modified = SequenceNumber::Invalid;
     }
 
+    /// Merge an incoming field against the old merged value and update this
+    /// field's sequence bookkeeping.
+    ///
     /// The caller supplies the previous merged value (`old_value`), the new
-    /// incoming value, the sequence stamp to apply when a real change is
-    /// detected, and whether previous network-data status should be inherited.
+    /// incoming value, the sequence stamp to apply when the effective value
+    /// changes, and whether previous network-data status should be inherited
+    /// for unchanged values.
     ///
     /// Returns true when this merge observes new data relative to `old_value`.
     #[must_use]
@@ -664,7 +695,9 @@ impl Codec<(f32, f32, f32)> for PositionAnchorMarshaler {
 // Per-field marshaler policies (continued)
 // ---------------------------------------------------------------------------
 
-/// **emits the high byte only** and reads it back
+/// Absolute-portion codec for delta-compressed `u16` counters.
+///
+/// It emits the high byte only and reads it back
 /// shifted left into the high half (low byte stays zero on
 /// unmarshal).
 ///
@@ -815,9 +848,10 @@ impl DeltaRangeValue for Vec3 {
 
 /// Delta-compressed field split into absolute and relative portions.
 ///
-/// This preserves the wire-level absolute/relative split and set logic. The
-/// timestamp accessor is intentionally left out because this field model does
-/// not track per-field network timestamps yet.
+/// When a new value is strictly inside the configured `DELTA_RANGE` around the
+/// current absolute value, only the relative portion is updated. Otherwise the
+/// handler re-bases by storing the new value as the absolute portion and
+/// resetting the relative portion to `T::default()`.
 ///
 /// The combined value is **always** computed on demand from the two
 /// portions — there is no cached field. Mutate parts through their
@@ -922,14 +956,17 @@ impl DeltaCompressedCounterHandler {
         self.absolute_portion.is_field_valid()
     }
 
-    /// `[absolute, absolute + 255]`.
+    /// Returns true when `new_value` fits in the current
+    /// `[absolute, absolute + 255]` window.
     #[must_use]
     pub fn is_within_delta(&self, new_value: u16) -> bool {
         let abs = self.absolute_portion.value.unwrap_or(0);
         abs <= new_value && (new_value - abs) <= VALUES_IN_BYTE
     }
 
-    /// the absolute portion when the new value would exceed the
+    /// Set the combined counter value.
+    ///
+    /// This re-bases the absolute portion when the new value would exceed the
     /// relative range or no absolute has been set yet.
     pub fn set_value(&mut self, new_value: u16) {
         if !self.is_absolute_valid() || !self.is_within_delta(new_value) {
@@ -942,8 +979,9 @@ impl DeltaCompressedCounterHandler {
         }
     }
 
-    /// Reconstructed combined value. Returns `0` when no absolute has
-    /// default-construct return.
+    /// Reconstructed combined value.
+    ///
+    /// Returns `0` when both portions are absent.
     #[must_use]
     pub fn value(&self) -> u16 {
         self.absolute_portion.value.unwrap_or(0) + self.relative_portion.value.unwrap_or(0)
@@ -970,8 +1008,9 @@ impl QuantizedRelativePosition {
         Self { quantized_values }
     }
 
-    /// signaling "no relative portion." Default-constructed positions
-    /// are zero.
+    /// Returns true when this value is the no-relative-portion sentinel.
+    ///
+    /// Default-constructed positions use this sentinel.
     #[must_use]
     pub fn is_zero(&self) -> bool {
         self.quantized_values == [255, 255, 255]
@@ -1059,7 +1098,7 @@ impl<AbsoluteM: Codec<Vec3>> DynamicDeltaReplicatedFieldHandler<AbsoluteM> {
     fn is_within_delta(&self, new_value: Vec3, quantization: f32) -> bool {
         let abs = self.absolute_portion.value.unwrap_or(Vec3::ZERO);
         let abs_diff = (abs - new_value).abs();
-        // for the sentinel.
+        // Strict comparisons keep endpoint buckets free for the sentinel.
         abs_diff.x < quantization && abs_diff.y < quantization && abs_diff.z < quantization
     }
 
@@ -1417,10 +1456,8 @@ mod tests {
         );
     }
 
-    /// Confirms that mutating the parts directly is reflected by `get()`
-    /// without any explicit "sync" step — the prior `combined_value`
-    /// used to verify; now the read-through structure makes the bug
-    /// unrepresentable.
+    /// Confirms that mutating the parts directly is reflected by `value()`
+    /// without any explicit sync step.
     #[test]
     fn test_delta_compressed_field_handler_get_reads_through_parts() {
         let mut field = DeltaCompressedReplicatedFieldHandler::<Vec3, 8>::default();

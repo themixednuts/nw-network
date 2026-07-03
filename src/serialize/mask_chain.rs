@@ -1,13 +1,9 @@
+//! Self-delimiting field-presence masks with seven fields per byte.
 //!
-//! Each byte holds 7 field-presence bits in positions 0–6; bit 7 is a
-//! **continuation marker**. Set means "another byte follows in this
-//! masks and inside `#[replicated_state]` group field masks.
-//!
-//! Before this module the same loop was hand-rolled at every callsite —
-//! `loop { let m = rb.read_u8()?; masks.push(m); if (m & 0x80) == 0 { break; } }`
-//! plus a private `mask_has(&masks, field) = masks[field/7] & (1 << field%7)`
-//! lookup, both copy-pasted across `attribute.rs`, `chat.rs`,
-//! `cooldown_timers.rs`, and `musical_performance_player.rs`.
+//! Each byte holds field bits in positions 0..=6; bit 7 is the continuation
+//! marker. When bit 7 is set, another mask byte follows. Reading stops at the
+//! first byte without the continuation marker, and fields beyond the decoded
+//! chain are treated as absent. The empty mask is a single `0x00` terminator.
 
 use super::{
     buffer::{ReadBuffer, WriteBuffer},

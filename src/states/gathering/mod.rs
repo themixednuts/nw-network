@@ -1,3 +1,5 @@
+//! Gathering and fishing replicated state modules.
+
 pub mod component;
 pub mod fishing;
 pub mod gatherable_controller;

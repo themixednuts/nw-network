@@ -1,4 +1,8 @@
-use crate::serialize::{ReplicatedFieldHandler, ReplicatedMap, ReplicatedVec};
+//! Character attribute and attribute-bonus replication.
+
+use crate::{az_rtti, replicated_state, type_registry};
+
+use crate::serialize::{IndexMap, ReplicatedContainer, ReplicatedFieldHandler};
 use crate::{CharacterAttributeType, Marshaler};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Marshaler)]
@@ -37,21 +41,21 @@ pub struct PersistentAttributeData {
     pub unspent_attribute_points: u32,
 }
 
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("464EBD37-105F-4790-8C59-C46EBB4C57A6")]
-#[::nw_network::type_registry(129)]
+#[az_rtti("464EBD37-105F-4790-8C59-C46EBB4C57A6")]
+#[type_registry(129)]
 pub struct AttributeComponentReplicatedState {
     pub attributes: ReplicatedFieldHandler<CharacterAttributes>,
-    pub attribute_bonuses: ReplicatedMap<CharacterAttributeType, u32>,
-    pub placing_bonuses: ReplicatedVec<u32, 5>,
+    pub attribute_bonuses: ReplicatedContainer<IndexMap<CharacterAttributeType, u32>>,
+    pub placing_bonuses: ReplicatedContainer<Vec<u32>, 5>,
     pub persistent_attribute_data: ReplicatedFieldHandler<PersistentAttributeData>,
 }
 
 impl AttributeComponentReplicatedState {
     pub fn apply_snapshot(&mut self, snapshot: AttributeSnapshot) {
         self.attributes.set_value(snapshot.attributes);
-        self.attribute_bonuses = ReplicatedMap::new(
+        self.attribute_bonuses = ReplicatedContainer::new(
             snapshot.attribute_bonuses_sequence,
             snapshot
                 .attribute_bonuses
@@ -60,7 +64,7 @@ impl AttributeComponentReplicatedState {
                 .collect(),
         );
         self.placing_bonuses =
-            ReplicatedVec::new(snapshot.placing_bonuses_sequence, snapshot.placing_bonuses);
+            ReplicatedContainer::new(snapshot.placing_bonuses_sequence, snapshot.placing_bonuses);
         self.persistent_attribute_data
             .set_value(snapshot.persistent_attribute_data);
     }

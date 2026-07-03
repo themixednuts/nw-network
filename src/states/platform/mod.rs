@@ -1,7 +1,8 @@
-pub mod entitlement;
-pub mod twitch_stream;
+//! Platform-service replicated state modules.
 
+pub mod entitlement;
+
+pub use crate::generated::states::TwitchStreamReplicatedState;
 pub use entitlement::{
     EntitlementBalance, EntitlementComponentReplicatedState, EntitlementSnapshot,
 };
-pub use twitch_stream::TwitchStreamReplicatedState;

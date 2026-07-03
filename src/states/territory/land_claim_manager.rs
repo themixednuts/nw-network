@@ -1,8 +1,12 @@
+//! Territory-wide land-claim governance and progression replication.
+
+use crate::{az_rtti, replicated_state, type_registry};
+
 use glam::{Vec3, Vec4};
 use uuid::Uuid;
 
 use crate::Marshaler;
-use crate::serialize::{ReplicatedFieldHandler, ReplicatedVec};
+use crate::serialize::{ReplicatedContainer, ReplicatedFieldHandler};
 
 #[derive(Debug, Clone, Default, PartialEq, Marshaler)]
 pub struct LandClaimOwnerData {
@@ -71,62 +75,63 @@ pub struct LandClaimSnapshot {
 }
 
 /// Territory-wide land-claim replicated state.
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("ABBA1776-6E4C-4BA6-A831-6F4052AFC9C0")]
-#[::nw_network::type_registry(3086)]
+#[az_rtti("ABBA1776-6E4C-4BA6-A831-6F4052AFC9C0")]
+#[type_registry(3086)]
 pub struct LandClaimManagerComponentReplicatedState {
-    pub fcp_lock_timers: ReplicatedVec<u16>,
+    pub fcp_lock_timers: ReplicatedContainer<Vec<u16>>,
     pub fcp_lock_anchor: ReplicatedFieldHandler<u64>,
-    pub replicated_claim_keys: ReplicatedVec<u16>,
-    pub replicated_conflict_faction: ReplicatedVec<u8>,
-    pub replicated_conflict_lottery_end_time: ReplicatedVec<u64>,
-    pub replicated_conflict_start_time: ReplicatedVec<u64>,
-    pub replicated_darkness_threshold: ReplicatedVec<u32>,
-    pub replicated_darkness_cycle_end_time: ReplicatedVec<u64>,
-    pub replicated_faction_control_point_data: ReplicatedVec<u8>,
-    pub replicated_faction1_influence_percentages: ReplicatedVec<u8>,
-    pub replicated_faction2_influence_percentages: ReplicatedVec<u8>,
-    pub replicated_faction3_influence_percentages: ReplicatedVec<u8>,
-    pub replicated_governance: ReplicatedVec<LandClaimGovernanceData>,
-    pub replicated_influence_race_start_time: ReplicatedVec<u64>,
-    pub replicated_pos_data: ReplicatedVec<Vec3>,
-    pub replicated_progression: ReplicatedVec<LandClaimProgressionData>,
-    pub replicated_owner_data: ReplicatedVec<LandClaimOwnerData>,
-    pub replicated_war_dec_threshold_met_faction: ReplicatedVec<u8>,
+    pub replicated_claim_keys: ReplicatedContainer<Vec<u16>>,
+    pub replicated_conflict_faction: ReplicatedContainer<Vec<u8>>,
+    pub replicated_conflict_lottery_end_time: ReplicatedContainer<Vec<u64>>,
+    pub replicated_conflict_start_time: ReplicatedContainer<Vec<u64>>,
+    pub replicated_darkness_threshold: ReplicatedContainer<Vec<u32>>,
+    pub replicated_darkness_cycle_end_time: ReplicatedContainer<Vec<u64>>,
+    pub replicated_faction_control_point_data: ReplicatedContainer<Vec<u8>>,
+    pub replicated_faction1_influence_percentages: ReplicatedContainer<Vec<u8>>,
+    pub replicated_faction2_influence_percentages: ReplicatedContainer<Vec<u8>>,
+    pub replicated_faction3_influence_percentages: ReplicatedContainer<Vec<u8>>,
+    pub replicated_governance: ReplicatedContainer<Vec<LandClaimGovernanceData>>,
+    pub replicated_influence_race_start_time: ReplicatedContainer<Vec<u64>>,
+    pub replicated_pos_data: ReplicatedContainer<Vec<Vec3>>,
+    pub replicated_progression: ReplicatedContainer<Vec<LandClaimProgressionData>>,
+    pub replicated_owner_data: ReplicatedContainer<Vec<LandClaimOwnerData>>,
+    pub replicated_war_dec_threshold_met_faction: ReplicatedContainer<Vec<u8>>,
 }
 
 impl LandClaimManagerComponentReplicatedState {
     pub fn apply_snapshot(&mut self, snapshot: LandClaimSnapshot) {
         let sequence = snapshot.sequence;
 
-        self.fcp_lock_timers = ReplicatedVec::new(sequence, snapshot.fcp_lock_timers);
+        self.fcp_lock_timers = ReplicatedContainer::new(sequence, snapshot.fcp_lock_timers);
         self.fcp_lock_anchor.set_value(snapshot.fcp_lock_anchor);
-        self.replicated_claim_keys = ReplicatedVec::new(sequence, snapshot.claim_keys);
-        self.replicated_conflict_faction = ReplicatedVec::new(sequence, snapshot.conflict_factions);
+        self.replicated_claim_keys = ReplicatedContainer::new(sequence, snapshot.claim_keys);
+        self.replicated_conflict_faction =
+            ReplicatedContainer::new(sequence, snapshot.conflict_factions);
         self.replicated_conflict_lottery_end_time =
-            ReplicatedVec::new(sequence, snapshot.conflict_lottery_end_times);
+            ReplicatedContainer::new(sequence, snapshot.conflict_lottery_end_times);
         self.replicated_conflict_start_time =
-            ReplicatedVec::new(sequence, snapshot.conflict_start_times);
+            ReplicatedContainer::new(sequence, snapshot.conflict_start_times);
         self.replicated_darkness_threshold =
-            ReplicatedVec::new(sequence, snapshot.darkness_thresholds);
+            ReplicatedContainer::new(sequence, snapshot.darkness_thresholds);
         self.replicated_darkness_cycle_end_time =
-            ReplicatedVec::new(sequence, snapshot.darkness_cycle_end_times);
+            ReplicatedContainer::new(sequence, snapshot.darkness_cycle_end_times);
         self.replicated_faction_control_point_data =
-            ReplicatedVec::new(sequence, snapshot.faction_control_point_data);
+            ReplicatedContainer::new(sequence, snapshot.faction_control_point_data);
         self.replicated_faction1_influence_percentages =
-            ReplicatedVec::new(sequence, snapshot.faction1_influence_percentages);
+            ReplicatedContainer::new(sequence, snapshot.faction1_influence_percentages);
         self.replicated_faction2_influence_percentages =
-            ReplicatedVec::new(sequence, snapshot.faction2_influence_percentages);
+            ReplicatedContainer::new(sequence, snapshot.faction2_influence_percentages);
         self.replicated_faction3_influence_percentages =
-            ReplicatedVec::new(sequence, snapshot.faction3_influence_percentages);
-        self.replicated_governance = ReplicatedVec::new(sequence, snapshot.governance);
+            ReplicatedContainer::new(sequence, snapshot.faction3_influence_percentages);
+        self.replicated_governance = ReplicatedContainer::new(sequence, snapshot.governance);
         self.replicated_influence_race_start_time =
-            ReplicatedVec::new(sequence, snapshot.influence_race_start_times);
-        self.replicated_pos_data = ReplicatedVec::new(sequence, snapshot.positions);
-        self.replicated_progression = ReplicatedVec::new(sequence, snapshot.progressions);
-        self.replicated_owner_data = ReplicatedVec::new(sequence, snapshot.owners);
+            ReplicatedContainer::new(sequence, snapshot.influence_race_start_times);
+        self.replicated_pos_data = ReplicatedContainer::new(sequence, snapshot.positions);
+        self.replicated_progression = ReplicatedContainer::new(sequence, snapshot.progressions);
+        self.replicated_owner_data = ReplicatedContainer::new(sequence, snapshot.owners);
         self.replicated_war_dec_threshold_met_faction =
-            ReplicatedVec::new(sequence, snapshot.war_dec_threshold_met_factions);
+            ReplicatedContainer::new(sequence, snapshot.war_dec_threshold_met_factions);
     }
 }

@@ -1,5 +1,9 @@
+//! Tipping-pool point totals and payout timing replication.
+
+use crate::{az_rtti, replicated_state, type_registry};
+
 use crate::Marshaler;
-use crate::serialize::ReplicatedVec;
+use crate::serialize::ReplicatedContainer;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Marshaler)]
 pub struct TippingPoolPointEntry {
@@ -10,31 +14,31 @@ pub struct TippingPoolPointEntry {
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct TippingPoolSnapshot {
-    pub pool_ids: ReplicatedVec<u32, 50>,
-    pub pool_counts: ReplicatedVec<u16, 50>,
-    pub pool_categories: ReplicatedVec<u8, 50>,
-    pub point_entries: ReplicatedVec<TippingPoolPointEntry, 1000>,
+    pub pool_ids: ReplicatedContainer<Vec<u32>, 50>,
+    pub pool_counts: ReplicatedContainer<Vec<u16>, 50>,
+    pub pool_categories: ReplicatedContainer<Vec<u8>, 50>,
+    pub point_entries: ReplicatedContainer<Vec<TippingPoolPointEntry>, 1000>,
 }
 
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("F7B56641-F8C3-41A9-83B2-13AC4F9843F9")]
-#[::nw_network::type_registry(3681)]
+#[az_rtti("F7B56641-F8C3-41A9-83B2-13AC4F9843F9")]
+#[type_registry(3681)]
 pub struct TippingPoolComponentReplicatedState {
-    pub pool_ids: ReplicatedVec<u32, 50>,
-    pub pool_counts: ReplicatedVec<u16, 50>,
-    pub pool_categories: ReplicatedVec<u8, 50>,
-    pub point_entries: ReplicatedVec<TippingPoolPointEntry, 1000>,
+    pub pool_ids: ReplicatedContainer<Vec<u32>, 50>,
+    pub pool_counts: ReplicatedContainer<Vec<u16>, 50>,
+    pub pool_categories: ReplicatedContainer<Vec<u8>, 50>,
+    pub point_entries: ReplicatedContainer<Vec<TippingPoolPointEntry>, 1000>,
 }
 
 impl TippingPoolComponentReplicatedState {
     #[must_use]
     pub fn empty_baseline(sequence: u64) -> Self {
         Self {
-            pool_ids: ReplicatedVec::new(sequence, Vec::new()),
-            pool_counts: ReplicatedVec::new(sequence, Vec::new()),
-            pool_categories: ReplicatedVec::new(sequence, Vec::new()),
-            point_entries: ReplicatedVec::new(sequence, Vec::new()),
+            pool_ids: ReplicatedContainer::new(sequence, Vec::new()),
+            pool_counts: ReplicatedContainer::new(sequence, Vec::new()),
+            pool_categories: ReplicatedContainer::new(sequence, Vec::new()),
+            point_entries: ReplicatedContainer::new(sequence, Vec::new()),
             ..Default::default()
         }
     }

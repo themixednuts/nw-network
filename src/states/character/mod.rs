@@ -1,10 +1,10 @@
-pub mod look_targeting;
+//! Character-owned replicated state modules.
+
 pub mod mount;
 pub mod player;
 pub mod player_appearance;
 pub mod player_arena;
 
-pub use look_targeting::LookTargetingComponentReplicatedState;
 pub use mount::{
     MountComponentReplicatedState, MountDyeData, PersistentMountDataValue, SummonAuthorization,
 };

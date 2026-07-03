@@ -1,3 +1,5 @@
+//! Public replicated state modules and re-exports.
+
 pub mod activities;
 pub mod alc;
 pub mod base;
@@ -30,19 +32,18 @@ pub use activities::{
 pub use alc::ALCReplicatedState;
 pub use base::HubIFragmentReplicatedState;
 pub use character::{
-    DebugAccountProbationOverride, FreePlayerCountdown, LookTargetingComponentReplicatedState,
-    MountComponentReplicatedState, MountDyeData, PersistentMountDataValue,
-    PlayerAppearanceComponentReplicatedState, PlayerAppearanceIconData, PlayerAppearanceSnapshot,
-    PlayerArenaReplicatedState, PlayerComponentReplicatedState, PlayerIdentitySnapshot,
-    SummonAuthorization,
+    DebugAccountProbationOverride, FreePlayerCountdown, MountComponentReplicatedState,
+    MountDyeData, PersistentMountDataValue, PlayerAppearanceComponentReplicatedState,
+    PlayerAppearanceIconData, PlayerAppearanceSnapshot, PlayerArenaReplicatedState,
+    PlayerComponentReplicatedState, PlayerIdentitySnapshot, SummonAuthorization,
 };
 pub use combat::{
     AbilityComponentReplicatedState, AbilityInstanceTrackingComponentReplicatedState,
     AbilitySnapshot, AbilityU32Pair, ActiveTrayIconData, AttributeBonus,
-    AttributeComponentReplicatedState, AttributeSnapshot, BeamAttackComponentReplicatedState,
-    BossPhaseComponentReplicatedState, CharacterAttributeValue, CharacterAttributes,
-    ChargeComponentReplicatedState, ColdAfflictionData, CombatStatusComponentReplicatedState,
-    ConditionalCooldownData, CooldownMapKind, CooldownTimerSnapshot, CooldownTimerWindow,
+    AttributeComponentReplicatedState, AttributeSnapshot, BossPhaseComponentReplicatedState,
+    CharacterAttributeValue, CharacterAttributes, ChargeComponentReplicatedState,
+    ColdAfflictionData, CombatStatusComponentReplicatedState, ConditionalCooldownData,
+    CooldownMapKind, CooldownTimerSnapshot, CooldownTimerWindow,
     CooldownTimersComponentReplicatedState, DamageReceiverComponentReplicatedState,
     DynamicScalingStatusEffectData, GritHalfFloatField, GritReplicatedState, HotAfflictionData,
     LightweightStatusEffectData, ManaComponentReplicatedState, PersistentAbilityData,
@@ -51,7 +52,7 @@ pub use combat::{
     RemoteStatusEffectData, ReplicatedGeneralCooldown, SpellComponentReplicatedState,
     StaminaComponentReplicatedState, StatMultiplierSnapshot,
     StatMultiplierTableComponentReplicatedState, StatMultiplierValue, StatusEffectInstanceData,
-    StatusEffectsComponentReplicatedState, StatusEffectsSnapshot, TerritoryStatusEffectData,
+    StatusEffectsComponentReplicatedState, StatusEffectsSnapshot, TerritoryStatusEffect,
     VitalsComponentReplicatedState, VitalsStateData,
 };
 pub use economy::{
@@ -71,7 +72,7 @@ pub use housing::{
     CommittedResourceValue, HomePointPersistentRef, HomePointReplicatedState,
     HouseDataReplicatedState, HousingItemValue, MAX_BUILDABLE_GRID_SIDE_CHANGES,
     PlacementObstructionComponentReplicatedState, PlayerHomeComponentReplicatedState,
-    PlayerHomeSnapshot,
+    PlayerHomeSnapshot, ReplicatedOwnedHouseData,
 };
 pub use interaction::{
     DelayedEventComponentReplicatedState, DetectionVolumeEventReplicatedState,
@@ -120,15 +121,15 @@ pub use quests::{
     SeasonsRewardsTaskIds, SeasonsRewardsTrackedStatReplicatedState,
 };
 pub use scripting::{
-    InstancedSlayerScriptReplicatedState, InstancedSlayerScriptSnapshot, SlayerScriptEntityMap,
-    SlayerScriptReplicatedState, SlayerScriptTimerMap,
+    InstancedSlayerScriptReplicatedState, InstancedSlayerScriptSnapshot,
+    SlayerScriptReplicatedState,
 };
 pub use social::{
     ChatMuteEntry, ChatMutes, ChatMutesReplicatedState, ChatReplicatedState, EligibleTerritoryWar,
-    GameInviteData, GroupFinderApplicationData, GroupInviteData, GroupsComponentReplicatedState,
-    GuildCrestColor, GuildCrestData, GuildInviteSenderData, GuildInviteStateData,
-    GuildPlayerIdentification, GuildsComponentReplicatedState, GuildsReplicatedState,
-    MAX_TEMPORARY_AFFILIATION_CHANGES, PlayerGenericInviteParticipants,
+    GameInviteData, GroupFinderApplicationData, GroupInviteData, GroupMemberHouseId,
+    GroupsComponentReplicatedState, GuildCrestColor, GuildCrestData, GuildInviteSenderData,
+    GuildInviteStateData, GuildPlayerIdentification, GuildsComponentReplicatedState,
+    GuildsReplicatedState, MAX_TEMPORARY_AFFILIATION_CHANGES, PlayerGenericInviteParticipants,
     PlayerGenericInviteReplicatedState, ReplicatedGuildInfluence, SocialCollectionsSnapshot,
     SocialReplicatedState, TemporaryAffiliation, TemporaryAffiliationRelationship,
     TemporaryAffiliationReplicatedState, TemporaryAffiliationType,
@@ -149,7 +150,7 @@ pub use territory::{
 pub use world::{
     AlignToTerrainComponentReplicatedState, ClientPathingComponentReplicatedState,
     ClientPathingCorridorPath, ClientPathingCorridorPaths, GdeMetadataReplicatedState,
-    GlobalMapData, GlobalMapDataManagerComponentReplicatedState, GlobalMapDataValue,
+    GlobalMapData, GlobalMapDataManagerComponentReplicatedState, GlobalMapDataMap,
     MAX_CLIENT_PATHING_CORRIDOR_PATHS, MAX_CLIENT_PATHING_CORRIDOR_POINTS,
     MAX_CLIENT_PATHING_CORRIDOR_SAMPLES, PositionInTheWorldReplicatedState,
     WaypointsComponentReplicatedState, position_anchor_to_bevy_translation,

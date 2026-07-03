@@ -1,7 +1,11 @@
+//! Equipped item, loadout, ammo, and visual paperdoll replication.
+
+use crate::{az_rtti, replicated_state, type_registry};
+
 use crate::Marshaler;
 use crate::hub::SequenceNumber;
 use crate::serialize::{
-    MarshalerError, ReadBuffer, ReplicatedFieldHandler, ReplicatedMap, ReplicatedVec,
+    IndexMap, MarshalerError, ReadBuffer, ReplicatedContainer, ReplicatedFieldHandler,
     VlqU16Marshaler, VlqU32, WriteBuffer,
 };
 
@@ -94,14 +98,14 @@ pub struct PaperdollLoadout {
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct PaperdollSnapshot {
-    pub visible_durability: Option<ReplicatedVec<u32>>,
-    pub non_visible_durability: Option<ReplicatedVec<u32>>,
-    pub visible_paperdoll_slots: Option<ReplicatedVec<u32>>,
-    pub non_visible_paperdoll_slots: Option<ReplicatedVec<u32>>,
-    pub visible_full_item_data: Option<ReplicatedVec<PaperdollItemDescriptor>>,
-    pub non_visible_full_item_data: Option<ReplicatedVec<PaperdollItemDescriptor>>,
-    pub visible_item_visual_data: Option<ReplicatedVec<ItemVisualData>>,
-    pub loadouts: Option<ReplicatedVec<PaperdollLoadout>>,
+    pub visible_durability: Option<ReplicatedContainer<Vec<u32>>>,
+    pub non_visible_durability: Option<ReplicatedContainer<Vec<u32>>>,
+    pub visible_paperdoll_slots: Option<ReplicatedContainer<Vec<u32>>>,
+    pub non_visible_paperdoll_slots: Option<ReplicatedContainer<Vec<u32>>>,
+    pub visible_full_item_data: Option<ReplicatedContainer<Vec<PaperdollItemDescriptor>>>,
+    pub non_visible_full_item_data: Option<ReplicatedContainer<Vec<PaperdollItemDescriptor>>>,
+    pub visible_item_visual_data: Option<ReplicatedContainer<Vec<ItemVisualData>>>,
+    pub loadouts: Option<ReplicatedContainer<Vec<PaperdollLoadout>>>,
     pub hide_skins: bool,
     pub sheathe_map: Option<PaperdollSlotFlags>,
     pub item_slots_attachment_status: Option<PaperdollSlotFlags>,
@@ -114,21 +118,21 @@ pub struct PaperdollSnapshot {
     pub main_hand_option2_loaded_ammo_data: Option<LoadedAmmoData>,
 }
 
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("B258A60E-FC21-40CF-8B86-57B7F6083D32")]
-#[::nw_network::type_registry(3183)]
+#[az_rtti("B258A60E-FC21-40CF-8B86-57B7F6083D32")]
+#[type_registry(3183)]
 pub struct PaperdollComponentReplicatedState {
     #[replicated_state(group = 1)]
-    pub visible_durability: ReplicatedVec<u32>,
+    pub visible_durability: ReplicatedContainer<Vec<u32>>,
     #[replicated_state(group = 1)]
-    pub visible_full_item_data: ReplicatedVec<PaperdollItemDescriptor>,
+    pub visible_full_item_data: ReplicatedContainer<Vec<PaperdollItemDescriptor>>,
     #[replicated_state(group = 1)]
-    pub non_visible_full_item_data: ReplicatedVec<PaperdollItemDescriptor>,
+    pub non_visible_full_item_data: ReplicatedContainer<Vec<PaperdollItemDescriptor>>,
     #[replicated_state(group = 1)]
-    pub non_visible_paperdoll_slots: ReplicatedVec<u32>,
+    pub non_visible_paperdoll_slots: ReplicatedContainer<Vec<u32>>,
     #[replicated_state(group = 1)]
-    pub non_visible_durability: ReplicatedVec<u32>,
+    pub non_visible_durability: ReplicatedContainer<Vec<u32>>,
     #[replicated_state(group = 1)]
     pub bonus_equip_load: ReplicatedFieldHandler<u16>,
     #[replicated_state(group = 1)]
@@ -140,9 +144,9 @@ pub struct PaperdollComponentReplicatedState {
     #[replicated_state(group = 1)]
     pub main_hand_option2_loaded_ammo_data: ReplicatedFieldHandler<LoadedAmmoData>,
     #[replicated_state(group = 1)]
-    pub loadouts: ReplicatedVec<PaperdollLoadout>,
+    pub loadouts: ReplicatedContainer<Vec<PaperdollLoadout>>,
     #[replicated_state(group = 1)]
-    pub hide_skins: ReplicatedMap<u32, bool>,
+    pub hide_skins: ReplicatedContainer<IndexMap<u32, bool>>,
     #[replicated_state(group = 2)]
     pub sheathe_map: ReplicatedFieldHandler<PaperdollSlotFlags>,
     #[replicated_state(group = 2)]
@@ -150,9 +154,9 @@ pub struct PaperdollComponentReplicatedState {
     #[replicated_state(group = 2)]
     pub active_map: ReplicatedFieldHandler<PaperdollSlotFlags>,
     #[replicated_state(group = 2)]
-    pub visible_paperdoll_slots: ReplicatedVec<u32>,
+    pub visible_paperdoll_slots: ReplicatedContainer<Vec<u32>>,
     #[replicated_state(group = 2)]
-    pub visible_item_visual_data: ReplicatedVec<ItemVisualData>,
+    pub visible_item_visual_data: ReplicatedContainer<Vec<ItemVisualData>>,
     #[replicated_state(group = 2)]
     pub loadout_swap_increment: ReplicatedFieldHandler<u8>,
 }
@@ -185,7 +189,7 @@ impl PaperdollComponentReplicatedState {
         }
 
         if snapshot.hide_skins {
-            self.hide_skins = ReplicatedMap::default();
+            self.hide_skins = ReplicatedContainer::default();
         }
         if let Some(value) = snapshot.sheathe_map {
             self.sheathe_map.set_value(value);
@@ -282,7 +286,10 @@ impl PaperdollComponentReplicatedState {
         state
     }
 
-    fn single_value<T>(source: &ReplicatedVec<T>, index: usize) -> Option<ReplicatedVec<T>>
+    fn single_value<T>(
+        source: &ReplicatedContainer<Vec<T>>,
+        index: usize,
+    ) -> Option<ReplicatedContainer<Vec<T>>>
     where
         T: Clone + Marshaler,
     {
@@ -293,10 +300,13 @@ impl PaperdollComponentReplicatedState {
         Some(Self::indexed_values(source.last_modified(), vec![value]))
     }
 
-    fn indexed_values<T>(sequence: impl Into<SequenceNumber>, values: Vec<T>) -> ReplicatedVec<T>
+    fn indexed_values<T>(
+        sequence: impl Into<SequenceNumber>,
+        values: Vec<T>,
+    ) -> ReplicatedContainer<Vec<T>>
     where
         T: Marshaler,
     {
-        ReplicatedVec::new(sequence, values)
+        ReplicatedContainer::new(sequence, values)
     }
 }

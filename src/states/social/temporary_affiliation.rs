@@ -1,5 +1,11 @@
+//! Temporary player affiliation replication.
+
+use crate::{az_rtti, replicated_state, type_registry};
+
 use crate::Marshaler;
-use crate::serialize::{MarshalerError, ReadBuffer, ReplicatedMap, VlqU64, WriteBuffer};
+use crate::serialize::{
+    IndexMap, MarshalerError, ReadBuffer, ReplicatedContainer, VlqU64, WriteBuffer,
+};
 use crate::types::{TemporaryAffiliationRelationship, TemporaryAffiliationType};
 
 pub const MAX_TEMPORARY_AFFILIATION_CHANGES: usize = 0x3fff;
@@ -38,17 +44,19 @@ impl Marshaler for TemporaryAffiliationRelationship {
     }
 }
 
-#[derive(::nw_network::Marshaler, Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Marshaler, Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct TemporaryAffiliation {
     pub affiliation_type: TemporaryAffiliationType,
     pub relationship: TemporaryAffiliationRelationship,
 }
 
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("E45CAB41-47AC-4AC0-8CCF-276816ACAB0A")]
-#[::nw_network::type_registry(3563)]
+#[az_rtti("E45CAB41-47AC-4AC0-8CCF-276816ACAB0A")]
+#[type_registry(3563)]
 pub struct TemporaryAffiliationReplicatedState {
-    pub affiliations:
-        ReplicatedMap<VlqU64, TemporaryAffiliation, MAX_TEMPORARY_AFFILIATION_CHANGES>,
+    pub affiliations: ReplicatedContainer<
+        IndexMap<VlqU64, TemporaryAffiliation>,
+        MAX_TEMPORARY_AFFILIATION_CHANGES,
+    >,
 }

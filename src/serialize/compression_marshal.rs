@@ -1,9 +1,11 @@
-//! Compression-oriented codecs for packed floats, vectors, quaternions,
-//! transforms, and bit-size fields.
+//! Compression-oriented codecs for bandwidth-sensitive math and size fields.
 //!
-//! The codecs preserve compact wire layouts built from sentinel flag bytes,
-//! half-floats, quantized Euler bytes, omitted-largest quaternion components,
-//! and byte-aligned packed sizes.
+//! This module contains policy codecs for compact vectors, quaternions,
+//! transforms, bounded floats, integer quantization, and packed bit counts.
+//! Encodings combine flag-byte sentinels, half-float scalars,
+//! omitted-component quaternions, bounded fixed-width buckets, and VLQ bit
+//! sizes so replicated state can avoid sending raw 32-bit values when a
+//! narrower protocol shape is known.
 
 use super::{
     buffer::{ReadBuffer, WriteBuffer},
@@ -138,8 +140,9 @@ impl Codec<QuatCompNormQuantized> for QuatCompNormQuantizedMarshaler {
     }
 }
 
+/// Raw two-angle quaternion payload used by the quantized Euler-angle helper.
 ///
-/// helper below.
+/// The wire shape is two carrier-endian `u32` values.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct QuatCompNormQuantizedAngles {
     pub first: u32,
@@ -160,6 +163,7 @@ impl Marshaler for QuatCompNormQuantizedAngles {
     }
 }
 
+/// Compressed normalized quaternion using the smallest-three component layout.
 ///
 /// - flags bit 0: omitted component sign,
 /// - flags bits 1..=4: component is exactly zero,
@@ -423,8 +427,9 @@ impl Marshaler for QuatCompNorm {
     }
 }
 
+/// Half-precision three-component vector codec.
 ///
-/// 6 bytes. `Vec3CompNormMarshaler` is the variable-width normalized-vector
+/// Each component is written as one [`HalfF32`], 6 bytes total.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Vec3CompMarshaler;
 
@@ -445,6 +450,50 @@ impl Codec<Vec3> for Vec3CompMarshaler {
     }
 }
 
+/// Tagged half-precision transform-scale codec.
+///
+/// The first byte selects one of three shapes:
+/// - `0`: default value `Vec3::ONE`;
+/// - `1`: uniform value, followed by one [`HalfF32`];
+/// - any other value: full vector, followed by three [`HalfF32`] values.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct NonUniformScaleCompMarshaler;
+
+impl Codec<Vec3> for NonUniformScaleCompMarshaler {
+    fn marshal(value: &Vec3, wb: &mut WriteBuffer) {
+        if value.x.to_bits() == 1.0f32.to_bits()
+            && value.y.to_bits() == 1.0f32.to_bits()
+            && value.z.to_bits() == 1.0f32.to_bits()
+        {
+            wb.write_u8(0);
+        } else if value.x.to_bits() == value.y.to_bits() && value.y.to_bits() == value.z.to_bits() {
+            wb.write_u8(1);
+            HalfF32(value.x).marshal(wb);
+        } else {
+            wb.write_u8(2);
+            HalfF32(value.x).marshal(wb);
+            HalfF32(value.y).marshal(wb);
+            HalfF32(value.z).marshal(wb);
+        }
+    }
+
+    fn unmarshal(rb: &mut ReadBuffer) -> Result<Vec3, MarshalerError> {
+        match rb.read_u8()? {
+            0 => Ok(Vec3::ONE),
+            1 => {
+                let HalfF32(value) = HalfF32::unmarshal(rb)?;
+                Ok(Vec3::splat(value))
+            }
+            _ => {
+                let HalfF32(x) = HalfF32::unmarshal(rb)?;
+                let HalfF32(y) = HalfF32::unmarshal(rb)?;
+                let HalfF32(z) = HalfF32::unmarshal(rb)?;
+                Ok(Vec3::new(x, y, z))
+            }
+        }
+    }
+}
+
 /// Quantizes an `f32` into a `u16` within a caller-supplied
 /// `[range_min, range_max]` interval.
 ///
@@ -462,8 +511,11 @@ pub struct Float16Marshaler {
 }
 
 impl Float16Marshaler {
+    /// Encoded size of a bounded float.
     pub const MARSHAL_SIZE: usize = 2;
 
+    /// Build a bounded-float codec for the inclusive range
+    /// `[range_min, range_max]`.
     #[must_use]
     pub fn new(range_min: f32, range_max: f32) -> Self {
         debug_assert!(
@@ -476,9 +528,14 @@ impl Float16Marshaler {
         }
     }
 
+    /// Encode a bounded float as a clamped `u16` bucket.
+    ///
+    /// Values are normalized into `[0.0, 1.0]`, clamped, multiplied by
+    /// `u16::MAX`, and truncated toward the lower bucket. The truncation is
+    /// part of the bounded-range protocol shape.
     pub fn marshal(&self, wb: &mut WriteBuffer, value: f32) {
         let normalized = ((value - self.min) / self.range).clamp(0.0, 1.0);
-        let q = f32_to_u16((normalized * f32::from(u16::MAX)).round());
+        let q = f32_to_u16(normalized * f32::from(u16::MAX));
         q.marshal(wb);
     }
 
@@ -489,7 +546,8 @@ impl Float16Marshaler {
     /// Returns an error when the underlying `u16` payload is truncated.
     pub fn unmarshal(&self, rb: &mut ReadBuffer) -> Result<f32, MarshalerError> {
         let q = u16::unmarshal(rb)?;
-        Ok(self.min + (f32::from(q) / f32::from(u16::MAX)) * self.range)
+        let value = self.min + (f32::from(q) / f32::from(u16::MAX)) * self.range;
+        Ok(value.clamp(self.min, self.min + self.range))
     }
 }
 
@@ -615,6 +673,7 @@ impl Codec<Vec3> for Vec3CompNormMarshaler {
     }
 }
 
+/// Flagged affine-transform codec that omits identity components.
 ///
 /// - one flag byte with `HAS_SCALE` (bit 0), `HAS_ROT` (bit 1),
 ///   `HAS_POS` (bit 2);
@@ -918,15 +977,7 @@ mod tests {
     }
 
     #[test]
-    fn vec3_comp_is_fixed_three_half_floats() {
-        let mut wb = WriteBuffer::new(CARRIER_ENDIAN);
-        Vec3CompMarshaler::marshal(&Vec3::ZERO, &mut wb);
-        assert_eq!(wb.into_vec(), [0, 0, 0, 0, 0, 0]);
-
-        let mut wb = WriteBuffer::new(CARRIER_ENDIAN);
-        Vec3CompMarshaler::marshal(&Vec3::splat(2.0), &mut wb);
-        assert_eq!(wb.into_vec(), [0x40, 0x00, 0x40, 0x00, 0x40, 0x00]);
-
+    fn vec3_comp_uses_fixed_three_half_shape() {
         let mut wb = WriteBuffer::new(CARRIER_ENDIAN);
         Vec3CompMarshaler::marshal(&Vec3::new(1.0, 2.0, 3.0), &mut wb);
         let bytes = wb.into_vec();
@@ -935,6 +986,38 @@ mod tests {
         let mut rb = ReadBuffer::new(CARRIER_ENDIAN, &bytes);
         let decoded = Vec3CompMarshaler::unmarshal(&mut rb).unwrap();
         assert_eq!(decoded, Vec3::new(1.0, 2.0, 3.0));
+        assert_eq!(rb.left(), 0);
+    }
+
+    #[test]
+    fn non_uniform_scale_comp_uses_tagged_scale_shapes() {
+        let mut wb = WriteBuffer::new(CARRIER_ENDIAN);
+        NonUniformScaleCompMarshaler::marshal(&Vec3::ONE, &mut wb);
+        assert_eq!(wb.into_vec(), [0]);
+
+        let mut wb = WriteBuffer::new(CARRIER_ENDIAN);
+        NonUniformScaleCompMarshaler::marshal(&Vec3::ZERO, &mut wb);
+        assert_eq!(wb.into_vec(), [1, 0, 0]);
+
+        let mut wb = WriteBuffer::new(CARRIER_ENDIAN);
+        NonUniformScaleCompMarshaler::marshal(&Vec3::splat(2.0), &mut wb);
+        assert_eq!(wb.into_vec(), [1, 0x40, 0x00]);
+
+        let mut wb = WriteBuffer::new(CARRIER_ENDIAN);
+        NonUniformScaleCompMarshaler::marshal(&Vec3::new(1.0, 2.0, 3.0), &mut wb);
+        let bytes = wb.into_vec();
+        assert_eq!(bytes, [2, 0x3c, 0x00, 0x40, 0x00, 0x42, 0x00]);
+
+        let mut rb = ReadBuffer::new(CARRIER_ENDIAN, &bytes);
+        let decoded = NonUniformScaleCompMarshaler::unmarshal(&mut rb).unwrap();
+        assert_eq!(decoded, Vec3::new(1.0, 2.0, 3.0));
+        assert_eq!(rb.left(), 0);
+
+        let mut rb = ReadBuffer::new(CARRIER_ENDIAN, &[0]);
+        assert_eq!(
+            NonUniformScaleCompMarshaler::unmarshal(&mut rb).unwrap(),
+            Vec3::ONE
+        );
         assert_eq!(rb.left(), 0);
     }
 
@@ -982,6 +1065,17 @@ mod tests {
         codec.marshal(&mut wb, 5.0);
         let bytes = wb.into_vec();
         assert_eq!(bytes, [0xff, 0xff]);
+    }
+
+    #[test]
+    fn float16_marshaler_decodes_range_endpoints() {
+        let codec = Float16Marshaler::new(-1.0, 1.0);
+
+        let mut rb = ReadBuffer::new(CARRIER_ENDIAN, &[0x00, 0x00]);
+        assert_eq!(codec.unmarshal(&mut rb).unwrap(), -1.0);
+
+        let mut rb = ReadBuffer::new(CARRIER_ENDIAN, &[0xff, 0xff]);
+        assert_eq!(codec.unmarshal(&mut rb).unwrap(), 1.0);
     }
 
     #[test]

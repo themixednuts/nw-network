@@ -1,3 +1,5 @@
+//! First-time user experience replicated state modules.
+
 pub mod detection_volume_teleport;
 pub mod island;
 

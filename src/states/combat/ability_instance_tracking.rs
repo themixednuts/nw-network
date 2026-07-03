@@ -1,8 +1,12 @@
+//! Ability instance tracking payloads.
+
+use crate::{az_rtti, type_registry};
+
 use crate::serialize::{Marshaler, MarshalerError, ReadBuffer, WriteBuffer};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-#[::nw_network::az_rtti("56C9A913-F676-4E50-B2B4-1C9F8719DF56")]
-#[::nw_network::type_registry(5116)]
+#[az_rtti("56C9A913-F676-4E50-B2B4-1C9F8719DF56")]
+#[type_registry(5116)]
 pub struct AbilityInstanceTrackingComponentReplicatedState {
     pub value: String,
 }

@@ -1,7 +1,11 @@
+//! Ability tray, cooldown, and persistent ability replication.
+
+use crate::{az_rtti, replicated_state, type_registry};
+
 use arrayvec::ArrayVec;
 
 use crate::Marshaler;
-use crate::serialize::{ReplicatedFieldHandler, ReplicatedVec};
+use crate::serialize::{ReplicatedContainer, ReplicatedFieldHandler};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Marshaler)]
 pub struct AbilityU32Pair {
@@ -24,20 +28,20 @@ pub struct PersistentAbilityData {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct AbilitySnapshot {
     pub persistent_ability_data: PersistentAbilityData,
-    pub action_data_count: Option<ReplicatedVec<u8>>,
-    pub action_data_ability_ids: Option<ReplicatedVec<u32>>,
+    pub action_data_count: Option<ReplicatedContainer<Vec<u8>>>,
+    pub action_data_ability_ids: Option<ReplicatedContainer<Vec<u32>>>,
 }
 
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("35877C3E-4EF8-43DD-ABE7-ABF35104F1B5")]
-#[::nw_network::type_registry(185)]
+#[az_rtti("35877C3E-4EF8-43DD-ABE7-ABF35104F1B5")]
+#[type_registry(185)]
 pub struct AbilityComponentReplicatedState {
     pub persistent_ability_data: ReplicatedFieldHandler<PersistentAbilityData>,
-    pub hit_data_num_hits: ReplicatedVec<u8>,
-    pub hit_data_ability_ids: ReplicatedVec<u32>,
-    pub action_data_count: ReplicatedVec<u8>,
-    pub action_data_ability_ids: ReplicatedVec<u32>,
+    pub hit_data_num_hits: ReplicatedContainer<Vec<u8>>,
+    pub hit_data_ability_ids: ReplicatedContainer<Vec<u32>>,
+    pub action_data_count: ReplicatedContainer<Vec<u8>>,
+    pub action_data_ability_ids: ReplicatedContainer<Vec<u32>>,
 }
 
 impl AbilityComponentReplicatedState {

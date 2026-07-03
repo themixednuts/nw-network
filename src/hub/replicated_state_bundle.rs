@@ -1,4 +1,13 @@
+//! Replicated state bundles carry one client-context stream update.
 //!
+//! A bundle starts with a header containing the hub sequence number, client
+//! context instance id, bandwidth mode byte (the low three bits select the
+//! protocol bandwidth mode), reliability flag, and optional replication-control
+//! data. The header is followed by a VLQ32 length prefix and an inner bundle
+//! buffer. That inner buffer is a sequence of per-actor state records; each
+//! record carries an actor interest id, a `u8` fragment count, and exactly that
+//! many fragments. Replication control data uses the capture-validated compact
+//! `u8` count and pause-partition index encoding.
 //!
 //! ```text
 //! ReplicatedStateBundle:
@@ -31,15 +40,15 @@ use uuid::Uuid;
 
 use super::sequence_number::SequenceNumber;
 use super::{
-    BandwidthMode, ClientContextId, DynFragment, Fragment, FragmentKey, FragmentRegistration,
-    InterestId, MarshalContext, TypeIndex, fragment_registration_by_type_index,
-    fragment_registration_by_uuid, fragment_type_index_by_uuid,
+    BandwidthMode, ClientContextId, DynFragment, FragmentKey, FragmentRegistration, InterestId,
+    MarshalContext, TypeIndex, fragment_registration_by_type_index, fragment_registration_by_uuid,
+    fragment_type_index_by_uuid,
 };
 use crate::serialize::buffer::{CARRIER_ENDIAN, ReadBuffer, WriteBuffer};
 use crate::serialize::error::MarshalerError;
-use crate::serialize::marshaler::Marshaler;
 use crate::serialize::vlq::VlqU32Marshaler;
 use crate::types::{AzRtti, TypeRegistryEntry};
+use crate::{Fragment, Marshaler, az_rtti, type_registry};
 
 pub const MAX_REPLICATED_STATE_BUNDLE_BUFFER_SIZE: usize = 250 * 1024;
 pub const MAX_REPLICATION_CONTROL_IDS: usize = 100;
@@ -49,9 +58,67 @@ fn capped_len_u32(len: usize) -> u32 {
     u32::try_from(len).expect("wire length cap fits in u32")
 }
 
-#[derive(::nw_network::Marshaler, Debug, Clone, Default, PartialEq, Eq)]
-#[::nw_network::az_rtti("64CEE0FB-B878-47B3-8377-B45A9C9BA884")]
-#[::nw_network::type_registry(18)]
+fn usize_to_u64(value: usize) -> u64 {
+    u64::try_from(value).unwrap_or(u64::MAX)
+}
+
+fn vlq_u32_len(value: u32) -> usize {
+    if value < 0x80 {
+        1
+    } else if value < 0x4000 {
+        2
+    } else if value < 0x20_0000 {
+        3
+    } else if value < 0x1000_0000 {
+        4
+    } else {
+        5
+    }
+}
+
+fn vlq_u64_len(value: u64) -> usize {
+    if value < 0x80 {
+        1
+    } else if value < 0x4000 {
+        2
+    } else if value < 0x20_0000 {
+        3
+    } else if value < 0x1000_0000 {
+        4
+    } else if value < 0x0000_0000_0800_0000 {
+        5
+    } else if value < 0x0000_0400_0000_0000 {
+        6
+    } else if value < 0x0002_0000_0000_0000 {
+        7
+    } else if value < 0x0100_0000_0000_0000 {
+        8
+    } else {
+        9
+    }
+}
+
+fn sequence_number_wire_len(sequence: SequenceNumber) -> usize {
+    match sequence {
+        SequenceNumber::Invalid => 1,
+        SequenceNumber::ValidNonSequence => 1 + vlq_u64_len(0),
+        SequenceNumber::Seq(sequence) => 1 + vlq_u64_len(sequence),
+    }
+}
+
+fn replication_control_data_wire_len(replication_control: &ReplicationControlData) -> usize {
+    <u8 as Marshaler>::MARSHAL_SIZE
+        + <u8 as Marshaler>::MARSHAL_SIZE
+        + replication_control.len() * <u16 as Marshaler>::MARSHAL_SIZE
+}
+
+fn bundle_buffer_wire_len(bundle_buffer: &[u8]) -> usize {
+    vlq_u32_len(capped_len_u32(bundle_buffer.len())) + bundle_buffer.len()
+}
+
+#[derive(Marshaler, Debug, Clone, Default, PartialEq, Eq)]
+#[az_rtti("64CEE0FB-B878-47B3-8377-B45A9C9BA884")]
+#[type_registry(18)]
 pub struct ReplicationPerformanceData {
     pub collection_period_ms: u16,
     pub count_bundles: u32,
@@ -114,12 +181,17 @@ impl AddAssign<&Self> for ReplicationPerformanceData {
     }
 }
 
+/// Replication-control message for one client-context stream.
+///
+/// The payload carries a sequence number, the client context instance id, and
+/// an ordered list of interest ids split into stop-replication ids followed by
+/// pause-replication ids.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-#[::nw_network::az_rtti(
+#[az_rtti(
     uuid = "FE59B513-CEB7-4BC2-80E6-545A8C492591",
     name = "Amazon::Hub::ReplicationControl"
 )]
-#[::nw_network::type_registry(9)]
+#[type_registry(9)]
 pub struct ReplicationControl {
     pub seq: SequenceNumber,
     pub client_context_instance_id: u8,
@@ -167,9 +239,10 @@ impl ReplicationControl {
         interest_ids.extend(pause_replication_ids.iter().copied().map(Into::into));
 
         let pause_start_idx = u32::try_from(stop_replication_ids.len()).map_err(|_| {
-            MarshalerError::ContainerOverflow {
-                len: stop_replication_ids.len(),
-                capacity: MAX_REPLICATION_CONTROL_MESSAGE_IDS,
+            MarshalerError::InvalidRange {
+                value: usize_to_u64(stop_replication_ids.len()),
+                min: 0,
+                max: u64::from(u32::MAX),
             }
         })?;
 
@@ -435,9 +508,14 @@ impl Marshaler for ReplicationControlData {
     }
 }
 
+/// State-bundle message for one client-context stream.
+///
+/// A bundle carries the stream sequence, client context instance id, bandwidth
+/// mode, reliability flag, optional replication-control data, and the raw
+/// encoded state-record buffer.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-#[::nw_network::az_rtti("8A40AEC2-AE07-4F92-9BF3-78FC0CC94FDF")]
-#[::nw_network::type_registry(8)]
+#[az_rtti("8A40AEC2-AE07-4F92-9BF3-78FC0CC94FDF")]
+#[type_registry(8)]
 pub struct ReplicatedStateBundle {
     pub seq: SequenceNumber,
     pub client_context_instance_id: u8,
@@ -609,9 +687,16 @@ impl ReplicatedStateBundle {
 
     #[must_use]
     pub fn total_bundle_size(&self) -> usize {
-        let mut wb = WriteBuffer::new(CARRIER_ENDIAN);
-        self.marshal(&mut wb);
-        wb.len()
+        sequence_number_wire_len(self.seq)
+            + <u8 as Marshaler>::MARSHAL_SIZE
+            + <u8 as Marshaler>::MARSHAL_SIZE
+            + <bool as Marshaler>::MARSHAL_SIZE
+            + <bool as Marshaler>::MARSHAL_SIZE
+            + self
+                .replication_control
+                .as_ref()
+                .map_or(0, replication_control_data_wire_len)
+            + bundle_buffer_wire_len(&self.bundle_buffer)
     }
 
     /// Append one state record to the bundle buffer.
@@ -643,16 +728,7 @@ impl ReplicatedStateBundle {
             &mut ReadBuffer<'_>,
         ) -> Result<(), MarshalerError>,
     {
-        ReplicatedStateBundleView {
-            seq: self.seq,
-            client_context_instance_id: self.client_context_instance_id,
-            bandwidth_mode: self.bandwidth_mode,
-            is_unreliable: self.is_unreliable,
-            replication_control: self.replication_control.clone(),
-            bundle_buffer: &self.bundle_buffer,
-            total_bundle_size: self.total_bundle_size(),
-        }
-        .visit_fragments(visit)
+        visit_bundle_buffer_fragments(&self.bundle_buffer, visit)
     }
 
     fn ensure_replication_control(&mut self) -> &mut ReplicationControlData {
@@ -776,7 +852,7 @@ impl<'a> ReplicatedStateBundleView<'a> {
     /// # Errors
     ///
     /// Returns the first error reported by header decoding or the visitor.
-    pub fn visit_fragments<F>(&self, mut visit: F) -> Result<(), MarshalerError>
+    pub fn visit_fragments<F>(&self, visit: F) -> Result<(), MarshalerError>
     where
         F: FnMut(
             StateRecordHeader,
@@ -784,16 +860,30 @@ impl<'a> ReplicatedStateBundleView<'a> {
             &mut ReadBuffer<'a>,
         ) -> Result<(), MarshalerError>,
     {
-        let mut rb = ReadBuffer::new(CARRIER_ENDIAN, self.bundle_buffer);
-        while !rb.is_empty() {
-            let record_header = read_state_record_header(&mut rb)?;
-            for _ in 0..record_header.fragment_count {
-                let fragment_header = read_state_fragment_header(&mut rb)?;
-                visit(record_header, fragment_header, &mut rb)?;
-            }
-        }
-        Ok(())
+        visit_bundle_buffer_fragments(self.bundle_buffer, visit)
     }
+}
+
+fn visit_bundle_buffer_fragments<'a, F>(
+    bundle_buffer: &'a [u8],
+    mut visit: F,
+) -> Result<(), MarshalerError>
+where
+    F: FnMut(
+        StateRecordHeader,
+        StateFragmentHeaderSpan,
+        &mut ReadBuffer<'a>,
+    ) -> Result<(), MarshalerError>,
+{
+    let mut rb = ReadBuffer::new(CARRIER_ENDIAN, bundle_buffer);
+    while !rb.is_empty() {
+        let record_header = read_state_record_header(&mut rb)?;
+        for _ in 0..record_header.fragment_count {
+            let fragment_header = read_state_fragment_header(&mut rb)?;
+            visit(record_header, fragment_header, &mut rb)?;
+        }
+    }
+    Ok(())
 }
 
 pub fn marshal_bundle_buffer(bundle_buffer: &[u8], wb: &mut WriteBuffer) {
@@ -859,9 +949,12 @@ impl FragmentTypeInfo {
     #[must_use]
     pub fn registered<C>() -> Self
     where
-        C: TypeRegistryEntry,
+        C: AzRtti + TypeRegistryEntry,
     {
-        Self::TypeIndex(C::TYPE_INDEX)
+        fragment_type_index_by_uuid(C::TYPE_ID).map_or_else(
+            || Self::RawUuid(C::TYPE_ID),
+            |index| Self::TypeIndex(index.get()),
+        )
     }
 
     #[must_use]
@@ -1047,7 +1140,7 @@ impl BaselineableFragment {
     #[must_use]
     pub fn encode<C>(fragment: &C, marshal_context: &MarshalContext<'_>) -> Self
     where
-        C: DynFragment + TypeRegistryEntry,
+        C: AzRtti + DynFragment + TypeRegistryEntry,
     {
         let mut wb = WriteBuffer::new(CARRIER_ENDIAN);
         fragment.full_marshal(marshal_context, &mut wb);
@@ -1185,7 +1278,9 @@ where
 ///
 /// # Errors
 ///
-/// Returns the first error reported by the record body writer.
+/// Returns the first hard error reported by the record body writer. Individual
+/// fragments that have no payload or exceed the bundle cap can be reported as
+/// skip outcomes by [`StateRecordWriter`] without failing the whole record.
 pub fn write_state_record<R>(
     wb: &mut WriteBuffer,
     interest_id: impl Into<InterestId>,
@@ -1214,6 +1309,18 @@ pub fn write_state_record<R>(
     result
 }
 
+/// Result of attempting to append one fragment to a state record.
+#[must_use]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StateFragmentWriteOutcome {
+    /// The fragment header and body were written and counted in the record.
+    Written,
+    /// The fragment reported that it had no payload, so no bytes were kept.
+    SkippedNoPayload,
+    /// The fragment would exceed the bundle-buffer cap, so only that fragment was rolled back.
+    SkippedOverLimit,
+}
+
 pub struct StateRecordWriter<'a> {
     wb: &'a mut WriteBuffer,
     count: u8,
@@ -1224,14 +1331,16 @@ impl StateRecordWriter<'_> {
     ///
     /// # Errors
     ///
-    /// Returns an error when the record fragment count or bundle byte cap would be exceeded.
+    /// Returns a skip outcome when the fragment has no payload or would exceed
+    /// the bundle byte cap. Returns an error only when the record fragment count
+    /// would be exceeded.
     pub fn write_fragment<C>(
         &mut self,
         fragment_key: impl Into<FragmentKey>,
         fragment: &C,
-    ) -> Result<(), MarshalerError>
+    ) -> Result<StateFragmentWriteOutcome, MarshalerError>
     where
-        C: DynFragment + TypeRegistryEntry,
+        C: AzRtti + DynFragment + TypeRegistryEntry,
     {
         self.write_fragment_with_context(fragment_key, fragment, &MarshalContext::default())
     }
@@ -1240,15 +1349,17 @@ impl StateRecordWriter<'_> {
     ///
     /// # Errors
     ///
-    /// Returns an error when the record fragment count or bundle byte cap would be exceeded.
+    /// Returns a skip outcome when the fragment has no payload or would exceed
+    /// the bundle byte cap. Returns an error only when the record fragment count
+    /// would be exceeded.
     pub fn write_fragment_with_context<C>(
         &mut self,
         fragment_key: impl Into<FragmentKey>,
         fragment: &C,
         marshal_context: &MarshalContext<'_>,
-    ) -> Result<(), MarshalerError>
+    ) -> Result<StateFragmentWriteOutcome, MarshalerError>
     where
-        C: DynFragment + TypeRegistryEntry,
+        C: AzRtti + DynFragment + TypeRegistryEntry,
     {
         let fragment_key = fragment_key.into();
         self.reserve_fragment_slot()?;
@@ -1258,31 +1369,29 @@ impl StateRecordWriter<'_> {
         let wrote_payload = fragment.marshal_contents_with(marshal_context, self.wb);
         if !wrote_payload {
             self.wb.truncate_to(fragment_start);
-            return Ok(());
+            return Ok(StateFragmentWriteOutcome::SkippedNoPayload);
         }
         if self.wb.len() > MAX_REPLICATED_STATE_BUNDLE_BUFFER_SIZE {
-            let len = self.wb.len();
             self.wb.truncate_to(fragment_start);
-            return Err(MarshalerError::ContainerOverflow {
-                len,
-                capacity: MAX_REPLICATED_STATE_BUNDLE_BUFFER_SIZE,
-            });
+            return Ok(StateFragmentWriteOutcome::SkippedOverLimit);
         }
         self.count = self.count.saturating_add(1);
-        Ok(())
+        Ok(StateFragmentWriteOutcome::Written)
     }
 
     /// Write a raw fragment body with caller-supplied type info.
     ///
     /// # Errors
     ///
-    /// Returns an error when the record fragment count or bundle byte cap would be exceeded.
+    /// Returns a skip outcome when the fragment would exceed the bundle byte
+    /// cap. Returns an error only when the record fragment count would be
+    /// exceeded.
     pub fn write_raw_fragment(
         &mut self,
         fragment_key: impl Into<FragmentKey>,
         type_info: FragmentTypeInfo,
         body: &[u8],
-    ) -> Result<(), MarshalerError> {
+    ) -> Result<StateFragmentWriteOutcome, MarshalerError> {
         let fragment_key = fragment_key.into();
         self.reserve_fragment_slot()?;
         let fragment_start = self.wb.mark();
@@ -1290,15 +1399,11 @@ impl StateRecordWriter<'_> {
         type_info.write_to(self.wb);
         self.wb.write_bytes(body);
         if self.wb.len() > MAX_REPLICATED_STATE_BUNDLE_BUFFER_SIZE {
-            let len = self.wb.len();
             self.wb.truncate_to(fragment_start);
-            return Err(MarshalerError::ContainerOverflow {
-                len,
-                capacity: MAX_REPLICATED_STATE_BUNDLE_BUFFER_SIZE,
-            });
+            return Ok(StateFragmentWriteOutcome::SkippedOverLimit);
         }
         self.count = self.count.saturating_add(1);
-        Ok(())
+        Ok(StateFragmentWriteOutcome::Written)
     }
 
     fn reserve_fragment_slot(&self) -> Result<(), MarshalerError> {
@@ -1315,11 +1420,12 @@ impl StateRecordWriter<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::hub::{DynFragment, Fragment, FragmentBase};
+    use crate::hub::{DynFragment, FragmentBase};
+    use crate::{Fragment, Marshaler, az_rtti, type_registry};
 
-    #[derive(::nw_network::Marshaler, Debug, Default)]
-    #[::nw_network::az_rtti("11111111-1111-4111-8111-111111111111")]
-    #[::nw_network::type_registry(65_000)]
+    #[derive(Marshaler, Debug, Default)]
+    #[az_rtti("11111111-1111-4111-8111-111111111111")]
+    #[type_registry(65_000)]
     struct EmptyFragment {
         #[marshal(skip)]
         base: FragmentBase,
@@ -1345,9 +1451,9 @@ mod tests {
 
     impl Fragment for EmptyFragment {}
 
-    #[derive(Debug, Default, ::nw_network::Fragment)]
-    #[::nw_network::az_rtti("33333333-3333-4333-8333-333333333333")]
-    #[::nw_network::type_registry(64_990)]
+    #[derive(Debug, Default, Fragment)]
+    #[az_rtti("33333333-3333-4333-8333-333333333333")]
+    #[type_registry(64_990)]
     struct FullBodyFragment {
         base: FragmentBase,
         contents: u8,
@@ -1399,6 +1505,12 @@ mod tests {
     }
 
     impl Fragment for FullBodyFragment {}
+
+    fn assert_total_bundle_size_matches_marshaled(bundle: &ReplicatedStateBundle) {
+        let mut wb = WriteBuffer::new(CARRIER_ENDIAN);
+        bundle.marshal(&mut wb);
+        assert_eq!(bundle.total_bundle_size(), wb.len());
+    }
 
     #[test]
     fn bundle_buffer_is_vlq_len_then_raw_bytes() {
@@ -1576,10 +1688,42 @@ mod tests {
     }
 
     #[test]
+    fn total_bundle_size_matches_marshaled_length() {
+        let no_control_empty = ReplicatedStateBundle::default();
+
+        let no_control_payload = ReplicatedStateBundle {
+            seq: SequenceNumber::ValidNonSequence,
+            client_context_instance_id: 3,
+            bandwidth_mode: 7,
+            is_unreliable: true,
+            bundle_buffer: vec![0xaa; 0x80],
+            ..Default::default()
+        };
+
+        let mut control_empty = ReplicatedStateBundle::with_seq(0x80, 4, 5);
+        control_empty.add_stop_id(10).unwrap();
+        control_empty.add_pause_id(20).unwrap();
+
+        let mut control_payload = ReplicatedStateBundle::with_seq(0x20_0000, 6, 2);
+        control_payload.add_stop_id(30).unwrap();
+        control_payload.add_pause_id(40).unwrap();
+        control_payload.bundle_buffer = vec![0xbb; 0x4000];
+
+        for bundle in [
+            no_control_empty,
+            no_control_payload,
+            control_empty,
+            control_payload,
+        ] {
+            assert_total_bundle_size_matches_marshaled(&bundle);
+        }
+    }
+
+    #[test]
     fn write_record_roundtrips_raw_fragment_headers() {
         let uuid = Uuid::parse_str("11223344-5566-7788-99aa-bbccddeeff00").unwrap();
         let mut bundle = ReplicatedStateBundle::default();
-        bundle
+        let _ = bundle
             .write_record(2, |record| {
                 record.write_raw_fragment(3, FragmentTypeInfo::RawUuid(uuid), &[0xcc])
             })
@@ -1611,13 +1755,94 @@ mod tests {
     #[test]
     fn write_record_rolls_back_fragments_without_payload() {
         let mut bundle = ReplicatedStateBundle::default();
-        bundle
+        let _ = bundle
             .write_record(7, |record| {
                 record.write_fragment(12, &EmptyFragment::default())
             })
             .unwrap();
 
         assert!(bundle.bundle_buffer.is_empty());
+    }
+
+    #[test]
+    fn write_record_skips_over_limit_fragment_and_keeps_written_fragments() {
+        let filler_body = vec![0x11; MAX_REPLICATED_STATE_BUNDLE_BUFFER_SIZE - 16];
+        let mut bundle = ReplicatedStateBundle::default();
+
+        assert_eq!(
+            bundle
+                .write_record(1, |record| record.write_raw_fragment(
+                    1,
+                    FragmentTypeInfo::TypeIndex(4),
+                    &filler_body
+                ))
+                .unwrap(),
+            StateFragmentWriteOutcome::Written
+        );
+
+        assert_eq!(
+            bundle.bundle_buffer.len(),
+            MAX_REPLICATED_STATE_BUNDLE_BUFFER_SIZE - 12
+        );
+
+        let overflow_body = [0x22; 10];
+        bundle
+            .write_record(2, |record| {
+                assert_eq!(
+                    record.write_raw_fragment(2, FragmentTypeInfo::TypeIndex(4), &[0xaa])?,
+                    StateFragmentWriteOutcome::Written
+                );
+                assert_eq!(
+                    record.write_raw_fragment(3, FragmentTypeInfo::TypeIndex(4), &overflow_body)?,
+                    StateFragmentWriteOutcome::SkippedOverLimit
+                );
+                assert_eq!(
+                    record.write_raw_fragment(4, FragmentTypeInfo::TypeIndex(4), &[0xcc])?,
+                    StateFragmentWriteOutcome::Written
+                );
+                Ok(())
+            })
+            .unwrap();
+
+        assert!(bundle.bundle_buffer.len() <= MAX_REPLICATED_STATE_BUNDLE_BUFFER_SIZE);
+
+        let mut seen = Vec::new();
+        bundle
+            .visit_fragments(|record, fragment, rb| {
+                seen.push((
+                    record.interest_id,
+                    record.fragment_count,
+                    fragment.fragment_key,
+                ));
+                match fragment.fragment_key.get() {
+                    1 => {
+                        let body = rb.read_bytes(filler_body.len())?;
+                        assert_eq!(body.first(), Some(&0x11));
+                    }
+                    2 => assert_eq!(rb.read_u8()?, 0xaa),
+                    4 => assert_eq!(rb.read_u8()?, 0xcc),
+                    other => panic!("unexpected fragment key {other}"),
+                }
+                Ok(())
+            })
+            .unwrap();
+
+        assert_eq!(
+            seen,
+            vec![
+                (InterestId::new(1), 1, FragmentKey::new(1)),
+                (InterestId::new(2), 2, FragmentKey::new(2)),
+                (InterestId::new(2), 2, FragmentKey::new(4)),
+            ]
+        );
+
+        let mut wb = WriteBuffer::new(CARRIER_ENDIAN);
+        bundle.marshal(&mut wb);
+        let mut rb = ReadBuffer::new(CARRIER_ENDIAN, wb.as_slice());
+        let decoded = ReplicatedStateBundle::unmarshal(&mut rb).unwrap();
+
+        assert_eq!(decoded, bundle);
+        assert_eq!(rb.left(), 0);
     }
 
     #[test]
@@ -1632,7 +1857,7 @@ mod tests {
 
         assert_eq!(
             body.type_info,
-            FragmentTypeInfo::TypeIndex(FullBodyFragment::TYPE_INDEX)
+            FragmentTypeInfo::registered::<FullBodyFragment>()
         );
         assert_eq!(body.body, &[0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77]);
 
@@ -1658,7 +1883,7 @@ mod tests {
         let mut bundle = ReplicatedStateBundle::with_bundle_buffer(vec![0xaa]);
         let err = bundle
             .write_record(2, |record| -> Result<(), MarshalerError> {
-                record.write_raw_fragment(3, FragmentTypeInfo::TypeIndex(4), &[0xcc])?;
+                let _ = record.write_raw_fragment(3, FragmentTypeInfo::TypeIndex(4), &[0xcc])?;
                 Err(MarshalerError::InvalidDiscriminant { value: 99 })
             })
             .unwrap_err();

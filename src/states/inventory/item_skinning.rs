@@ -1,5 +1,9 @@
+//! Item skin and dye replication.
+
+use crate::{az_rtti, replicated_state, type_registry};
+
 use crate::Marshaler;
-use crate::serialize::{ReplicatedMap, ReplicatedVec};
+use crate::serialize::{IndexMap, ReplicatedContainer};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Marshaler)]
 pub struct ItemSkinDyeData {
@@ -23,22 +27,22 @@ pub struct ItemSkinningSnapshot {
     pub skin_dyes: Vec<SkinDyeEntry>,
 }
 
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("E1EBCA63-1759-477C-BBE7-61B8A471F5BB")]
-#[::nw_network::type_registry(3765)]
+#[az_rtti("E1EBCA63-1759-477C-BBE7-61B8A471F5BB")]
+#[type_registry(3765)]
 pub struct ItemSkinningComponentReplicatedState {
     #[replicated_state(group = 1)]
-    pub enabled_item_skins: ReplicatedVec<u64>,
+    pub enabled_item_skins: ReplicatedContainer<Vec<u64>>,
     #[replicated_state(group = 1)]
-    pub skin_dye_data: ReplicatedMap<u32, ItemSkinDyeData>,
+    pub skin_dye_data: ReplicatedContainer<IndexMap<u32, ItemSkinDyeData>>,
 }
 
 impl ItemSkinningComponentReplicatedState {
     pub fn apply_snapshot(&mut self, snapshot: ItemSkinningSnapshot) {
         self.enabled_item_skins =
-            ReplicatedVec::new(snapshot.enabled_skins_sequence, snapshot.enabled_skin_ids);
-        self.skin_dye_data = ReplicatedMap::new(
+            ReplicatedContainer::new(snapshot.enabled_skins_sequence, snapshot.enabled_skin_ids);
+        self.skin_dye_data = ReplicatedContainer::new(
             snapshot.skin_dye_data_sequence,
             snapshot
                 .skin_dyes

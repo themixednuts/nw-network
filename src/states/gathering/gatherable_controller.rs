@@ -1,3 +1,7 @@
+//! Gatherable resource controller state replication.
+
+use crate::{az_rtti, replicated_state, type_registry};
+
 use crate::Marshaler;
 use crate::serialize::ReplicatedFieldHandler;
 
@@ -17,10 +21,10 @@ impl ReplicatedGatherableState {
     }
 }
 
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("CF2B3E22-7FDB-4F06-BC1F-7A4B8912CA73")]
-#[::nw_network::type_registry(12)]
+#[az_rtti("CF2B3E22-7FDB-4F06-BC1F-7A4B8912CA73")]
+#[type_registry(12)]
 pub struct GatherableControllerReplicatedState {
     pub gatherable_state: ReplicatedFieldHandler<ReplicatedGatherableState>,
     pub replenish_time: ReplicatedFieldHandler<u64>,

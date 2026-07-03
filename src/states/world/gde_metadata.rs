@@ -1,10 +1,14 @@
+//! Game-data-entry metadata replication.
+
+use crate::{az_rtti, replicated_state, type_registry};
+
 use crate::serialize::ReplicatedFieldHandler;
 use crate::types::{AssetId, GdeRef, ReplicationCategory};
 
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("203DC8C7-0C60-454B-A46F-566114314B84")]
-#[::nw_network::type_registry(10)]
+#[az_rtti("203DC8C7-0C60-454B-A46F-566114314B84")]
+#[type_registry(10)]
 pub struct GdeMetadataReplicatedState {
     pub asset_id: ReplicatedFieldHandler<AssetId>,
     pub gde_ref: ReplicatedFieldHandler<GdeRef>,

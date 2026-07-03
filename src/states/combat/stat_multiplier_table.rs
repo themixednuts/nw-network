@@ -1,7 +1,9 @@
-use std::collections::HashMap;
+//! Stat multiplier table replication.
+
+use crate::{az_rtti, replicated_state, type_registry};
 
 use crate::Marshaler;
-use crate::serialize::{Change, ReplicatedMap};
+use crate::serialize::{Change, IndexMap, ReplicatedContainer};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Marshaler)]
 pub struct StatMultiplierValue {
@@ -11,25 +13,25 @@ pub struct StatMultiplierValue {
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct StatMultiplierSnapshot {
-    pub multiplier_table: ReplicatedMap<u8, StatMultiplierValue>,
-    pub stamina_cost_reduction_multipliers: ReplicatedMap<u32, u32>,
-    pub xp_increase_multipliers: ReplicatedMap<u32, u32>,
-    pub remote_multiplier_table: ReplicatedMap<u8, StatMultiplierValue>,
+    pub multiplier_table: ReplicatedContainer<IndexMap<u8, StatMultiplierValue>>,
+    pub stamina_cost_reduction_multipliers: ReplicatedContainer<IndexMap<u32, u32>>,
+    pub xp_increase_multipliers: ReplicatedContainer<IndexMap<u32, u32>>,
+    pub remote_multiplier_table: ReplicatedContainer<IndexMap<u8, StatMultiplierValue>>,
 }
 
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("DDD46896-8DAD-4EE5-836E-341A72D44403")]
-#[::nw_network::type_registry(1525)]
+#[az_rtti("DDD46896-8DAD-4EE5-836E-341A72D44403")]
+#[type_registry(1525)]
 pub struct StatMultiplierTableComponentReplicatedState {
     #[replicated_state(group = 1)]
-    pub multiplier_table: ReplicatedMap<u8, StatMultiplierValue>,
+    pub multiplier_table: ReplicatedContainer<IndexMap<u8, StatMultiplierValue>>,
     #[replicated_state(group = 1)]
-    pub stamina_cost_reduction_multipliers: ReplicatedMap<u32, u32>,
+    pub stamina_cost_reduction_multipliers: ReplicatedContainer<IndexMap<u32, u32>>,
     #[replicated_state(group = 1)]
-    pub xp_increase_multipliers: ReplicatedMap<u32, u32>,
+    pub xp_increase_multipliers: ReplicatedContainer<IndexMap<u32, u32>>,
     #[replicated_state(group = 2)]
-    pub remote_multiplier_table: ReplicatedMap<u8, StatMultiplierValue>,
+    pub remote_multiplier_table: ReplicatedContainer<IndexMap<u8, StatMultiplierValue>>,
 }
 
 impl StatMultiplierTableComponentReplicatedState {
@@ -54,7 +56,7 @@ impl StatMultiplierTableComponentReplicatedState {
                     Change::update(*key, value.clone(), self.multiplier_table.last_modified())
                 });
             if let Some(entry) = entry {
-                state.multiplier_table = ReplicatedMap::delta(vec![entry]);
+                state.multiplier_table = ReplicatedContainer::delta(vec![entry]);
             }
         }
 
@@ -65,9 +67,9 @@ impl StatMultiplierTableComponentReplicatedState {
             .current_value_changes()
             .find(|(_, _, sequence)| sequence.is_valid())
         {
-            let mut values = HashMap::new();
+            let mut values = IndexMap::new();
             values.insert(*key, value.clone());
-            state.remote_multiplier_table = ReplicatedMap::new(sequence, values);
+            state.remote_multiplier_table = ReplicatedContainer::new(sequence, values);
         }
         state
     }

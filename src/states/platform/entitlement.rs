@@ -1,4 +1,8 @@
-use crate::serialize::{ReplicatedFieldHandler, ReplicatedMap, ReplicatedVec};
+//! Platform entitlement balance replication.
+
+use crate::{az_rtti, replicated_state, type_registry};
+
+use crate::serialize::{IndexMap, ReplicatedContainer, ReplicatedFieldHandler};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct EntitlementBalance {
@@ -14,21 +18,21 @@ pub struct EntitlementSnapshot {
     pub balances: Vec<EntitlementBalance>,
 }
 
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("FEAFABE8-6219-4C4A-9269-261D1E76878E")]
-#[::nw_network::type_registry(3133)]
+#[az_rtti("FEAFABE8-6219-4C4A-9269-261D1E76878E")]
+#[type_registry(3133)]
 pub struct EntitlementComponentReplicatedState {
-    pub entitlements: ReplicatedVec<u8, 0x23f>,
-    pub balances: ReplicatedMap<u32, u32, 1000>,
+    pub entitlements: ReplicatedContainer<Vec<u8>, 0x23f>,
+    pub balances: ReplicatedContainer<IndexMap<u32, u32>, 1000>,
     pub entitlements_received: ReplicatedFieldHandler<bool>,
 }
 
 impl EntitlementComponentReplicatedState {
     pub fn apply_snapshot(&mut self, snapshot: EntitlementSnapshot) {
         self.entitlements =
-            ReplicatedVec::new(snapshot.entitlements_sequence, snapshot.entitlements);
-        self.balances = ReplicatedMap::new(
+            ReplicatedContainer::new(snapshot.entitlements_sequence, snapshot.entitlements);
+        self.balances = ReplicatedContainer::new(
             snapshot.balances_sequence,
             snapshot
                 .balances

@@ -69,6 +69,46 @@
       "reason": "game-mode participant state data"
     },
     {
+      "root": "RemoteServerFacetRef<HousingPlotComponentServerFacet >",
+      "reason": "player-housing state data"
+    },
+    {
+      "root": "RemoteServerFacetRef<HouseDataComponentServerFacet >",
+      "reason": "player-housing state data"
+    },
+    {
+      "root": "RemoteServerFacetRef<PlayerHousingComponentServerFacet >",
+      "reason": "player-housing state data"
+    },
+    {
+      "root": "PersistentPlayerHousingData",
+      "reason": "player-housing persistent payload"
+    },
+    {
+      "root": "PersistentOwnedHouseData",
+      "reason": "player-housing persistent payload"
+    },
+    {
+      "root": "PersistentHouseData",
+      "reason": "player-housing persistent payload"
+    },
+    {
+      "root": "PlotHousingData",
+      "reason": "player-housing persistent payload"
+    },
+    {
+      "root": "TopHouseData",
+      "reason": "player-housing payload"
+    },
+    {
+      "root": "ReplicatedEnterHousingData",
+      "reason": "player-housing network payload"
+    },
+    {
+      "root": "ReplicatedPurchaseHousingData",
+      "reason": "player-housing network payload"
+    },
+    {
       "root": "GameModeParticipantStatus",
       "reason": "game-mode participant state data"
     },
@@ -87,6 +127,26 @@
     {
       "root": "TemporaryAffiliationRelationship",
       "reason": "temporary-affiliation state data"
+    },
+    {
+      "root": "CurrencyTransactionEntry",
+      "reason": "game-event state data"
+    },
+    {
+      "root": "DailyBonus",
+      "reason": "game-event state data"
+    },
+    {
+      "root": "TerritoryStatusEffect",
+      "reason": "status-effect state data"
+    },
+    {
+      "root": "ChatMessageTypeToState",
+      "reason": "social state data"
+    },
+    {
+      "root": "DyeData",
+      "reason": "mount and item dye replication payload"
     }
   ]
 }

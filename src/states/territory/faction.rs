@@ -1,9 +1,13 @@
+//! Faction membership, rank, and reputation replication.
+
+use crate::{az_rtti, replicated_state, type_registry};
+
 use crate::serialize::ReplicatedFieldHandler;
 
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("80A502FD-67EB-4A1B-87E3-B85004919249")]
-#[::nw_network::type_registry(3152)]
+#[az_rtti("80A502FD-67EB-4A1B-87E3-B85004919249")]
+#[type_registry(3152)]
 pub struct FactionComponentReplicatedState {
     #[replicated_state(group = 1)]
     pub pvp_flag_pending: ReplicatedFieldHandler<bool>,

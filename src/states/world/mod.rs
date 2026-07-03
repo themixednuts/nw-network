@@ -1,11 +1,12 @@
-pub mod align_to_terrain;
+//! World-positioning, pathing, map, and metadata replicated state modules.
+
 pub mod client_pathing;
 pub mod gde_metadata;
 pub mod global_map_data_manager;
 pub mod position_in_the_world;
 pub mod waypoints;
 
-pub use align_to_terrain::AlignToTerrainComponentReplicatedState;
+pub use crate::generated::states::AlignToTerrainComponentReplicatedState;
 pub use client_pathing::{
     ClientPathingComponentReplicatedState, ClientPathingCorridorPath, ClientPathingCorridorPaths,
     MAX_CLIENT_PATHING_CORRIDOR_PATHS, MAX_CLIENT_PATHING_CORRIDOR_POINTS,
@@ -13,7 +14,7 @@ pub use client_pathing::{
 };
 pub use gde_metadata::GdeMetadataReplicatedState;
 pub use global_map_data_manager::{
-    GlobalMapData, GlobalMapDataManagerComponentReplicatedState, GlobalMapDataValue,
+    GlobalMapData, GlobalMapDataManagerComponentReplicatedState, GlobalMapDataMap,
 };
 pub use position_in_the_world::{
     PositionInTheWorldReplicatedState, position_anchor_to_bevy_translation,

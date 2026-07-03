@@ -1,8 +1,14 @@
 //! Serialization primitives for packet and replicated-state payloads.
 //!
-//! Lengths use unsigned VLQ encodings. Ordered containers preserve stream
-//! order; hash-based containers are available for semantic maps/sets where
-//! deterministic byte order is not required.
+//! The module exposes byte buffers, value-level [`Marshaler`] impls,
+//! field-local [`Codec`] policies, VLQ integers, container count policies,
+//! field-mask helpers, and replicated field/container wrappers. Carrier scalar
+//! values use big-endian byte order by default; variable counts use unsigned
+//! VLQ encodings unless a field selects a raw-count policy.
+//!
+//! Ordered containers preserve stream order. Hash-based containers are
+//! available for semantic maps and sets where deterministic byte order is not
+//! required.
 //!
 //! `Marshaler<bool>` is strict: only `0` and `1` are accepted on read.
 
@@ -27,8 +33,8 @@ pub use buffer::{
 };
 pub use compression_marshal::{
     Float16Marshaler, IntegerQuantizationMarshalerU8, IntegerQuantizationMarshalerU16,
-    IntegerQuantizationMarshalerU32, PackedSize, QuatCompMarshaler, QuatCompNorm,
-    QuatCompNormMarshaler, QuatCompNormQuantized, QuatCompNormQuantizedAngles,
+    IntegerQuantizationMarshalerU32, NonUniformScaleCompMarshaler, PackedSize, QuatCompMarshaler,
+    QuatCompNorm, QuatCompNormMarshaler, QuatCompNormQuantized, QuatCompNormQuantizedAngles,
     QuatCompNormQuantizedMarshaler, QuatSmallestThreeQuantized,
     QuatSmallestThreeQuantizedMarshaler, TransformCompressor, Vec2CompMarshaler, Vec3CompMarshaler,
     Vec3CompNormMarshaler,
@@ -43,7 +49,6 @@ pub use marshaler::{Codec, DefaultMarshaler, Marshaler};
 pub use mask_chain::MaskChain;
 pub use replicated_container::{
     Change, ChangeOp, ChangeSet, REPLICATED_CONTAINER_FIXED_JOURNAL_SIZE, ReplicatedContainer,
-    ReplicatedIndexMap, ReplicatedMap, ReplicatedVec,
 };
 pub use replicated_field::{
     DeltaCompressedCounterHandler, DeltaCompressedReplicatedFieldHandler, DeltaIntegerMarshaler,

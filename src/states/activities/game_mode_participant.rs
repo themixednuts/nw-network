@@ -1,7 +1,11 @@
+//! Per-player game-mode participation, queue, raid, and mutation state.
+
+use crate::{az_rtti, replicated_state, type_registry};
+
 use uuid::Uuid;
 
 use crate::Marshaler;
-use crate::serialize::{ReplicatedFieldHandler, ReplicatedMap, ReplicatedVec};
+use crate::serialize::{IndexMap, ReplicatedContainer, ReplicatedFieldHandler};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Hash, Marshaler)]
 pub struct GameModeInstanceId {
@@ -35,15 +39,15 @@ pub struct GameModeMutationContext {
     pub field_0c: u8,
 }
 
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("4C6684A9-6988-4A05-94BD-118CE991A7D9")]
-#[::nw_network::type_registry(3312)]
+#[az_rtti("4C6684A9-6988-4A05-94BD-118CE991A7D9")]
+#[type_registry(3312)]
 pub struct GameModeParticipantReplicatedState {
-    pub active_game_modes: ReplicatedMap<GameModeInstanceId, ActiveGameModeData>,
+    pub active_game_modes: ReplicatedContainer<IndexMap<GameModeInstanceId, ActiveGameModeData>>,
     pub flags: ReplicatedFieldHandler<[u8; 6]>,
-    pub queuing_for_game_modes: ReplicatedVec<QueuedGameModeData>,
-    pub queue_eligible_times_for_game_modes: ReplicatedMap<u32, u64>,
+    pub queuing_for_game_modes: ReplicatedContainer<Vec<QueuedGameModeData>>,
+    pub queue_eligible_times_for_game_modes: ReplicatedContainer<IndexMap<u32, u64>>,
     pub game_mode_mutation_context: ReplicatedFieldHandler<GameModeMutationContext>,
     #[replicated_state(group = 1)]
     pub matchmaking_service_activity: ReplicatedFieldHandler<u8>,

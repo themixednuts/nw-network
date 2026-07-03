@@ -1,4 +1,8 @@
-use crate::serialize::{Change, ReplicatedMap};
+//! Item transformation input and output replication.
+
+use crate::{az_rtti, replicated_state, type_registry};
+
+use crate::serialize::{Change, IndexMap, ReplicatedContainer};
 
 pub type ItemTransformItemDescriptor = super::item_descriptor::ReplicatedItemDescriptor;
 
@@ -14,18 +18,18 @@ pub struct ItemTransformSnapshot {
     pub owned_items: Vec<OwnedItemEntry>,
 }
 
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("A7933D94-4E0B-4711-BE2D-EA22000CCF06")]
-#[::nw_network::type_registry(5437)]
+#[az_rtti("A7933D94-4E0B-4711-BE2D-EA22000CCF06")]
+#[type_registry(5437)]
 pub struct ItemTransformComponentReplicatedState {
     #[replicated_state(group = 1)]
-    pub owned_items: ReplicatedMap<u16, ItemTransformItemDescriptor>,
+    pub owned_items: ReplicatedContainer<IndexMap<u16, ItemTransformItemDescriptor>>,
 }
 
 impl ItemTransformComponentReplicatedState {
     pub fn apply_snapshot(&mut self, snapshot: ItemTransformSnapshot) {
-        self.owned_items = ReplicatedMap::new(
+        self.owned_items = ReplicatedContainer::new(
             snapshot.owned_items_sequence,
             snapshot
                 .owned_items
@@ -51,7 +55,7 @@ impl ItemTransformComponentReplicatedState {
             .map(|(slot, item)| Change::update(*slot, item.clone(), items.last_modified()));
 
         if let Some(entry) = entry {
-            state.owned_items = ReplicatedMap::delta(vec![entry]);
+            state.owned_items = ReplicatedContainer::delta(vec![entry]);
         }
         state
     }

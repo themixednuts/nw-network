@@ -1,6 +1,10 @@
+//! Guild roster, invite, crest, and territory influence replication.
+
+use crate::{az_rtti, replicated_state, type_registry};
+
 use uuid::Uuid;
 
-use crate::serialize::{ReplicatedFieldHandler, ReplicatedMap, VlqU64};
+use crate::serialize::{IndexMap, ReplicatedContainer, ReplicatedFieldHandler};
 use crate::{EntityRef, Marshaler};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Marshaler)]
@@ -52,10 +56,10 @@ pub struct GuildInviteStateData {
     pub sent_time: u64,
 }
 
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("704F90BD-BA5A-4DED-A3DF-DA1827A45E93")]
-#[::nw_network::type_registry(3217)]
+#[az_rtti("704F90BD-BA5A-4DED-A3DF-DA1827A45E93")]
+#[type_registry(3217)]
 pub struct GuildsReplicatedState {
     pub guild_id: ReplicatedFieldHandler<Uuid>,
     pub guild_owner: ReplicatedFieldHandler<String>,
@@ -70,10 +74,10 @@ pub struct GuildsReplicatedState {
     pub permission_options: ReplicatedFieldHandler<u8>,
 }
 
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("F5398BCB-8AF9-47C7-84C6-B8AFBF249F34")]
-#[::nw_network::type_registry(3147)]
+#[az_rtti("F5398BCB-8AF9-47C7-84C6-B8AFBF249F34")]
+#[type_registry(3147)]
 pub struct GuildsComponentReplicatedState {
     pub guild_id: ReplicatedFieldHandler<Uuid>,
     pub guild_rank: ReplicatedFieldHandler<u16>,
@@ -106,23 +110,23 @@ pub struct GuildsComponentReplicatedState {
     #[replicated_state(group = 1)]
     pub governor_leave_guild_time: ReplicatedFieldHandler<u64>,
     #[replicated_state(group = 1)]
-    pub guild_members_character_id_string: ReplicatedMap<VlqU64, String>,
+    pub guild_members_character_id_string: ReplicatedContainer<Vec<String>>,
     #[replicated_state(group = 1)]
-    pub guild_members_rank: ReplicatedMap<VlqU64, u16>,
+    pub guild_members_rank: ReplicatedContainer<Vec<u16>>,
     #[replicated_state(group = 1)]
-    pub guild_members_online_status: ReplicatedMap<VlqU64, u8>,
+    pub guild_members_online_status: ReplicatedContainer<Vec<u8>>,
     #[replicated_state(group = 1)]
-    pub guild_members_last_online_time: ReplicatedMap<VlqU64, u64>,
+    pub guild_members_last_online_time: ReplicatedContainer<Vec<u64>>,
     #[replicated_state(group = 1)]
     pub guild_member_was_kicked: ReplicatedFieldHandler<bool>,
     #[replicated_state(group = 1)]
-    pub guild_influence_data: ReplicatedMap<VlqU64, ReplicatedGuildInfluence>,
+    pub guild_influence_data: ReplicatedContainer<Vec<ReplicatedGuildInfluence>>,
     #[replicated_state(group = 1)]
-    pub eligible_territory_wars: ReplicatedMap<VlqU64, EligibleTerritoryWar>,
+    pub eligible_territory_wars: ReplicatedContainer<Vec<EligibleTerritoryWar>>,
     #[replicated_state(group = 1)]
     pub guild_war_lottery_deadline: ReplicatedFieldHandler<u64>,
     #[replicated_state(group = 1)]
-    pub guild_invites: ReplicatedMap<Uuid, GuildInviteStateData>,
+    pub guild_invites: ReplicatedContainer<IndexMap<Uuid, GuildInviteStateData>>,
     #[replicated_state(group = 1)]
     pub number_of_outstanding_invites: ReplicatedFieldHandler<u64>,
 }

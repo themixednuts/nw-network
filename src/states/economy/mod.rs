@@ -1,3 +1,5 @@
+//! Economy and settlement-project replicated state modules.
+
 pub mod aggregate_contract_count;
 pub mod contribution;
 pub mod tipping_pool;

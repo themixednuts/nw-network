@@ -1,3 +1,7 @@
+//! Client pathing corridor replication.
+
+use crate::{az_rtti, replicated_state, type_registry};
+
 use arrayvec::ArrayVec;
 use bevy_math::Vec3;
 
@@ -74,10 +78,10 @@ impl Marshaler for ClientPathingCorridorPaths {
     }
 }
 
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("A32A95F6-9EF4-4139-8FC3-98C712910DAD")]
-#[::nw_network::type_registry(5915)]
+#[az_rtti("A32A95F6-9EF4-4139-8FC3-98C712910DAD")]
+#[type_registry(5915)]
 pub struct ClientPathingComponentReplicatedState {
     pub corridor_paths: ReplicatedFieldHandler<ClientPathingCorridorPaths>,
 }

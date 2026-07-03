@@ -1,6 +1,9 @@
-//! Wire marshalers for AZ math types as supplied by Bevy / glam.
+//! Raw math-type marshalers for glam and Bevy values.
 //!
-//! Wire format: each scalar component as one f32, in declaration order.
+//! These impls write scalar `f32` components in protocol order without
+//! compression: vectors are component order, quaternions are `x`, `y`, `z`,
+//! `w`, matrices and affine transforms are basis columns followed by
+//! translation, and bounds are min then max.
 
 use super::{
     buffer::{ReadBuffer, WriteBuffer},
@@ -25,7 +28,7 @@ impl Marshaler for Vec2 {
     }
 }
 
-/// `AZ::Bounds` wire layout: two raw `AZ::Vector2` values, min then max.
+/// 2D bounds wire layout: two raw `Vec2` values, min then max.
 impl Marshaler for Aabb2d {
     const MARSHAL_SIZE: usize = 16;
 
@@ -78,7 +81,8 @@ impl Marshaler for Vec4 {
     }
 }
 
-/// variant). For the compressed normalized form see
+/// Raw quaternion wire layout: four `f32` components in `x`, `y`, `z`, `w`
+/// order. For the compressed normalized form see
 /// [`super::compression_marshal::QuatCompNorm`].
 impl Marshaler for Quat {
     const MARSHAL_SIZE: usize = 16;
@@ -99,8 +103,8 @@ impl Marshaler for Quat {
     }
 }
 
-/// `GetBasisX/Y/Z` in order. glam's `Mat3` stores basis vectors as
-/// `x_axis`, `y_axis`, `z_axis` so the on-wire order matches one-to-one.
+/// Matrix wire layout: three raw `Vec3` basis columns in `x_axis`, `y_axis`,
+/// `z_axis` order.
 impl Marshaler for Mat3 {
     const MARSHAL_SIZE: usize = 36;
 
@@ -118,7 +122,11 @@ impl Marshaler for Mat3 {
     }
 }
 
-/// equivalent SIMD-aligned affine; we round-trip through `Vec3` for the
+/// Affine transform wire layout: three raw `Vec3` basis columns followed by
+/// raw `Vec3` translation.
+///
+/// `Affine3A` stores SIMD-aligned vectors, so marshal converts through `Vec3`
+/// to keep the wire shape at 12 raw `f32` values.
 impl Marshaler for Affine3A {
     const MARSHAL_SIZE: usize = 48;
 
@@ -145,8 +153,10 @@ impl Marshaler for Affine3A {
     }
 }
 
-/// with only 6 floats on the wire. We use Bevy's `Aabb3d` (whose `Vec3A`
-/// fields are themselves SIMD-aligned) for the semantic type.
+/// 3D bounds wire layout: two raw `Vec3` values, min then max.
+///
+/// `Aabb3d` stores SIMD-aligned vectors, so marshal converts through `Vec3` to
+/// keep the wire shape at 6 raw `f32` values.
 impl Marshaler for Aabb3d {
     const MARSHAL_SIZE: usize = 24;
 

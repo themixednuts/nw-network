@@ -1,6 +1,15 @@
 use std::collections::BTreeMap;
 
-use nw_network::generated::states::RaidDataComponentReplicatedState as GeneratedRaidDataComponentReplicatedState;
+use nw_network::generated::states::{
+    CapturePointReplicatedState as GeneratedCapturePointReplicatedState,
+    EventTimelineComponentReplicatedState as GeneratedEventTimelineComponentReplicatedState,
+    GroupFinderGroupDataComponentReplicatedState as GeneratedGroupFinderGroupDataComponentReplicatedState,
+    IncapacitatedReplicatedState as GeneratedIncapacitatedReplicatedState,
+    LookTargetingComponentReplicatedState as GeneratedLookTargetingComponentReplicatedState,
+    PlayerHousingReplicatedState as GeneratedPlayerHousingReplicatedState,
+    RaidDataComponentReplicatedState as GeneratedRaidDataComponentReplicatedState,
+    TurretReplicatedState as GeneratedTurretReplicatedState,
+};
 use nw_network::network_schema::identity::RaidDataComponentReplicatedState;
 use nw_network::{
     NetworkFieldConfidence, NetworkTypeCapability, NetworkTypeIdentity, NetworkWireShape,
@@ -19,6 +28,14 @@ use uuid::Uuid;
 const NETWORK_SCHEMA_JSON: &str =
     include_str!("../crates/nw-network-types/codegen/network-schema.json");
 const RAID_DATA_TYPE_ID: Uuid = Uuid::from_u128(0xa85df621_dce0_409f_8d39_a447ea0807ff);
+const CAPTURE_POINT_TYPE_ID: Uuid = Uuid::from_u128(0x1c9f052f_b0db_4466_9ed1_681d34da4452);
+const INCAPACITATED_TYPE_ID: Uuid = Uuid::from_u128(0x490db5f1_4e39_483a_9897_78fa312e45b5);
+const EVENT_TIMELINE_TYPE_ID: Uuid = Uuid::from_u128(0x9e6ee43b_15f1_497b_9461_1f97e488aa10);
+const LOOK_TARGETING_TYPE_ID: Uuid = Uuid::from_u128(0xeae9bc99_4d02_4ba5_acfa_85eb452119f2);
+const PLAYER_HOUSING_TYPE_ID: Uuid = Uuid::from_u128(0x4f70c3bb_8f7d_48c2_a0b6_95431f88f356);
+const GROUP_FINDER_GROUP_DATA_TYPE_ID: Uuid =
+    Uuid::from_u128(0x7b3f6d42_be9e_4c7c_be50_4a0d6298b172);
+const TURRET_TYPE_ID: Uuid = Uuid::from_u128(0xa9f8d205_2922_41e1_b8c2_0dfaf1cc8475);
 
 #[test]
 fn generated_schema_resolves_known_state_and_message_types() {
@@ -135,21 +152,36 @@ fn generated_schema_reports_unknown_type_indices_for_capture_validation() {
 
 #[test]
 fn state_fragment_type_coverage_distinguishes_schema_and_decoder_gaps() {
-    let coverage = validate_state_fragment_type_indices([11, 11, 28, 67, 164, u32::MAX]);
+    let coverage = validate_state_fragment_type_indices([
+        11,
+        11,
+        28,
+        333,
+        670,
+        1647,
+        2443,
+        2768,
+        3451,
+        2947,
+        4276,
+        67,
+        164,
+        u32::MAX,
+    ]);
 
     assert_eq!(coverage.unknown_type_indices, vec![u32::MAX]);
     assert_eq!(coverage.non_replicated_state_type_indices, vec![67, 164]);
     assert_eq!(
         coverage.unregistered_replicated_state_type_indices,
-        Vec::<u32>::new()
+        vec![1647, 3451]
     );
     assert_eq!(
         coverage.registered_replicated_state_type_indices,
-        vec![11, 28]
+        vec![11, 28, 333, 670, 2443, 2768, 2947, 4276]
     );
     assert_eq!(
         coverage.field_shape_incomplete_replicated_state_type_indices,
-        vec![11]
+        vec![1647, 2768, 3451]
     );
     assert_eq!(
         coverage.generation_ready_unregistered_replicated_state_type_indices,
@@ -160,8 +192,8 @@ fn state_fragment_type_coverage_distinguishes_schema_and_decoder_gaps() {
 
     let registered_state = validate_state_fragment_type_indices([11]);
     assert!(registered_state.is_fully_registered());
-    assert!(!registered_state.has_complete_field_shapes());
-    assert!(!registered_state.is_fully_supported());
+    assert!(registered_state.has_complete_field_shapes());
+    assert!(registered_state.is_fully_supported());
 
     let generated_state = validate_state_fragment_type_indices([28]);
     assert!(generated_state.is_fully_registered());
@@ -192,26 +224,64 @@ fn replicated_state_port_statuses_compare_schema_and_registered_ports() {
         .find(|status| status.type_index == 11)
         .expect("alc status state status");
     assert!(alc_status_state.is_registered);
-    assert_eq!(alc_status_state.field_count, 0);
-    assert!(!alc_status_state.has_complete_field_shapes());
+    assert_eq!(alc_status_state.field_count, 64);
+    assert_eq!(alc_status_state.missing_field_wire_shape_count, 0);
+    assert!(alc_status_state.has_complete_field_shapes());
     assert!(!alc_status_state.can_generate_state_fields());
 }
 
 #[test]
-fn generated_replicated_state_is_registered_from_allowlist() {
-    assert_eq!(
-        <GeneratedRaidDataComponentReplicatedState as nw_network::TypeRegistryEntry>::TYPE_INDEX,
-        28
-    );
-    assert_eq!(
-        <GeneratedRaidDataComponentReplicatedState as nw_network::AzRtti>::TYPE_ID,
-        RAID_DATA_TYPE_ID
-    );
+fn generated_replicated_states_are_registered_unless_denied() {
+    let expected = [
+        (
+            <GeneratedRaidDataComponentReplicatedState as nw_network::TypeRegistryEntry>::TYPE_INDEX,
+            <GeneratedRaidDataComponentReplicatedState as nw_network::AzRtti>::TYPE_ID,
+            RAID_DATA_TYPE_ID,
+        ),
+        (
+            <GeneratedCapturePointReplicatedState as nw_network::TypeRegistryEntry>::TYPE_INDEX,
+            <GeneratedCapturePointReplicatedState as nw_network::AzRtti>::TYPE_ID,
+            CAPTURE_POINT_TYPE_ID,
+        ),
+        (
+            <GeneratedIncapacitatedReplicatedState as nw_network::TypeRegistryEntry>::TYPE_INDEX,
+            <GeneratedIncapacitatedReplicatedState as nw_network::AzRtti>::TYPE_ID,
+            INCAPACITATED_TYPE_ID,
+        ),
+        (
+            <GeneratedEventTimelineComponentReplicatedState as nw_network::TypeRegistryEntry>::TYPE_INDEX,
+            <GeneratedEventTimelineComponentReplicatedState as nw_network::AzRtti>::TYPE_ID,
+            EVENT_TIMELINE_TYPE_ID,
+        ),
+        (
+            <GeneratedLookTargetingComponentReplicatedState as nw_network::TypeRegistryEntry>::TYPE_INDEX,
+            <GeneratedLookTargetingComponentReplicatedState as nw_network::AzRtti>::TYPE_ID,
+            LOOK_TARGETING_TYPE_ID,
+        ),
+        (
+            <GeneratedPlayerHousingReplicatedState as nw_network::TypeRegistryEntry>::TYPE_INDEX,
+            <GeneratedPlayerHousingReplicatedState as nw_network::AzRtti>::TYPE_ID,
+            PLAYER_HOUSING_TYPE_ID,
+        ),
+        (
+            <GeneratedGroupFinderGroupDataComponentReplicatedState as nw_network::TypeRegistryEntry>::TYPE_INDEX,
+            <GeneratedGroupFinderGroupDataComponentReplicatedState as nw_network::AzRtti>::TYPE_ID,
+            GROUP_FINDER_GROUP_DATA_TYPE_ID,
+        ),
+        (
+            <GeneratedTurretReplicatedState as nw_network::TypeRegistryEntry>::TYPE_INDEX,
+            <GeneratedTurretReplicatedState as nw_network::AzRtti>::TYPE_ID,
+            TURRET_TYPE_ID,
+        ),
+    ];
 
-    let registration =
-        nw_network::hub::fragment_registration_by_type_index(28).expect("generated raid state");
-    assert_eq!((registration.type_index)(), 28);
-    assert_eq!((registration.uuid)(), RAID_DATA_TYPE_ID);
+    for (type_index, type_id, expected_type_id) in expected {
+        assert_eq!(type_id, expected_type_id);
+        let registration = nw_network::hub::fragment_registration_by_type_index(type_index)
+            .expect("generated state registration");
+        assert_eq!((registration.type_index)(), type_index);
+        assert_eq!((registration.uuid)(), expected_type_id);
+    }
 }
 
 #[test]
@@ -235,8 +305,8 @@ fn fragment_type_index_registrations_are_unique() {
 #[test]
 fn checked_in_schema_carries_confidence_ranked_serialize_evidence() {
     let schema: Value = serde_json::from_str(NETWORK_SCHEMA_JSON).expect("network schema JSON");
-    assert_eq!(schema["summary"]["serializeTypeCount"], 12);
-    assert_eq!(schema["summary"]["serializeDependencyCount"], 6);
+    assert_eq!(schema["summary"]["serializeTypeCount"], 16);
+    assert_eq!(schema["summary"]["serializeDependencyCount"], 9);
 
     let null_type = type_by_schema_name(&schema, "NullType").expect("NullType schema entry");
     assert!(null_type["serialize"].is_null());

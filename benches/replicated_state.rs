@@ -1,6 +1,5 @@
 use criterion::{BatchSize, Criterion, Throughput, criterion_group, criterion_main};
 use nw_network::{
-    ReplicatedState,
     hub::{DynFragment, MarshalContext, SequenceNumber},
     serialize::{Marshaler, ReadBuffer, ReplicatedFieldHandler, WriteBuffer},
 };
@@ -8,9 +7,9 @@ use std::hint::black_box;
 
 const FIELD_COUNT: usize = 16;
 
-#[derive(Debug, Default, ReplicatedState)]
+#[nw_network::replicated_state]
+#[derive(Debug, Default)]
 struct PackedState {
-    base: nw_network::hub::ReplicatedState,
     f00: ReplicatedFieldHandler<u32>,
     f01: ReplicatedFieldHandler<u32>,
     f02: ReplicatedFieldHandler<u32>,

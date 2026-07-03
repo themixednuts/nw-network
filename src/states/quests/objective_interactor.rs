@@ -1,8 +1,12 @@
+//! Objective interactor response and mission-parameter replication.
+
+use crate::{az_rtti, replicated_state, type_registry};
+
 use arrayvec::ArrayVec;
 use uuid::Uuid;
 
 use crate::Marshaler;
-use crate::serialize::{ReplicatedFieldHandler, ReplicatedVec};
+use crate::serialize::{ReplicatedContainer, ReplicatedFieldHandler};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Marshaler)]
 #[expect(
@@ -46,14 +50,14 @@ pub struct ObjectiveInteractorSnapshot {
     pub community_goals: Vec<CommunityGoalParams>,
 }
 
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("2205CFE8-2403-42C7-81F7-5DEDB58E9ECE")]
-#[::nw_network::type_registry(3829)]
+#[az_rtti("2205CFE8-2403-42C7-81F7-5DEDB58E9ECE")]
+#[type_registry(3829)]
 pub struct ObjectiveInteractorComponentReplicatedState {
     pub objective_provider_id: ReplicatedFieldHandler<Uuid>,
     pub expiration_time: ReplicatedFieldHandler<u64>,
-    pub mission_params: ReplicatedVec<MissionParam>,
+    pub mission_params: ReplicatedContainer<Vec<MissionParam>>,
     pub community_goals: ReplicatedFieldHandler<Vec<CommunityGoalParams>>,
 }
 
@@ -63,7 +67,7 @@ impl ObjectiveInteractorComponentReplicatedState {
             .set_value(snapshot.objective_provider_id);
         self.expiration_time.set_value(snapshot.expiration_time);
         self.mission_params =
-            ReplicatedVec::new(snapshot.mission_params_sequence, snapshot.mission_params);
+            ReplicatedContainer::new(snapshot.mission_params_sequence, snapshot.mission_params);
         self.community_goals.set_value(snapshot.community_goals);
     }
 }

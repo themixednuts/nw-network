@@ -327,9 +327,7 @@ fn parse_field_attrs(field: &syn::Field) -> syn::Result<FieldAttrs> {
                 let value = meta.value()?;
                 name = value.parse()?;
                 Ok(())
-            } else if meta.path.is_ident("skip") {
-                Ok(())
-            } else if meta.path.is_ident("base") {
+            } else if meta.path.is_ident("skip") || meta.path.is_ident("base") {
                 Ok(())
             } else {
                 Err(meta.error("unsupported replicated_state field attribute"))

@@ -14,6 +14,11 @@ pub mod state {
     pub struct Unset;
 }
 
+/// Typestate builder for a replicated state bundle.
+///
+/// The builder keeps reliability, bandwidth mode, payload bytes, and optional
+/// stop/pause replication-control ids explicit while producing the same compact
+/// wire message as [`ReplicatedStateBundle`].
 #[derive(Debug, Clone)]
 pub struct StateBundleBuilder<
     Reliability = state::Unset,
@@ -192,7 +197,7 @@ mod tests {
     #[test]
     fn typestate_builder_accepts_writer_payload() {
         let mut payload = ReplicatedStateBundle::default();
-        payload
+        let _ = payload
             .write_record(7, |record| {
                 record.write_raw_fragment(3, FragmentTypeInfo::TypeIndex(4), &[0xcc])
             })

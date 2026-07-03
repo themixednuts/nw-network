@@ -1,3 +1,5 @@
+//! Shared item descriptor payloads used by inventory replicated states.
+
 use arrayvec::ArrayVec;
 use uuid::Uuid;
 

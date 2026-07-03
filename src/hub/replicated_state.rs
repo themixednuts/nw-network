@@ -56,6 +56,11 @@ pub struct ReplicatedFieldInfoMut<'a> {
     pub is_filter_group: bool,
 }
 
+/// Bitset describing fields whose current value matches their registered default.
+///
+/// Default-valued fields can be omitted from the state body. The receiver uses
+/// this bitset to restore the same default state without spending payload bytes
+/// on each suppressed field value.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct ReplicatedDefaultBits(u64);
 
@@ -121,7 +126,13 @@ impl Default for ReplicatedMergeOutcome {
     }
 }
 
-/// concrete field handlers.
+/// Per-group filter metadata stored beside concrete field handlers.
+///
+/// The explicit target list contains pre-hashed client actor identities supplied
+/// by the caller. An empty list broadcasts the group to every client. Repeated
+/// adds are ref-counted, so each add needs a matching remove before the target
+/// is dropped from the whitelist. The default-bits field tracks fields whose
+/// values equal their registered defaults and can be suppressed from the wire.
 #[derive(Debug, Clone)]
 pub struct ReplicatedFilterGroup {
     explicit_client_targets: ClientFilterField,
@@ -168,9 +179,11 @@ impl ReplicatedFilterGroup {
     }
 }
 
+/// Runtime-sized replicated-state bookkeeping for generated fragments.
 ///
-/// Variable-length sibling of [`super::FixedReplicatedState`]. Concrete Rust
-/// through the `ReplicatedState` derive.
+/// `ReplicatedState` is the variable-length sibling of
+/// [`super::FixedReplicatedState`]. Concrete Rust fragments embed this header
+/// and expose their field/group APIs through the `ReplicatedState` derive.
 #[derive(Debug, Clone)]
 pub struct ReplicatedState {
     base: FragmentBase,
@@ -196,8 +209,10 @@ impl ReplicatedState {
         Self::with_reserved_groups(1)
     }
 
+    /// Create state bookkeeping with capacity for generated filter groups.
     ///
-    /// whose field/group APIs are fully overridden.
+    /// Passing `0` is useful for concrete states whose field/group APIs are
+    /// fully overridden.
     #[must_use]
     pub fn with_reserved_groups(reserve_groups: usize) -> Self {
         let mut filter_groups = Vec::with_capacity(reserve_groups);
@@ -484,9 +499,11 @@ impl ReplicatedState {
         }
     }
 
+    /// Marshal dirty filter whitelist and default-bit attributes.
     ///
-    /// User attributes are emitted by generated states after these fields once
-    /// only need the filter whitelist/default-bit attributes.
+    /// User attributes are emitted by generated states after these fields. This
+    /// helper only writes the per-filter-group whitelist/default-bit attributes
+    /// owned by `ReplicatedState`.
     pub fn marshal_filter_group_attributes(
         &self,
         baseline: SequenceNumber,

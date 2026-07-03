@@ -1,18 +1,22 @@
+//! Transform replication for an entity's position in the world.
+
+use crate::{az_rtti, replicated_state, type_registry};
+
 use glam::{Quat, Vec3};
 
 use crate::serialize::{
-    PositionAnchorMarshaler, QuatCompNorm, ReplicatedFieldHandler, Vec3CompMarshaler,
+    NonUniformScaleCompMarshaler, PositionAnchorMarshaler, QuatCompNorm, ReplicatedFieldHandler,
 };
 
 /// Position, rotation, and scale state for an entity in the world.
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("79C28008-4FC5-4EFB-88A1-538F4FB7DDE1")]
-#[::nw_network::type_registry(13)]
+#[az_rtti("79C28008-4FC5-4EFB-88A1-538F4FB7DDE1")]
+#[type_registry(13)]
 pub struct PositionInTheWorldReplicatedState {
     pub position: ReplicatedFieldHandler<(f32, f32, f32), PositionAnchorMarshaler>,
     pub rotation: ReplicatedFieldHandler<QuatCompNorm>,
-    pub scale: ReplicatedFieldHandler<Vec3, Vec3CompMarshaler>,
+    pub scale: ReplicatedFieldHandler<Vec3, NonUniformScaleCompMarshaler>,
 }
 
 impl PositionInTheWorldReplicatedState {
@@ -33,7 +37,7 @@ impl PositionInTheWorldReplicatedState {
 
     #[must_use]
     pub fn rotation(&self) -> Option<Quat> {
-        self.rotation.value().copied().map(|rotation| rotation.0)
+        self.rotation.value().copied().map(Into::into)
     }
 
     #[must_use]

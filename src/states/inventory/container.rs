@@ -1,6 +1,10 @@
+//! Inventory container contents, settings, and item-class replication.
+
+use crate::{az_rtti, replicated_state, type_registry};
+
 use crate::Marshaler;
 use crate::hub::SequenceNumber;
-use crate::serialize::{Change, ReplicatedFieldHandler, ReplicatedVec, VlqU64};
+use crate::serialize::{Change, ReplicatedContainer, ReplicatedFieldHandler, VlqU64};
 
 const CONTAINER_ITEM_MAX_COUNT: usize = 0x1f4;
 
@@ -36,12 +40,12 @@ impl Default for ContainerSnapshot {
     }
 }
 
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("EF1A20F2-F6CF-439F-A1AC-63460F803134")]
-#[::nw_network::type_registry(1755)]
+#[az_rtti("EF1A20F2-F6CF-439F-A1AC-63460F803134")]
+#[type_registry(1755)]
 pub struct ContainerComponentReplicatedState {
-    pub container: ReplicatedVec<ContainerItemDescriptor, CONTAINER_ITEM_MAX_COUNT>,
+    pub container: ReplicatedContainer<Vec<ContainerItemDescriptor>, CONTAINER_ITEM_MAX_COUNT>,
     pub item_class: ReplicatedFieldHandler<ContainerItemClasses>,
     pub bonus_max_encumbrance: ReplicatedFieldHandler<u32>,
     pub can_transfer_items: ReplicatedFieldHandler<bool>,
@@ -52,7 +56,7 @@ impl ContainerComponentReplicatedState {
     #[must_use]
     pub fn initial_baseline() -> Self {
         let mut state = Self {
-            container: ReplicatedVec::new(3, vec![Self::empty_item_descriptor(); 5]),
+            container: ReplicatedContainer::new(3, vec![Self::empty_item_descriptor(); 5]),
             ..Self::default()
         };
         state.bonus_max_encumbrance.set_value(0);
@@ -63,7 +67,7 @@ impl ContainerComponentReplicatedState {
     #[must_use]
     pub fn continuation_delta() -> Self {
         Self {
-            container: ReplicatedVec::delta(vec![Change::update(
+            container: ReplicatedContainer::delta(vec![Change::update(
                 VlqU64::new(0),
                 Self::empty_item_descriptor(),
                 9,
@@ -73,7 +77,7 @@ impl ContainerComponentReplicatedState {
     }
 
     pub fn apply_snapshot(&mut self, snapshot: ContainerSnapshot) {
-        self.container = ReplicatedVec::new(snapshot.container_sequence, snapshot.items);
+        self.container = ReplicatedContainer::new(snapshot.container_sequence, snapshot.items);
 
         if let Some(settings) = snapshot.inventory_settings {
             self.item_class.set_value(ContainerItemClasses {

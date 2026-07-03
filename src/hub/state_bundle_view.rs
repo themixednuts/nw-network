@@ -1,31 +1,57 @@
 use std::{iter::FusedIterator, ops::Range};
 
 use super::{
-    ReplicatedStateBundle, ReplicatedStateBundleView, StateFragmentHeaderSpan, StateRecordHeader,
-    decode_state_fragment_contents, read_state_fragment_header, read_state_record_header,
+    Fragment, ReplicatedStateBundle, ReplicatedStateBundleView, StateFragmentHeaderSpan,
+    StateRecordHeader, read_state_fragment_header, read_state_record_header,
 };
 use crate::serialize::{CARRIER_ENDIAN, MarshalerError, ReadBuffer};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug)]
 pub struct StateFragmentView<'a> {
     pub record: StateRecordHeader,
     pub header: StateFragmentHeaderSpan,
     pub body: &'a [u8],
     pub body_range: Range<usize>,
+    fragment: Box<dyn Fragment>,
 }
 
 impl StateFragmentView<'_> {
-    /// Decode the borrowed fragment body as a concrete fragment type.
+    /// Return the fragment value decoded while walking the bundle stream.
     ///
-    /// # Errors
-    ///
-    /// Returns any error reported by the fragment's content decoder.
-    pub fn decode<T>(&self) -> Result<T, MarshalerError>
+    /// This is the same pass that advances [`StateFragmentIter`]; callers do
+    /// not need to decode `body` again to inspect the value.
+    #[must_use]
+    pub fn value(&self) -> &dyn Fragment {
+        self.fragment.as_ref()
+    }
+
+    /// Return the mutable fragment value decoded while walking the bundle stream.
+    pub fn value_mut(&mut self) -> &mut dyn Fragment {
+        self.fragment.as_mut()
+    }
+
+    /// Downcast the decoded fragment value to its concrete generated state type.
+    #[must_use]
+    pub fn downcast_ref<T>(&self) -> Option<&T>
     where
-        T: super::DynFragment + Default,
+        T: Fragment + 'static,
     {
-        let mut rb = ReadBuffer::new(CARRIER_ENDIAN, self.body);
-        decode_state_fragment_contents(&mut rb)
+        self.fragment.as_ref().downcast_ref::<T>()
+    }
+
+    /// Mutably downcast the decoded fragment value to its concrete generated state type.
+    #[must_use]
+    pub fn downcast_mut<T>(&mut self) -> Option<&mut T>
+    where
+        T: Fragment + 'static,
+    {
+        self.fragment.as_mut().downcast_mut::<T>()
+    }
+
+    /// Consume the view and return the decoded fragment value.
+    #[must_use]
+    pub fn into_fragment(self) -> Box<dyn Fragment> {
+        self.fragment
     }
 }
 
@@ -73,7 +99,7 @@ impl<'a> StateFragmentIter<'a> {
         let header = read_state_fragment_header(&mut self.rb)?;
         let body_start = self.rb.position();
 
-        header.type_info.consume_contents(&mut self.rb)?;
+        let fragment = header.type_info.decode_contents(&mut self.rb)?;
 
         let body_end = self.rb.position();
         self.fragments_left_in_record -= 1;
@@ -82,6 +108,7 @@ impl<'a> StateFragmentIter<'a> {
             header,
             body: self.rb.range(body_start..body_end)?,
             body_range: body_start..body_end,
+            fragment,
         })
     }
 }
@@ -134,17 +161,17 @@ impl<'a> ReplicatedStateBundleView<'a> {
 mod tests {
     use super::*;
     use crate::{
+        Fragment, az_rtti,
         hub::{
-            DynFragment, Fragment, FragmentBase, FragmentKey, FragmentTypeInfo, InterestId,
-            StateRecordWriter,
+            DynFragment, FragmentBase, FragmentKey, FragmentTypeInfo, InterestId, StateRecordWriter,
         },
         serialize::{Marshaler, WriteBuffer},
-        types::TypeRegistryEntry,
+        type_registry,
     };
 
-    #[derive(Debug, Default, ::nw_network::Fragment)]
-    #[::nw_network::az_rtti("22222222-2222-4222-8222-222222222222")]
-    #[::nw_network::type_registry(64_991)]
+    #[derive(Debug, Default, Fragment)]
+    #[az_rtti("22222222-2222-4222-8222-222222222222")]
+    #[type_registry(64_991)]
     struct ByteFragment {
         base: FragmentBase,
         value: u8,
@@ -183,7 +210,7 @@ mod tests {
     #[test]
     fn fragment_iterator_yields_borrowed_bodies_and_headers() {
         let mut bundle = ReplicatedStateBundle::default();
-        bundle
+        let _ = bundle
             .write_record(7, |record: &mut StateRecordWriter<'_>| {
                 record.write_fragment(3, &ByteFragment::new(0xcc))
             })
@@ -196,9 +223,12 @@ mod tests {
         assert_eq!(fragments[0].header.fragment_key, FragmentKey::new(3));
         assert_eq!(
             fragments[0].header.type_info,
-            FragmentTypeInfo::TypeIndex(ByteFragment::TYPE_INDEX)
+            FragmentTypeInfo::registered::<ByteFragment>()
         );
         assert_eq!(fragments[0].body, &[0xcc]);
-        assert_eq!(fragments[0].decode::<ByteFragment>().unwrap().value, 0xcc);
+        assert_eq!(
+            fragments[0].downcast_ref::<ByteFragment>().unwrap().value,
+            0xcc
+        );
     }
 }

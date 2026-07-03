@@ -6,7 +6,6 @@ use nw_network::{
         InstancedSlayerScriptReplicatedState, InteractReplicatedState,
         ProgressionComponentReplicatedState, TemporaryAffiliationReplicatedState,
     },
-    types::TypeRegistryEntry,
     validate_state_fragment_type_indices,
 };
 
@@ -364,15 +363,15 @@ fn live_state_702_walks_instanced_slayer_script_into_progression() {
         .iter()
         .position(|fragment| {
             fragment.header.type_info
-                == FragmentTypeInfo::TypeIndex(InstancedSlayerScriptReplicatedState::TYPE_INDEX)
+                == FragmentTypeInfo::registered::<InstancedSlayerScriptReplicatedState>()
         })
         .unwrap_or_else(|| panic!("{}: missing instanced slayer script state", fixture.name));
     let slayer = &fragments[slayer_index];
     assert_eq!(slayer.body_range, 0x113..0x121, "{}", fixture.name);
 
     let slayer = slayer
-        .decode::<InstancedSlayerScriptReplicatedState>()
-        .unwrap_or_else(|err| panic!("{}: instanced slayer script body: {err}", fixture.name));
+        .downcast_ref::<InstancedSlayerScriptReplicatedState>()
+        .unwrap_or_else(|| panic!("{}: instanced slayer script body type", fixture.name));
     assert!(
         slayer.spawned_entity_ids_by_spawner_id.values().is_empty(),
         "{}",
@@ -390,19 +389,19 @@ fn live_state_702_walks_instanced_slayer_script_into_progression() {
     );
     assert_eq!(
         progression.header.type_info,
-        FragmentTypeInfo::TypeIndex(ProgressionComponentReplicatedState::TYPE_INDEX),
+        FragmentTypeInfo::registered::<ProgressionComponentReplicatedState>(),
         "{}",
         fixture.name
     );
     progression
-        .decode::<ProgressionComponentReplicatedState>()
-        .unwrap_or_else(|err| panic!("{}: progression body: {err}", fixture.name));
+        .downcast_ref::<ProgressionComponentReplicatedState>()
+        .unwrap_or_else(|| panic!("{}: progression body type", fixture.name));
 
     let affiliation = fragments
         .iter()
         .find(|fragment| {
             fragment.header.type_info
-                == FragmentTypeInfo::TypeIndex(TemporaryAffiliationReplicatedState::TYPE_INDEX)
+                == FragmentTypeInfo::registered::<TemporaryAffiliationReplicatedState>()
         })
         .unwrap_or_else(|| panic!("{}: missing temporary affiliation state", fixture.name));
     assert_eq!(affiliation.body_range, 0x338..0x340, "{}", fixture.name);
@@ -414,8 +413,8 @@ fn live_state_702_walks_instanced_slayer_script_into_progression() {
     );
 
     let affiliation = affiliation
-        .decode::<TemporaryAffiliationReplicatedState>()
-        .unwrap_or_else(|err| panic!("{}: temporary affiliation body: {err}", fixture.name));
+        .downcast_ref::<TemporaryAffiliationReplicatedState>()
+        .unwrap_or_else(|| panic!("{}: temporary affiliation body type", fixture.name));
     assert!(
         affiliation.affiliations.values().is_empty(),
         "{}",
@@ -431,7 +430,7 @@ fn live_state_702_walks_instanced_slayer_script_into_progression() {
     assert_eq!(last.record.interest_id.get(), 101, "{}", fixture.name);
     assert_eq!(
         last.header.type_info,
-        FragmentTypeInfo::TypeIndex(InteractReplicatedState::TYPE_INDEX),
+        FragmentTypeInfo::registered::<InteractReplicatedState>(),
         "{}",
         fixture.name
     );
@@ -518,8 +517,8 @@ fn assert_expected_state(
             rotation,
         } => {
             let alc = fragment
-                .decode::<ALCReplicatedState>()
-                .unwrap_or_else(|err| panic!("{name}: ALC fragment body: {err}"));
+                .downcast_ref::<ALCReplicatedState>()
+                .unwrap_or_else(|| panic!("{name}: ALC fragment body type"));
             assert_eq!(alc.state_id(), Some(state_id), "{name}");
             assert_eq!(
                 alc.time_offset_milliseconds(),
@@ -534,8 +533,8 @@ fn assert_expected_state(
         }
         ExpectedState::Interact { has_interactors } => {
             let interact = fragment
-                .decode::<InteractReplicatedState>()
-                .unwrap_or_else(|err| panic!("{name}: interact fragment body: {err}"));
+                .downcast_ref::<InteractReplicatedState>()
+                .unwrap_or_else(|| panic!("{name}: interact fragment body type"));
             assert_eq!(interact.enabled.value(), None, "{name}");
             assert_eq!(
                 interact.has_interactors.value().copied(),
@@ -549,8 +548,8 @@ fn assert_expected_state(
             total_sell_contracts,
         } => {
             let aggregate = fragment
-                .decode::<AggregateContractCountComponentReplicatedState>()
-                .unwrap_or_else(|err| panic!("{name}: aggregate contract-count body: {err}"));
+                .downcast_ref::<AggregateContractCountComponentReplicatedState>()
+                .unwrap_or_else(|| panic!("{name}: aggregate contract-count body type"));
             assert_eq!(
                 aggregate.total_buy_contracts.value().copied(),
                 Some(total_buy_contracts),

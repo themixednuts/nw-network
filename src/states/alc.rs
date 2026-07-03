@@ -1,29 +1,50 @@
+//! Action-list state replicated for every character.
+//!
+//! This is the highest-frequency character state on the wire. The fixed fields
+//! are laid out in send-frequency order rather than struct declaration order:
+//! frequently changing movement, rotation, timing, and animation values occupy
+//! the low field indices so common delta masks stay dense and usually marshal
+//! with fewer mask bytes.
+//!
+//! Group 0 carries character action data visible to observers. Group 1 carries
+//! owning-player-only data and is filtered through the replication whitelist.
+
+use crate::{Fragment, Marshaler, az_rtti, fixed_replicated_state, type_registry};
+
 use arrayvec::ArrayVec;
 use bevy_math::bounding::Aabb2d;
 use glam::{Quat, Vec2, Vec3};
 use std::fmt;
 
 use crate::hub::{
-    ClientActorHash, DynFragment, FixedReplicatedState, FixedReplicatedStateFields, Fragment,
-    FragmentBase, FragmentCategory, GroupIndex, MarshalContext, SequenceNumber,
+    ClientActorHash, DynFragment, FixedReplicatedState, FixedReplicatedStateFields, FragmentBase,
+    FragmentCategory, GroupIndex, MarshalContext, SequenceNumber,
 };
 use crate::serialize::{
     Codec, DeltaCompressedCounterHandler, DeltaCompressedReplicatedFieldHandler,
-    FloatTimerDeltaReplicatedField, HalfF32Marshaler, Marshaler, MarshalerError,
-    PositionAnchorMarshaler, QuantizedRelativePosition, QuatSmallestThreeQuantized, ReadBuffer,
-    ReplicatedFieldHandler, ReplicatedFieldHandlerBase, VlqU32, WriteBuffer, quantize_with_range,
-    unquantize_with_range,
+    FloatTimerDeltaReplicatedField, HalfF32Marshaler, MarshalerError, PositionAnchorMarshaler,
+    QuantizedRelativePosition, QuatSmallestThreeQuantized, ReadBuffer, ReplicatedFieldHandler,
+    ReplicatedFieldHandlerBase, VlqU32, WriteBuffer, quantize_with_range, unquantize_with_range,
 };
 
+/// Maximum number of scoped action entries encoded by the action-list blobs.
 pub const ACTION_STATE_MAX_SCOPE_SIZE: usize = 16;
+/// Byte capacity of the scoped action-info payload.
 pub const SCOPE_INFO_TOTAL_BYTES: usize = 11 * ACTION_STATE_MAX_SCOPE_SIZE;
+/// Byte capacity of the scoped action-time payload.
 pub const SCOPE_TIME_TOTAL_BYTES: usize = 2 * ACTION_STATE_MAX_SCOPE_SIZE;
 
+/// Opaque action-list payload for scope-bound action metadata.
 pub type ScopeInfoBlob = ArrayVec<u8, SCOPE_INFO_TOTAL_BYTES>;
+/// Opaque action-list payload for scope-bound action timing.
 pub type ScopeTimeBlob = ArrayVec<u8, SCOPE_TIME_TOTAL_BYTES>;
+/// Opaque action-list payload for owner-visible action metadata without a scope.
 pub type ScopelessInfoBlob = ArrayVec<u8, SCOPE_INFO_TOTAL_BYTES>;
+/// Opaque action-list payload for owner-visible action timing without a scope.
 pub type ScopelessTimeBlob = ArrayVec<u8, SCOPE_TIME_TOTAL_BYTES>;
+/// Serialized script payload embedded in action-list data.
 pub type SlayerScriptBlob = Vec<u8>;
+/// Optional script payload field used by action-list data.
 pub type SlayerScriptField = Option<SlayerScriptBlob>;
 
 const ALC_REPLICATION_GROUPS: usize = 2;
@@ -32,10 +53,18 @@ const ALC_CLIENT_WHITELIST_SIZE: usize = 1;
 type AlcFixedState =
     FixedReplicatedState<ALC_REPLICATION_GROUPS, ALC_FIELDS_PER_GROUP, ALC_CLIENT_WHITELIST_SIZE>;
 
+/// Absolute position anchor used by the action-list position codec.
+///
+/// The wire representation stores horizontal position and height through the
+/// packed position-anchor marshaler. Subsequent movement can be sent as a small
+/// quantized delta from this anchor.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct AlcPositionAnchor {
+    /// World X coordinate.
     pub x: f32,
+    /// World Y coordinate.
     pub y: f32,
+    /// World height coordinate.
     pub height: f32,
 }
 
@@ -56,6 +85,7 @@ impl AlcPositionAnchor {
     }
 }
 
+/// Marshals an [`AlcPositionAnchor`] with the protocol position-anchor codec.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct AlcPositionAnchorMarshaler;
 
@@ -72,10 +102,19 @@ impl Codec<AlcPositionAnchor> for AlcPositionAnchorMarshaler {
     }
 }
 
+/// Three-part world-position field used by action-list replication.
+///
+/// The absolute portion provides an anchor, the relative portion carries a
+/// quantized delta from that anchor, and the quantization field describes the
+/// range needed to decode the delta. When a new value falls outside the current
+/// quantization range, the anchor is refreshed and the relative delta resets.
 #[derive(Debug, Clone, Default)]
 pub struct AlcWorldPositionHandler {
+    /// Absolute position anchor for the current quantized range.
     pub absolute_portion: ReplicatedFieldHandler<AlcPositionAnchor, AlcPositionAnchorMarshaler>,
+    /// Quantized delta from `absolute_portion`.
     pub quantized_relative_portion: ReplicatedFieldHandler<QuantizedRelativePosition>,
+    /// Range used to quantize and unquantize the relative delta.
     pub quantization: ReplicatedFieldHandler<f32>,
 }
 
@@ -157,9 +196,11 @@ impl AlcWorldPositionHandler {
     }
 }
 
+/// Delta-compressed half-float animation timer field.
 pub type SlayerAnimationFieldHandler =
     DeltaCompressedReplicatedFieldHandler<f32, 2, HalfF32Marshaler>;
 
+/// Packs quaternions with the protocol smallest-three quaternion codec.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct PackedQuaternionMarshaller;
 
@@ -173,6 +214,7 @@ impl Codec<Quat> for PackedQuaternionMarshaller {
     }
 }
 
+/// Packs normalized direction vectors with the protocol smallest-three codec.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct PackedNormalizedVec3Marshaller;
 
@@ -191,10 +233,13 @@ impl Codec<Vec3> for PackedNormalizedVec3Marshaller {
     }
 }
 
+/// Compact global fragment-tag bit payload.
 pub type TagStateData = [u8; 12];
 
+/// Grid accessibility value carried by owner-only movement diagnostics.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct GridAccessibility {
+    /// Raw protocol value.
     pub raw: u8,
 }
 
@@ -223,10 +268,19 @@ impl Marshaler for GridAccessibility {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, ::nw_network::Marshaler)]
+/// Movement bounds that are forbidden for the owning player.
+///
+/// The display form intentionally renders the bounds component twice as
+/// `{bounds,bounds,for_exit}`. The repeated bounds component is part of the
+/// established diagnostic text format and should remain stable for consumers
+/// that parse it.
+#[derive(Debug, Clone, PartialEq, Marshaler)]
 pub struct AlcForbiddenBounds {
+    /// Forbidden two-dimensional bounds.
     pub bounds: Aabb2d,
+    /// Accessibility classification for the grid containing the bounds.
     pub accessibility: GridAccessibility,
+    /// Whether the bounds apply to an exit path.
     pub for_exit: bool,
 }
 
@@ -250,46 +304,87 @@ impl fmt::Display for AlcForbiddenBounds {
     }
 }
 
-#[::nw_network::fixed_replicated_state(AlcFixedState)]
-#[derive(Debug, Clone, Default, ::nw_network::Fragment)]
-#[::nw_network::az_rtti("01B0664B-3AB6-44A6-87E3-8C69D40E0365")]
-#[::nw_network::type_registry(11)]
+/// Action-list replicated state for character movement, animation, and action
+/// metadata.
+///
+/// Group 0 is observer-visible action data. Group 1 is reserved for the client
+/// that owns the character and is controlled by the fixed-state whitelist.
+#[fixed_replicated_state(AlcFixedState)]
+#[derive(Debug, Clone, Default, Fragment)]
+#[az_rtti("01B0664B-3AB6-44A6-87E3-8C69D40E0365")]
+#[type_registry(11)]
 pub struct ALCReplicatedState {
+    /// Action-state sequence counter, delta-compressed in group 0.
     pub state_id: DeltaCompressedCounterHandler,
+    /// Absolute action time anchor in microseconds.
     pub time_anchor_microseconds: ReplicatedFieldHandler<u64>,
+    /// Millisecond offset from the current action time anchor.
     pub time_offset_milliseconds: DeltaCompressedCounterHandler,
+    /// Primary action-state bit flags.
     pub flags: ReplicatedFieldHandler<u8>,
+    /// Additional action-state bit flags.
     pub more_flags: ReplicatedFieldHandler<u8>,
+    /// World-space position using absolute-anchor plus quantized-delta fields.
     pub world_pos: AlcWorldPositionHandler,
+    /// Normalized facing/look direction.
     pub look_dir: ReplicatedFieldHandler<Vec3, PackedNormalizedVec3Marshaller>,
+    /// Character rotation.
     pub rotation: ReplicatedFieldHandler<Quat, PackedQuaternionMarshaller>,
+    /// AI-facing offset used by movement and animation steering.
     pub ai_angle_to_desired_facing: ReplicatedFieldHandler<f32>,
+    /// Weapon accuracy contribution from current stance.
     pub weapon_accuracy_stance: ReplicatedFieldHandler<f32, HalfF32Marshaler>,
+    /// Weapon accuracy contribution from current movement.
     pub weapon_accuracy_movement: ReplicatedFieldHandler<f32, HalfF32Marshaler>,
+    /// Active script layer count for action animation playback.
     pub slayer_script_layers: ReplicatedFieldHandler<u8>,
+    /// Script-level action flags packed as a variable-length integer.
     pub slayer_script_flags: ReplicatedFieldHandler<VlqU32>,
+    /// Per-layer script state identifiers.
     pub slayer_state_id: [ReplicatedFieldHandler<VlqU32>; 4],
+    /// Per-layer script-state start ticks.
     pub slayer_state_id_started: [ReplicatedFieldHandler<u16>; 4],
+    /// Per-layer script sequence identifiers.
     pub slayer_sequence_id: [ReplicatedFieldHandler<VlqU32>; 4],
+    /// Per-layer script sequence timers.
     pub slayer_sequence_time: [SlayerAnimationFieldHandler; 4],
+    /// Global fragment-tag data attached to the action state.
     pub global_frag_tags: ReplicatedFieldHandler<TagStateData>,
+    /// Teleport or migration marker used to disambiguate discontinuous motion.
     pub teleport_and_migration_id: ReplicatedFieldHandler<u8>,
+    /// Owner-only hit counter for character hits.
     pub hit_character_counter: ReplicatedFieldHandler<u8>,
+    /// Owner-only hit counter for structure hits.
     pub hit_structure_counter: ReplicatedFieldHandler<u8>,
+    /// Owner-only hit counter for world hits.
     pub hit_world_counter: ReplicatedFieldHandler<u8>,
+    /// Counter advanced when grit is broken.
     pub grit_broken_counter: ReplicatedFieldHandler<u8>,
+    /// Packed action scope descriptor.
     pub scope_data: ReplicatedFieldHandler<VlqU32>,
+    /// Compact stamina segment state for action playback.
     pub segmented_stamina: ReplicatedFieldHandler<u8>,
+    /// Scope-bound action metadata blob.
     pub scope_info_blob: ReplicatedFieldHandler<ScopeInfoBlob>,
+    /// Scope-bound action timer blobs split across delta timer fields.
     pub scope_time_blobs: [FloatTimerDeltaReplicatedField; 2],
+    /// Additional scope-bound action timer payload.
     pub scope_time_blob_extra: ReplicatedFieldHandler<ScopeTimeBlob>,
+    /// Owner-only action metadata that is not tied to a scope.
     pub scopeless_info_blob: ReplicatedFieldHandler<ScopelessInfoBlob>,
+    /// Owner-only action timing that is not tied to a scope.
     pub scopeless_time_blob: ReplicatedFieldHandler<ScopelessTimeBlob>,
+    /// Packed extension byte for action-list-specific network data.
     pub combined_extra_network_data: ReplicatedFieldHandler<u8>,
+    /// Shape-cast filter used for melee attack hit tests.
     pub melee_attack_shape_cast_filter: ReplicatedFieldHandler<VlqU32>,
+    /// Owner-only movement bounds that are currently forbidden.
     pub forbidden_bounds: ReplicatedFieldHandler<Option<AlcForbiddenBounds>>,
+    /// Owner-only grid accessibility value at the character's current location.
     pub current_grid_accessibility: ReplicatedFieldHandler<GridAccessibility>,
+    /// Owner-only compact distance-to-ground sample.
     pub distance_to_ground: ReplicatedFieldHandler<u8>,
+    /// Owner-only compact water-depth sample.
     pub water_depth: ReplicatedFieldHandler<u8>,
 }
 
@@ -326,6 +421,11 @@ impl ALCReplicatedState {
         self.world_pos.set_value(value, quantization);
     }
 
+    /// Replaces the owning-player whitelist for group 1 with `player_actor_hash`.
+    ///
+    /// A character has exactly one owning client at a time. Clearing before
+    /// adding prevents a stale owner from retaining access after reconnects,
+    /// transfers, or other ownership changes.
     pub fn set_owning_player(&mut self, player_actor_hash: ClientActorHash) {
         let group = GroupIndex::new(Self::OWNING_PLAYER_GROUP_IDX);
         self.clear_replication_whitelist(group);
@@ -340,6 +440,11 @@ impl ALCReplicatedState {
         Some(handler.value())
     }
 
+    /// Visits group 0 fields in their fixed wire order.
+    ///
+    /// Low indices are reserved for high-churn counters, animation timers,
+    /// position deltas, rotation, and look direction so common updates emit the
+    /// shortest practical mask chain.
     fn visit_default_replication_fields<'a>(
         &'a self,
         mut visit: impl FnMut(usize, &'a dyn ReplicatedFieldHandlerBase),
@@ -461,6 +566,11 @@ impl ALCReplicatedState {
         Ok(())
     }
 
+    /// Visits group 1 fields in their owning-player-only wire order.
+    ///
+    /// These fields carry local movement diagnostics, scopeless action payloads,
+    /// owner hit feedback, and navigation constraints. The group is only sent to
+    /// the whitelisted owning client.
     fn visit_owning_player_fields<'a>(
         &'a self,
         mut visit: impl FnMut(usize, &'a dyn ReplicatedFieldHandlerBase),

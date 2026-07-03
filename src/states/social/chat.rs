@@ -1,3 +1,7 @@
+//! Chat channel and mute-list replication.
+
+use crate::{az_rtti, replicated_state, type_registry};
+
 use crate::hub::SequenceNumber;
 use crate::serialize::container_marshal::marshal_wire_count;
 use crate::serialize::{
@@ -5,10 +9,10 @@ use crate::serialize::{
     VlqU64Marshaler, WIRE_VEC_CAP, WriteBuffer,
 };
 
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("733DD7CC-D17E-41DD-B0EA-0FB6D8E0939F")]
-#[::nw_network::type_registry(2895)]
+#[az_rtti("733DD7CC-D17E-41DD-B0EA-0FB6D8E0939F")]
+#[type_registry(2895)]
 pub struct ChatReplicatedState {
     pub state: ReplicatedFieldHandler<u32>,
     pub channel: ReplicatedFieldHandler<u32>,
@@ -175,10 +179,10 @@ impl Marshaler for ChatMutes {
     }
 }
 
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("01CEFF40-344D-4B55-9879-BA0D55C50312")]
-#[::nw_network::type_registry(1566)]
+#[az_rtti("01CEFF40-344D-4B55-9879-BA0D55C50312")]
+#[type_registry(1566)]
 pub struct ChatMutesReplicatedState {
     pub chat_mutes: ReplicatedFieldHandler<ChatMutes>,
 }

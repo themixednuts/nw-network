@@ -1,8 +1,12 @@
+//! Projectile transform, lifetime, and hit-data replication.
+
+use crate::{az_rtti, replicated_state, type_registry};
+
 use glam::Vec3;
 
 use crate::serialize::{
-    HalfF32Marshaler, HalfVec3Marshaler, PositionAnchorMarshaler, ReplicatedFieldHandler,
-    ReplicatedVec, VlqU32Marshaler,
+    HalfF32Marshaler, HalfVec3Marshaler, PositionAnchorMarshaler, ReplicatedContainer,
+    ReplicatedFieldHandler, VlqU32Marshaler,
 };
 use crate::{GdeId, Marshaler};
 
@@ -15,13 +19,10 @@ pub struct PiercingHitData {
 }
 
 /// Projectile ranged-attack replicated state.
-#[::nw_network::replicated_state(
-    category = "projectile",
-    world_position = "world_position_anchor()"
-)]
+#[replicated_state(category = "projectile", world_position = "world_position_anchor()")]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("39B4C919-3A6D-46B5-92D0-3B4ACB284B1D")]
-#[::nw_network::type_registry(16)]
+#[az_rtti("39B4C919-3A6D-46B5-92D0-3B4ACB284B1D")]
+#[type_registry(16)]
 pub struct ProjectileReplicatedState {
     pub position_anchor: ReplicatedFieldHandler<(f32, f32, f32), PositionAnchorMarshaler>,
     pub anchor_height_delta: ReplicatedFieldHandler<f32, HalfF32Marshaler>,
@@ -39,7 +40,7 @@ pub struct ProjectileReplicatedState {
     pub ammo_id_crc: ReplicatedFieldHandler<u32, VlqU32Marshaler>,
     pub damage_table_id: ReplicatedFieldHandler<u32>,
     pub damage_table_row_index: ReplicatedFieldHandler<u16>,
-    pub piercing_hits: ReplicatedVec<PiercingHitData>,
+    pub piercing_hits: ReplicatedContainer<Vec<PiercingHitData>>,
     pub magnet_entity_id: ReplicatedFieldHandler<u64>,
     pub magnet_root_offset: ReplicatedFieldHandler<(f32, f32, f32), HalfVec3Marshaler>,
     pub combat_settings_exp_idx: ReplicatedFieldHandler<u8>,

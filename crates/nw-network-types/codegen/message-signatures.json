@@ -55,63 +55,6 @@
       ]
     },
     {
-      "typeId": "104145A7-FF95-44F1-9468-21FB41C8AC2B",
-      "typeIndex": 3,
-      "name": "REPClient::RegistrationResponseMsg",
-      "rustName": "RegistrationResponseMsg",
-      "source": "source-signature-notes",
-      "fields": [
-        {
-          "index": 0,
-          "name": "StatusCode",
-          "nativeType": "std::int32_t",
-          "wireShape": "u32"
-        },
-        {
-          "index": 1,
-          "name": "Time",
-          "nativeType": "Amazon::Hub::SyncedTimestamp",
-          "wireShape": "u64"
-        },
-        {
-          "index": 2,
-          "name": "AnalyticsSessionId",
-          "nativeType": "std::string",
-          "wireShape": "string"
-        },
-        {
-          "index": 3,
-          "name": "ServerVersion",
-          "nativeType": "std::string",
-          "wireShape": "string"
-        },
-        {
-          "index": 4,
-          "name": "EnableClientMsgWhitelist",
-          "nativeType": "bool",
-          "wireShape": "bool"
-        },
-        {
-          "index": 5,
-          "name": "EnableGameMasterClient",
-          "nativeType": "bool",
-          "wireShape": "bool"
-        },
-        {
-          "index": 6,
-          "name": "EnableSuperGameMasterClient",
-          "nativeType": "bool",
-          "wireShape": "bool"
-        },
-        {
-          "index": 7,
-          "name": "RequireAntiCheat",
-          "nativeType": "bool",
-          "wireShape": "bool"
-        }
-      ]
-    },
-    {
       "typeId": "038CD847-0653-4243-9A26-936E3BD7F312",
       "typeIndex": 335,
       "name": "REPClient::TimeSynchMsg",
@@ -122,21 +65,6 @@
           "index": 0,
           "name": "Time",
           "nativeType": "SyncedTimestamp",
-          "wireShape": "u64"
-        }
-      ]
-    },
-    {
-      "typeId": "6A379FB8-0BDD-43A1-AB3E-9843D7BE8CD3",
-      "typeIndex": 349,
-      "name": "REPClient::PingMsg",
-      "rustName": "PingMsg",
-      "source": "source-signature-notes",
-      "fields": [
-        {
-          "index": 0,
-          "name": "EpochTimeSend",
-          "nativeType": "Pervasives::Duration",
           "wireShape": "u64"
         }
       ]
@@ -182,26 +110,11 @@
       ]
     },
     {
-      "typeId": "B5733A42-3CC9-442E-B6C7-D83AF26DBBB4",
-      "typeIndex": 401,
-      "name": "Replicate::UnregisterProxyMsg",
-      "rustName": "UnregisterProxyMsg",
-      "source": "source-signature-notes",
-      "fields": [
-        {
-          "index": 0,
-          "name": "Address",
-          "nativeType": "ActorRef",
-          "rustType": "::nw_network::ActorRef"
-        }
-      ]
-    },
-    {
       "typeId": "951EF3ED-C9A0-4E3D-A6FD-7FE0673D28D2",
       "typeIndex": 422,
       "name": "ReplicateClient::FragmentUpdateMsg",
-      "rustName": "FragmentUpdateMsg",
-      "source": "source-signature-notes",
+      "rustName": "ReplicateClientFragmentUpdateMsg",
+      "source": "message-signature-notes",
       "fields": [
         {
           "index": 0,
@@ -217,7 +130,88 @@
         {
           "index": 2,
           "name": "Fragment",
-          "nativeType": "BaselineableFragment"
+          "nativeType": "Amazon::Hub::BaselineableFragment",
+          "rustType": "::nw_network::BaselineableFragment"
+        }
+      ]
+    },
+    {
+      "typeId": "5570CFB7-0C5C-475E-BB19-D8FBC3FD8D32",
+      "typeIndex": 710,
+      "name": "ActorMover::MoveActorMsg",
+      "rustName": "MoveActorMsg",
+      "source": "message-signature-notes",
+      "fields": [
+        {
+          "index": 0,
+          "name": "ActorId",
+          "nativeType": "Amazon::Hub::ActorID",
+          "rustType": "::nw_network::ActorId",
+          "wireShape": "fixed-bytes-16"
+        }
+      ]
+    },
+    {
+      "typeId": "E13CE79F-F318-42D2-BADD-991AAE4F3185",
+      "typeIndex": 755,
+      "name": "MoveCoordinator::InitMsg",
+      "rustName": "MoveCoordinatorInitMsg",
+      "source": "message-signature-notes",
+      "fields": [
+        {
+          "index": 0,
+          "name": "MovementTimeout",
+          "nativeType": "Amazon::Pervasives::Duration",
+          "rustType": "::nw_network::Duration",
+          "wireShape": "u64"
+        }
+      ]
+    },
+    {
+      "typeId": "97B5CC71-075E-4F76-A30C-FC670EDAD0AB",
+      "typeIndex": 4996,
+      "name": "ActorMover::TimeoutMigrationsMsg",
+      "rustName": "TimeoutMigrationsMsg",
+      "source": "message-signature-notes",
+      "fields": [
+        {
+          "index": 0,
+          "name": "DurationSecs",
+          "nativeType": "AZ::u32",
+          "rustType": "u32",
+          "wireShape": "u32"
+        }
+      ]
+    },
+    {
+      "typeId": "66185CBC-DA8C-47E3-A6D9-20D627D80C5A",
+      "typeIndex": 5343,
+      "name": "ActorMover::TimeoutMigrationsAtCommitMsg",
+      "rustName": "TimeoutMigrationsAtCommitMsg",
+      "source": "message-signature-notes",
+      "fields": [
+        {
+          "index": 0,
+          "name": "DurationSecs",
+          "nativeType": "AZ::u32",
+          "rustType": "u32",
+          "wireShape": "u32"
+        }
+      ]
+    },
+    {
+      "typeId": "890A8AA5-67DF-4ED6-A872-589C60A80190",
+      "typeIndex": 5033,
+      "name": "ActorMover::DelayMigrationsMsg",
+      "rustName": "DelayMigrationsMsg",
+      "source": "message-signature-notes",
+      "fields": [
+        {
+          "index": 0,
+          "name": "DurationSecs",
+          "nativeType": "AZ::u32",
+          "rustType": "u32",
+          "wireShape": "u32"
         }
       ]
     }

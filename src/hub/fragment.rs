@@ -1,9 +1,10 @@
-use std::{any::Any, fmt::Debug};
+use std::{any::Any, collections::HashMap, fmt::Debug, sync::LazyLock};
 
 use glam::Vec3;
 use uuid::Uuid;
 
 use super::{ClientActorHash, SequenceNumber, TypeIndex};
+use crate::network_schema;
 use crate::serialize::{MarshalerError, ReadBuffer, WriteBuffer};
 use crate::types::{AzRtti, TypeRegistryEntry};
 
@@ -167,6 +168,11 @@ impl<'a> From<&'a [SequenceNumber]> for GroupBaselines<'a> {
 }
 
 /// Context used while marshaling replicated fragments.
+///
+/// `baseline_seq` selects the state baseline for delta output. `filter_target`
+/// is the pre-hashed client actor identity used by per-group whitelist checks;
+/// `None` means marshal without per-client filtering. `group_baselines` can
+/// override the baseline per replicated-state group.
 #[derive(Debug, Clone, Copy)]
 pub struct MarshalContext<'a> {
     pub baseline_seq: SequenceNumber,
@@ -426,6 +432,7 @@ pub struct FragmentRegistration {
     pub uuid: fn() -> Uuid,
     pub name: fn() -> &'static str,
     pub type_index: fn() -> u32,
+    pub registry_index: fn() -> Option<TypeIndex>,
     pub decode_contents: FragmentContentsDecodeFn,
     pub consume_contents: FragmentContentsConsumeFn,
     pub decode_full: FullFragmentDecodeFn,
@@ -433,6 +440,47 @@ pub struct FragmentRegistration {
 }
 
 inventory::collect!(FragmentRegistration);
+
+static FRAGMENT_REGISTRATION_BY_UUID: LazyLock<HashMap<Uuid, &'static FragmentRegistration>> =
+    LazyLock::new(|| {
+        let mut registrations = HashMap::new();
+        for entry in inventory::iter::<FragmentRegistration> {
+            let previous = registrations.insert((entry.uuid)(), entry);
+            debug_assert!(previous.is_none(), "duplicate fragment UUID registration");
+        }
+        registrations
+    });
+
+static FRAGMENT_REGISTRATION_BY_TYPE_INDEX: LazyLock<
+    HashMap<TypeIndex, &'static FragmentRegistration>,
+> = LazyLock::new(|| {
+    let mut registrations = HashMap::new();
+    for entry in inventory::iter::<FragmentRegistration> {
+        let previous = registrations.insert(TypeIndex::new((entry.type_index)()), entry);
+        debug_assert!(
+            previous.is_none(),
+            "duplicate fragment type-index registration"
+        );
+    }
+    registrations
+});
+
+static FRAGMENT_REGISTRATION_BY_REGISTRY_INDEX: LazyLock<
+    HashMap<TypeIndex, &'static FragmentRegistration>,
+> = LazyLock::new(|| {
+    let mut registrations = HashMap::new();
+    for entry in inventory::iter::<FragmentRegistration> {
+        let Some(registry_index) = (entry.registry_index)() else {
+            continue;
+        };
+        let previous = registrations.insert(registry_index, entry);
+        debug_assert!(
+            previous.is_none(),
+            "duplicate fragment registry-index registration"
+        );
+    }
+    registrations
+});
 
 impl FragmentRegistration {
     #[must_use]
@@ -444,6 +492,7 @@ impl FragmentRegistration {
             uuid: || T::TYPE_ID,
             name: || T::TYPE_NAME,
             type_index: || T::TYPE_INDEX,
+            registry_index: registry_index_for_fragment::<T>,
             decode_contents: |rb| {
                 let mut fragment = T::default();
                 fragment.unmarshal_contents(rb)?;
@@ -468,32 +517,54 @@ impl FragmentRegistration {
     }
 }
 
+fn registry_index_for_fragment<T>() -> Option<TypeIndex>
+where
+    T: AzRtti,
+{
+    network_schema::registry_index_for_type_id(T::TYPE_ID).map(TypeIndex::new)
+}
+
 #[must_use]
 pub fn fragment_registration_by_uuid(uuid: Uuid) -> Option<&'static FragmentRegistration> {
-    inventory::iter::<FragmentRegistration>
-        .into_iter()
-        .find(|entry| (entry.uuid)() == uuid)
+    FRAGMENT_REGISTRATION_BY_UUID.get(&uuid).copied()
 }
 
 #[must_use]
 pub fn fragment_registration_by_type_index(
     type_index: impl Into<TypeIndex>,
 ) -> Option<&'static FragmentRegistration> {
-    let type_index = type_index.into();
-    inventory::iter::<FragmentRegistration>
-        .into_iter()
-        .find(|entry| TypeIndex::new((entry.type_index)()) == type_index)
+    FRAGMENT_REGISTRATION_BY_TYPE_INDEX
+        .get(&type_index.into())
+        .copied()
+}
+
+#[must_use]
+pub fn fragment_registration_by_registry_index(
+    registry_index: impl Into<TypeIndex>,
+) -> Option<&'static FragmentRegistration> {
+    FRAGMENT_REGISTRATION_BY_REGISTRY_INDEX
+        .get(&registry_index.into())
+        .copied()
 }
 
 #[must_use]
 pub fn registered_fragment_type_indices() -> Vec<TypeIndex> {
-    let mut type_indices = inventory::iter::<FragmentRegistration>
-        .into_iter()
-        .filter_map(|entry| fragment_type_index_by_uuid((entry.uuid)()))
+    let mut type_indices = FRAGMENT_REGISTRATION_BY_TYPE_INDEX
+        .keys()
+        .copied()
         .collect::<Vec<_>>();
     type_indices.sort_unstable();
-    type_indices.dedup();
     type_indices
+}
+
+#[must_use]
+pub fn registered_fragment_registry_indices() -> Vec<TypeIndex> {
+    let mut registry_indices = FRAGMENT_REGISTRATION_BY_REGISTRY_INDEX
+        .keys()
+        .copied()
+        .collect::<Vec<_>>();
+    registry_indices.sort_unstable();
+    registry_indices
 }
 
 #[must_use]
@@ -502,44 +573,53 @@ pub fn fragment_name_for_type_index(type_index: impl Into<TypeIndex>) -> Option<
 }
 
 #[must_use]
-pub fn fragment_type_index_by_uuid(uuid: Uuid) -> Option<TypeIndex> {
-    inventory::iter::<FragmentRegistration>
-        .into_iter()
-        .find(|entry| (entry.uuid)() == uuid)
-        .map(|entry| TypeIndex::new((entry.type_index)()))
+pub fn fragment_name_for_registry_index(
+    registry_index: impl Into<TypeIndex>,
+) -> Option<&'static str> {
+    fragment_registration_by_registry_index(registry_index).map(|entry| (entry.name)())
 }
 
-/// Consume a registered fragment body by compact type index.
+#[must_use]
+pub fn fragment_type_index_by_uuid(uuid: Uuid) -> Option<TypeIndex> {
+    fragment_registration_by_uuid(uuid).map(|entry| TypeIndex::new((entry.type_index)()))
+}
+
+#[must_use]
+pub fn fragment_registry_index_by_uuid(uuid: Uuid) -> Option<TypeIndex> {
+    fragment_registration_by_uuid(uuid).and_then(|entry| (entry.registry_index)())
+}
+
+/// Consume a registered fragment body by TypeRegistryInstance index.
 ///
 /// # Errors
 ///
-/// Returns an error when the type index is unknown or the body decoder fails.
-pub fn consume_fragment_contents_by_type_index(
-    type_index: impl Into<TypeIndex>,
+/// Returns an error when the registry index is unknown or the body decoder fails.
+pub fn consume_fragment_contents_by_registry_index(
+    registry_index: impl Into<TypeIndex>,
     rb: &mut ReadBuffer<'_>,
 ) -> Result<(), MarshalerError> {
-    let type_index = type_index.into();
-    let registration = fragment_registration_by_type_index(type_index).ok_or(
+    let registry_index = registry_index.into();
+    let registration = fragment_registration_by_registry_index(registry_index).ok_or(
         MarshalerError::UnknownTypeIndex {
-            type_index: type_index.get(),
+            type_index: registry_index.get(),
         },
     )?;
     (registration.consume_contents)(rb)
 }
 
-/// Decode a registered fragment body by compact type index.
+/// Decode a registered fragment body by TypeRegistryInstance index.
 ///
 /// # Errors
 ///
-/// Returns an error when the type index is unknown or the body decoder fails.
-pub fn decode_fragment_contents_by_type_index(
-    type_index: impl Into<TypeIndex>,
+/// Returns an error when the registry index is unknown or the body decoder fails.
+pub fn decode_fragment_contents_by_registry_index(
+    registry_index: impl Into<TypeIndex>,
     rb: &mut ReadBuffer<'_>,
 ) -> Result<Box<dyn Fragment>, MarshalerError> {
-    let type_index = type_index.into();
-    let registration = fragment_registration_by_type_index(type_index).ok_or(
+    let registry_index = registry_index.into();
+    let registration = fragment_registration_by_registry_index(registry_index).ok_or(
         MarshalerError::UnknownTypeIndex {
-            type_index: type_index.get(),
+            type_index: registry_index.get(),
         },
     )?;
     (registration.decode_contents)(rb)

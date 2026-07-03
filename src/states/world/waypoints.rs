@@ -1,11 +1,15 @@
+//! Waypoint path and current-waypoint replication.
+
+use crate::{az_rtti, replicated_state, type_registry};
+
 use glam::Vec3;
 
 use crate::serialize::ReplicatedFieldHandler;
 
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("B84EBDAF-8450-4C65-B345-3B02B892F05C")]
-#[::nw_network::type_registry(4321)]
+#[az_rtti("B84EBDAF-8450-4C65-B345-3B02B892F05C")]
+#[type_registry(4321)]
 pub struct WaypointsComponentReplicatedState {
     pub replicated_waypoint_position: ReplicatedFieldHandler<Vec3>,
 }

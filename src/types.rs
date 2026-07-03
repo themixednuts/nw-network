@@ -1,15 +1,18 @@
 pub use nw_network_types::{
     az::{asset::AssetId, crc::Crc32},
     types::{
-        AfflictionData, CharacterAttributeType, GDEID as GdeId, GameModeParticipantStatus,
+        AfflictionData, CharacterAttributeType, DyeData, GDEID as GdeId, GameModeParticipantStatus,
         GatheringStatus, GeneralCooldownType, GridSides, PaperdollSlotAlias, RecipeCooldownData,
         RemoteServerContextRef, RemoteServerFacetRefGameModeParticipantComponentServerFacet,
+        RemoteServerFacetRefHousingPlotComponentServerFacet,
         RemoteServerGDERef as RemoteServerGdeRef, RemoteTypelessServerFacetRef,
         ReplicationCategory, TemporaryAffiliationRelationship, TemporaryAffiliationType, TimePoint,
         WallClockTimePoint,
     },
 };
 use uuid::Uuid;
+
+use crate::Marshaler;
 
 /// Runtime type identity: stable UUID plus a human-readable type name.
 pub trait AzRtti {
@@ -22,30 +25,35 @@ pub trait TypeRegistryEntry {
     const TYPE_INDEX: u32;
 }
 
-/// Request id shape used by actor-scoped payloads.
+/// Actor target header used by actor-scoped payloads.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ActorRequestId {
-    pub request_id: u64,
     pub target_local_id: u64,
+    pub source_actor_ref: u64,
 }
 
 impl ActorRequestId {
     pub const INVALID_TARGET_LOCAL_ID: u64 = u32::MAX as u64;
 
     #[must_use]
-    pub const fn new(request_id: u64, target_local_id: u64) -> Self {
+    pub const fn new(target_local_id: u64, source_actor_ref: u64) -> Self {
         Self {
-            request_id,
             target_local_id,
+            source_actor_ref,
         }
+    }
+
+    #[must_use]
+    pub const fn facet_target_id(self) -> u64 {
+        self.target_local_id.wrapping_sub(self.source_actor_ref)
     }
 }
 
 impl Default for ActorRequestId {
     fn default() -> Self {
         Self {
-            request_id: 0,
             target_local_id: Self::INVALID_TARGET_LOCAL_ID,
+            source_actor_ref: 0,
         }
     }
 }
@@ -110,9 +118,7 @@ impl From<ComponentId> for u64 {
 
 /// Game-data reference carried as one UUID.
 #[repr(transparent)]
-#[derive(
-    Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash, ::nw_network::Marshaler,
-)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Marshaler)]
 pub struct GdeRef(Uuid);
 
 impl GdeRef {

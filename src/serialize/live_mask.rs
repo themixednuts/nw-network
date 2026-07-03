@@ -1,17 +1,13 @@
-//! Live-mask batch combinators — the "u8 live-mask byte every 8 entries"
+//! Live-mask batch helpers for sparse delta collection entries.
 //!
-//! Several replicated collection formats (`HouseDataComponent::housingItems`,
-//! `Projectile::piercingHits`, `GlobalMapDataManager::map`, and the internal
-//! replicated map/vector helpers) use chunks of up to 8 entries. Each chunk
-//! starts with a single `u8` whose bit `i` indicates whether entry `i` in
-//! the chunk carries an optional value (typically the "this slot was
-//! updated" flag in a sparse delta). Per-entry headers (keys, indices,
-//! sequence numbers) are always emitted; the value body is only present when
-//! the bit is set.
+//! Some collection payloads are written in chunks of up to 8 entries. Each
+//! chunk starts with a single `u8` whose bit `i` indicates whether entry `i`
+//! in the chunk carries an optional value, typically the value body in a sparse
+//! delta. Per-entry headers such as keys, indices, and sequence numbers are
+//! always emitted; the optional value body is only present when the bit is set.
 //!
-//! Before this module the loop was hand-rolled at every callsite. Capturing
-//! it once gives one place to look for the protocol shape and one place to
-//! cover with tests.
+//! These helpers centralize the chunking rule so readers and writers share the
+//! same live-mask layout.
 
 use super::{
     buffer::{ReadBuffer, WriteBuffer},

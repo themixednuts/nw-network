@@ -1,5 +1,9 @@
+//! Managed item storage replication for inventory-backed systems.
+
+use crate::{az_rtti, replicated_state, type_registry};
+
 use crate::Marshaler;
-use crate::serialize::{ReplicatedFieldHandler, ReplicatedMap};
+use crate::serialize::{IndexMap, ReplicatedContainer, ReplicatedFieldHandler};
 
 type ItemManagementItemDescriptor = super::item_transform::ItemTransformItemDescriptor;
 
@@ -23,19 +27,19 @@ pub struct ItemStorageItems {
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ItemManagementSnapshot {
-    pub weight_map: ReplicatedMap<ItemManagementStorageKey, u32>,
-    pub slot_count_map: ReplicatedMap<ItemManagementStorageKey, u32>,
+    pub weight_map: ReplicatedContainer<IndexMap<ItemManagementStorageKey, u32>>,
+    pub slot_count_map: ReplicatedContainer<IndexMap<ItemManagementStorageKey, u32>>,
 }
 
-#[::nw_network::replicated_state]
+#[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[::nw_network::az_rtti("37F7555D-8476-410A-9753-850945075374")]
-#[::nw_network::type_registry(2938)]
+#[az_rtti("37F7555D-8476-410A-9753-850945075374")]
+#[type_registry(2938)]
 pub struct ItemManagementComponentReplicatedState {
-    pub global_item_map: ReplicatedMap<ItemManagementStorageKey, ItemStorageItems>,
+    pub global_item_map: ReplicatedContainer<IndexMap<ItemManagementStorageKey, ItemStorageItems>>,
     pub overflow_item_count: ReplicatedFieldHandler<u32>,
-    pub weight_map: ReplicatedMap<ItemManagementStorageKey, u32>,
-    pub slot_count_map: ReplicatedMap<ItemManagementStorageKey, u32>,
+    pub weight_map: ReplicatedContainer<IndexMap<ItemManagementStorageKey, u32>>,
+    pub slot_count_map: ReplicatedContainer<IndexMap<ItemManagementStorageKey, u32>>,
 }
 
 impl ItemManagementComponentReplicatedState {

@@ -1,6 +1,24 @@
+//! Fixed replicated-state support for fragments with compile-time group and
+//! field counts.
 //!
-//! client whitelists, hub attributes, the fixed group-present bitset, and the
-//! VLQ-u64 field mask used inside each present group.
+//! A fixed replicated state stores fragment lifecycle metadata and per-group
+//! client whitelists while the concrete fragment owns the registered fields.
+//! Field traversal happens through visitors, giving each group a stable
+//! declaration-order field index without storing self-references.
+//!
+//! Content encoding starts with a fixed group-present bitset, one bit per
+//! compile-time group and at least one byte wide. Each present group then writes
+//! a VLQ-u64 field mask followed by the dirty field bodies in registration
+//! order. Client whitelists marshal separately as hub-to-hub attributes so peer
+//! hubs can preserve the same filtering state.
+//!
+//! Whitelist entries are pre-hashed [`ClientActorHash`] values supplied by the
+//! caller. An empty whitelist broadcasts the group to every client. Unlike
+//! [`super::ReplicatedState`], fixed whitelists are not ref-counted: adding an
+//! existing client is a no-op and one remove deletes the entry. When
+//! [`MarshalContext::filter_target`] is set, marshaling omits groups whose
+//! whitelist does not allow that target and clears the corresponding
+//! group-present bit.
 
 use super::{
     ClientActorHash, GroupIndex, SequenceNumber,
@@ -53,7 +71,9 @@ impl<const CLIENT_WHITELIST_SIZE: usize> Default for FieldGroupState<CLIENT_WHIT
     }
 }
 
-/// client-whitelist attributes. Registered fields live in the derived state,
+/// Shared fixed-state metadata and per-group client-whitelist attributes.
+///
+/// Registered fields live in the derived state,
 /// so Rust exposes them through [`FixedReplicatedStateFields`] visitors
 /// instead of storing self-referential field pointers.
 #[derive(Debug, Clone)]
@@ -928,7 +948,7 @@ pub trait FixedReplicatedStateFields<
         Some(Box::new(merged_state))
     }
 
-    /// fully-merged flag, and correlation id on the merged state.
+    /// Finish a merge by recording sequence, network-data flags, and correlation id.
     fn finish_merge(
         &mut self,
         seq: SequenceNumber,
@@ -1082,6 +1102,9 @@ pub trait FixedReplicatedStateFields<
         true
     }
 
+    /// Marshal fields discovered through a visitor.
+    ///
+    /// This path supports concrete states that expose fields through a
     /// `NamedField` visitor instead of a stored self-referential registry.
     fn marshal_visited_fields(
         &self,
@@ -1152,7 +1175,6 @@ pub trait FixedReplicatedStateFields<
         Ok(true)
     }
 
-    /// mutable `NamedField` visitor.
     /// Decode fields selected by a presence mask through a mutable visitor.
     ///
     /// # Errors
@@ -1191,7 +1213,9 @@ pub trait FixedReplicatedStateFields<
         Ok(true)
     }
 
-    /// zero field mask when no attribute is dirty because the read path
+    /// Marshal registered attributes selected by a dirty-field mask.
+    ///
+    /// Writes a zero field mask when no attribute is dirty because the read path
     fn marshal_registered_attributes(
         &self,
         attr_count: usize,
@@ -1286,8 +1310,10 @@ pub struct FieldGroupMut<'a, const N_FIELDS_PER_GROUP: usize, const CLIENT_WHITE
     pub client_whitelist: &'a mut ClientWhitelistField<CLIENT_WHITELIST_SIZE>,
 }
 
+/// Write the fixed-width group-present bitset.
 ///
-/// bytes and patches the value after writing group bodies. In the recovered
+/// Bits are packed least-significant bit first within each byte. The bitset is
+/// always at least one byte wide, even for zero-group test helpers.
 fn write_group_present_flags<const N_GROUPS: usize>(
     group_present: &GroupPresentFlagBitset<N_GROUPS>,
     wb: &mut WriteBuffer,
@@ -1324,8 +1350,8 @@ fn read_group_present_flags<const N_GROUPS: usize>(
 
 /// Marshal one fixed field group by index.
 ///
-/// presence mask only when at least one field is dirty, then write each dirty
-/// field body in registration order.
+/// Writes the VLQ-u64 presence mask only when at least one field is dirty, then
+/// writes each dirty field body in registration order.
 #[cfg(test)]
 fn marshal_registered_fields_with(
     field_count: usize,
@@ -1385,7 +1411,9 @@ fn unmarshal_registered_fields_with(
 
 /// Marshal one fixed field group — VLQ-u64 presence bitset + dirty field bodies.
 ///
-/// is dirty relative to `baseline` (caller may write a zero sentinel before
+/// Writes no bytes and returns `false` when no field is dirty relative to
+/// `baseline`; callers may write a zero sentinel when their framing requires
+/// one.
 #[cfg(test)]
 fn marshal_named_field_handlers(
     fields: &[&dyn ReplicatedFieldHandlerBase],
@@ -1428,9 +1456,10 @@ fn unmarshal_named_field_handlers(
     })
 }
 
+/// Marshal fixed-state attributes selected by dirty field bits.
 ///
-/// Writes no bytes and returns `false` when no group has dirty fields. When
-/// one or more groups are dirty, the output is:
+/// Writes a zero mask when no attribute has dirty data. When one or more
+/// attributes are dirty, the output is:
 ///
 /// ```text
 /// for each present group:

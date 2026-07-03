@@ -1,14 +1,25 @@
-//! Replicated containers keep the ergonomic Rust spelling
+//! Replicated containers with snapshot, delta, and merge bookkeeping.
+//!
+//! Replicated containers keep the source concept visible in Rust:
 //! `ReplicatedContainer<Vec<T>>`, `ReplicatedContainer<HashMap<K, V>>`, or
 //! `ReplicatedContainer<IndexMap<K, V>>`. The type owns replication metadata
 //! beside the ordinary Rust container so callers mutate through domain methods
 //! instead of manually coordinating flags and journals.
 //!
-//! A zero change count means a snapshot body follows, and a non-zero count
-//! means that many delta changes follow.
-//! Snapshot bodies carry `SequenceNumber + VLQ count + entries`; delta bodies
-//! carry live-mask batches of changed entries. A delta
-//! `SequenceNumber::ValidNonSequence` repeats the previous sequence.
+//! Wire bodies start with a VLQ mode/count. A zero mode means a snapshot body
+//! follows: `SequenceNumber + VLQ count + entries`. A non-zero mode means that
+//! many delta changes follow, grouped by live-mask batches. Delta changes carry
+//! a key, a sequence number, and an optional value body; a delta
+//! `SequenceNumber::ValidNonSequence` repeats the previous explicit sequence.
+//!
+//! As a [`ReplicatedFieldHandlerBase`], this type participates in a three-way
+//! merge between the old merged value, the incoming value, and the current
+//! destination. Merge applies advancing snapshots and change sets, preserves
+//! the old value when incoming data does not advance the journal or sequence,
+//! and records accepted deltas in the short journal for later `marshal_since`
+//! calls. `has_new_network_data` is set by unmarshal or by a merge that accepts
+//! incoming network changes; local `push_*` writes mark data dirty for outbound
+//! replication but deliberately do not set that flag.
 
 use std::collections::HashMap;
 use std::hash::{BuildHasher, Hash};
@@ -31,14 +42,6 @@ use super::{
 };
 
 pub const REPLICATED_CONTAINER_FIXED_JOURNAL_SIZE: usize = 10;
-
-pub type ReplicatedVec<T, const CAP: usize = WIRE_VEC_CAP> = ReplicatedContainer<Vec<T>, CAP>;
-
-pub type ReplicatedMap<K, V, const CAP: usize = WIRE_VEC_CAP> =
-    ReplicatedContainer<HashMap<K, V>, CAP>;
-
-pub type ReplicatedIndexMap<K, V, const CAP: usize = WIRE_VEC_CAP> =
-    ReplicatedContainer<IndexMap<K, V>, CAP>;
 
 /// The wire format encodes `Add` and `Update` identically: both set the live
 /// bit and may carry a value. Delta unmarshal therefore yields `Update`; vector
@@ -251,8 +254,10 @@ impl Default for ContainerFlags {
     }
 }
 
+/// Replicated container value with snapshot storage, current changes, and a
+/// fixed-size change journal.
 ///
-/// `KMarshaller` and `VMarshaller` policy parameters; defaults use each
+/// `KM` and `VM` are key/value codec policy parameters; defaults use each
 /// key/value type's own [`Marshaler`] impl.
 #[derive(Debug)]
 pub struct ReplicatedContainer<
@@ -484,6 +489,12 @@ where
         self.flags.default_value()
     }
 
+    /// Returns whether this value contains incoming network data that has not
+    /// yet been acknowledged by the owner.
+    ///
+    /// This flag is set by unmarshal and by merges that accept newer incoming
+    /// changes. Local mutations record outbound dirty state but leave this
+    /// false.
     #[must_use]
     pub const fn has_new_network_data(&self) -> bool {
         self.flags.new_network_data()
