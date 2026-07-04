@@ -152,6 +152,256 @@
       ]
     },
     {
+      "typeId": "0A8F6818-915C-4700-9C33-463862BBE5F0",
+      "typeIndex": 718,
+      "name": "ActorMover::MoveActorToHubMsg",
+      "rustName": "MoveActorToHubMsg",
+      "source": "message-signature-notes",
+      "fields": [
+        {
+          "index": 0,
+          "name": "ActorId",
+          "nativeType": "Amazon::Hub::ActorID",
+          "rustType": "::nw_network::ActorId",
+          "wireShape": "fixed-bytes-16"
+        },
+        {
+          "index": 1,
+          "name": "HubId",
+          "nativeType": "Amazon::Hub::HubID",
+          "rustType": "::nw_network::HubId",
+          "wireShape": "u32"
+        }
+      ]
+    },
+    {
+      "typeId": "767FC9BF-1C8D-417F-AD19-C51E363D4DF0",
+      "typeIndex": 726,
+      "name": "ActorMover::StartMovementCommunicationMsg",
+      "rustName": "StartMovementCommunicationMsg",
+      "source": "message-signature-notes",
+      "fields": [
+        {
+          "index": 0,
+          "name": "ActorId",
+          "nativeType": "Amazon::Hub::ActorID",
+          "rustType": "::nw_network::ActorId",
+          "wireShape": "fixed-bytes-16"
+        },
+        {
+          "index": 1,
+          "name": "HubId",
+          "nativeType": "Amazon::Hub::HubID",
+          "rustType": "::nw_network::HubId",
+          "wireShape": "u32"
+        }
+      ]
+    },
+    {
+      "typeId": "4604A3CC-2CAC-4A93-A0E2-D330041777E6",
+      "typeIndex": 736,
+      "name": "ActorMover::MovementTimeoutMsg",
+      "rustName": "MovementTimeoutMsg",
+      "source": "message-signature-notes",
+      "fields": [
+        {
+          "index": 0,
+          "name": "ActorId",
+          "nativeType": "Amazon::Hub::ActorID",
+          "rustType": "::nw_network::ActorId",
+          "wireShape": "fixed-bytes-16"
+        },
+        {
+          "index": 1,
+          "name": "RemoteMoveCoordinator",
+          "nativeType": "Amazon::Hub::ActorRef",
+          "rustType": "::nw_network::ActorRef"
+        },
+        {
+          "index": 2,
+          "name": "MovementInteractionId",
+          "nativeType": "MovementInteractionId",
+          "rustType": "::nw_network::MovementInteractionId"
+        }
+      ]
+    },
+    {
+      "typeId": "A9DA71B4-4DCF-46E6-AFA2-DBBE9E5CED0E",
+      "typeIndex": 5342,
+      "name": "ActorMover::CancelMovementMsg",
+      "rustName": "CancelMovementMsg",
+      "source": "message-signature-notes",
+      "fields": [
+        {
+          "index": 0,
+          "name": "ActorId",
+          "nativeType": "Amazon::Hub::ActorID",
+          "rustType": "::nw_network::ActorId",
+          "wireShape": "fixed-bytes-16"
+        },
+        {
+          "index": 1,
+          "name": "RemoteMoveCoordinator",
+          "nativeType": "Amazon::Hub::ActorRef",
+          "rustType": "::nw_network::ActorRef"
+        },
+        {
+          "index": 2,
+          "name": "MovementInteractionId",
+          "nativeType": "MovementInteractionId",
+          "rustType": "::nw_network::MovementInteractionId"
+        }
+      ]
+    },
+    {
+      "typeId": "78EC38B5-D408-4F06-8AAF-60E7FDA45CEE",
+      "typeIndex": 740,
+      "name": "ActorMover::CommitMovementMsg",
+      "rustName": "CommitMovementMsg",
+      "source": "message-signature-notes",
+      "fields": [
+        {
+          "index": 0,
+          "name": "ActorId",
+          "nativeType": "Amazon::Hub::ActorID",
+          "rustType": "::nw_network::ActorId",
+          "wireShape": "fixed-bytes-16"
+        },
+        {
+          "index": 1,
+          "name": "MovementInteractionId",
+          "nativeType": "MovementInteractionId",
+          "rustType": "::nw_network::MovementInteractionId"
+        }
+      ]
+    },
+    {
+      "typeId": "ADAA28E6-B831-4505-8F05-FE32E000BD5D",
+      "typeIndex": 745,
+      "name": "ActorMover::AbortMovementMsg",
+      "rustName": "AbortMovementMsg",
+      "source": "message-signature-notes",
+      "fields": [
+        {
+          "index": 0,
+          "name": "ActorId",
+          "nativeType": "Amazon::Hub::ActorID",
+          "rustType": "::nw_network::ActorId",
+          "wireShape": "fixed-bytes-16"
+        },
+        {
+          "index": 1,
+          "name": "MovementInteractionId",
+          "nativeType": "MovementInteractionId",
+          "rustType": "::nw_network::MovementInteractionId"
+        }
+      ]
+    },
+    {
+      "typeId": "44BA8334-C3AA-476E-855C-27364BF8A964",
+      "typeIndex": 747,
+      "name": "ActorMover::CheckMovementStatusMsg",
+      "rustName": "CheckMovementStatusMsg",
+      "source": "message-signature-notes",
+      "fields": [
+        {
+          "index": 0,
+          "name": "ActorId",
+          "nativeType": "Amazon::Hub::ActorID",
+          "rustType": "::nw_network::ActorId",
+          "wireShape": "fixed-bytes-16"
+        },
+        {
+          "index": 1,
+          "name": "MovementInteractionTimeout",
+          "nativeType": "Amazon::Pervasives::Timestamp",
+          "rustType": "::nw_network::Timestamp",
+          "wireShape": "u64"
+        },
+        {
+          "index": 2,
+          "name": "OriginatingMoveCoordinator",
+          "nativeType": "Amazon::Hub::ActorRef",
+          "rustType": "::nw_network::ActorRef"
+        },
+        {
+          "index": 3,
+          "name": "MovementInteractionId",
+          "nativeType": "MovementInteractionId",
+          "rustType": "::nw_network::MovementInteractionId"
+        }
+      ]
+    },
+    {
+      "typeId": "15203A91-C8B6-43EE-BDF6-571A30C8B8B0",
+      "typeIndex": 5032,
+      "name": "ActorMover::CompleteDelayedMigrationsMsg",
+      "rustName": "CompleteDelayedMigrationsMsg",
+      "source": "message-signature-notes",
+      "fields": [
+        {
+          "index": 0,
+          "name": "DelayUntil",
+          "nativeType": "Amazon::Pervasives::Timestamp",
+          "rustType": "::nw_network::Timestamp",
+          "wireShape": "u64"
+        }
+      ]
+    },
+    {
+      "typeId": "059B0DE2-4789-4DC1-945C-3728873D68F2",
+      "typeIndex": 5044,
+      "name": "ActorMover::CrashMoveActorMsg",
+      "rustName": "CrashMoveActorMsg",
+      "source": "message-signature-notes",
+      "fields": [
+        {
+          "index": 0,
+          "name": "ActorId",
+          "nativeType": "Amazon::Hub::ActorID",
+          "rustType": "::nw_network::ActorId",
+          "wireShape": "fixed-bytes-16"
+        },
+        {
+          "index": 1,
+          "name": "Target",
+          "nativeType": "CrashTarget",
+          "rustType": "::nw_network::CrashTarget",
+          "wireShape": "u32"
+        }
+      ]
+    },
+    {
+      "typeId": "6F298C98-A99E-4210-AD2A-E48D3CD775EE",
+      "typeIndex": 5045,
+      "name": "ActorMover::CrashMoveActorToHubMsg",
+      "rustName": "CrashMoveActorToHubMsg",
+      "source": "message-signature-notes",
+      "fields": [
+        {
+          "index": 0,
+          "name": "ActorId",
+          "nativeType": "Amazon::Hub::ActorID",
+          "rustType": "::nw_network::ActorId",
+          "wireShape": "fixed-bytes-16"
+        },
+        {
+          "index": 1,
+          "name": "HubId",
+          "nativeType": "Amazon::Hub::HubID",
+          "rustType": "::nw_network::HubId",
+          "wireShape": "u32"
+        },
+        {
+          "index": 2,
+          "name": "Target",
+          "nativeType": "CrashTarget",
+          "rustType": "::nw_network::CrashTarget",
+          "wireShape": "u32"
+        }
+      ]
+    },
+    {
       "typeId": "E13CE79F-F318-42D2-BADD-991AAE4F3185",
       "typeIndex": 755,
       "name": "MoveCoordinator::InitMsg",
@@ -212,6 +462,196 @@
           "nativeType": "AZ::u32",
           "rustType": "u32",
           "wireShape": "u32"
+        }
+      ]
+    },
+    {
+      "typeId": "604EE6CA-3B94-4209-9845-0F94F5342B92",
+      "typeIndex": 2150,
+      "name": "MB::ServerContext::AddPortrayalToClientsMsg",
+      "rustName": "AddPortrayalToClientsMsg",
+      "source": "message-signature-notes",
+      "fields": [
+        {
+          "index": 0,
+          "name": "GdeId",
+          "nativeType": "MB::GDEID",
+          "rustType": "::nw_network::GdeId",
+          "wireShape": "u64"
+        },
+        {
+          "index": 1,
+          "name": "Client",
+          "nativeType": "MB::ClientRef",
+          "rustType": "::nw_network::ClientRef"
+        },
+        {
+          "index": 2,
+          "name": "GhostClient",
+          "nativeType": "Amazon::Hub::ActorRef",
+          "rustType": "::nw_network::ActorRef"
+        },
+        {
+          "index": 3,
+          "name": "InterestRef",
+          "nativeType": "MB::RemoteTypelessServerFacetRef",
+          "rustType": "::nw_network::RemoteTypelessServerFacetRef"
+        },
+        {
+          "index": 4,
+          "name": "OwningActor",
+          "nativeType": "Amazon::Hub::ActorRef",
+          "rustType": "::nw_network::ActorRef"
+        }
+      ]
+    },
+    {
+      "typeId": "0EF3B71F-BA81-48E1-8CE8-E3E511218688",
+      "typeIndex": 2168,
+      "name": "MB::ServerContext::RemovePortrayalFromClientsMsg",
+      "rustName": "RemovePortrayalFromClientsMsg",
+      "source": "message-signature-notes",
+      "fields": [
+        {
+          "index": 0,
+          "name": "GdeId",
+          "nativeType": "MB::GDEID",
+          "rustType": "::nw_network::GdeId",
+          "wireShape": "u64"
+        },
+        {
+          "index": 1,
+          "name": "Client",
+          "nativeType": "MB::ClientRef",
+          "rustType": "::nw_network::ClientRef"
+        },
+        {
+          "index": 2,
+          "name": "GhostClient",
+          "nativeType": "Amazon::Hub::ActorRef",
+          "rustType": "::nw_network::ActorRef"
+        },
+        {
+          "index": 3,
+          "name": "InterestRef",
+          "nativeType": "MB::RemoteTypelessServerFacetRef",
+          "rustType": "::nw_network::RemoteTypelessServerFacetRef"
+        },
+        {
+          "index": 4,
+          "name": "OwningActor",
+          "nativeType": "Amazon::Hub::ActorRef",
+          "rustType": "::nw_network::ActorRef"
+        }
+      ]
+    },
+    {
+      "typeId": "0552ED14-3F76-47CC-844C-E1C1150766C0",
+      "typeIndex": 1956,
+      "name": "MB::ServerContext::PulseMsg",
+      "rustName": "PulseMsg",
+      "source": "message-signature-notes",
+      "fields": [
+        {
+          "index": 0,
+          "name": "CurrentTimePoint",
+          "nativeType": "TimePoint",
+          "rustType": "::nw_network::TimePoint",
+          "wireShape": "u64"
+        }
+      ]
+    },
+    {
+      "typeId": "6E73E3A8-450B-4292-9582-9A75424EAC96",
+      "typeIndex": 1873,
+      "name": "MB::ServerContext::InitializeMsg",
+      "rustName": "InitializeMsg",
+      "source": "message-signature-notes",
+      "fields": [
+        {
+          "index": 0,
+          "name": "GdeId",
+          "nativeType": "MB::GDEID",
+          "rustType": "::nw_network::GdeId",
+          "wireShape": "u64"
+        },
+        {
+          "index": 1,
+          "name": "AssetId",
+          "nativeType": "AZ::Data::AssetId",
+          "rustType": "::nw_network::AssetId"
+        },
+        {
+          "index": 2,
+          "name": "Parameters",
+          "nativeType": "MB::GDEInstantiationParameters"
+        },
+        {
+          "index": 3,
+          "name": "PostInitPriority",
+          "nativeType": "Amazon::Hub::SchedulerPriority"
+        }
+      ]
+    },
+    {
+      "typeId": "714553B1-B732-44E5-9D4B-BE710851E864",
+      "typeIndex": 1764,
+      "name": "MB::ServerContext::RequestReportDirtyPersistedStatesMsg",
+      "rustName": "RequestReportDirtyPersistedStatesMsg",
+      "source": "message-signature-notes",
+      "fields": [
+        {
+          "index": 0,
+          "name": "IsDelayedReport",
+          "nativeType": "bool",
+          "rustType": "bool",
+          "wireShape": "bool"
+        },
+        {
+          "index": 1,
+          "name": "IsFinalSaveOnShutdown",
+          "nativeType": "bool",
+          "rustType": "bool",
+          "wireShape": "bool"
+        }
+      ]
+    },
+    {
+      "typeId": "59FB8445-1064-4956-B309-AEE0463DA579",
+      "typeIndex": 2171,
+      "name": "MB::ServerContext::SetBurningMigrationTestMsg",
+      "rustName": "SetBurningMigrationTestMsg",
+      "source": "message-signature-notes",
+      "fields": [
+        {
+          "index": 0,
+          "name": "Value",
+          "nativeType": "bool",
+          "rustType": "bool",
+          "wireShape": "bool"
+        },
+        {
+          "index": 1,
+          "name": "PeriodMs",
+          "nativeType": "int",
+          "rustType": "i32",
+          "wireShape": "u32"
+        }
+      ]
+    },
+    {
+      "typeId": "A222E4C7-DF79-460F-BD21-2BC02183A9AA",
+      "typeIndex": 5047,
+      "name": "MB::ServerContext::ForceMigrateAndCrashMsg",
+      "rustName": "ForceMigrateAndCrashMsg",
+      "source": "message-signature-notes",
+      "fields": [
+        {
+          "index": 0,
+          "name": "CrashSource",
+          "nativeType": "bool",
+          "rustType": "bool",
+          "wireShape": "bool"
         }
       ]
     }

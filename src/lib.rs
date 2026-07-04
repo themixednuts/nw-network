@@ -48,8 +48,10 @@ pub use hub::{
     StateRecordHeader, StateRecordWriter, SyncedTimestamp, Timestamp, TypeIndex,
 };
 pub use messages::{
-    AuthToken, ClientVersionTokenMap, ConnTicket, ImpersonatedValues, LoginToken,
-    ProcessDeferredMovementRequestsMsg, RegistrationRequestV3Msg, TypeIndexCrc,
+    AuthToken, ClientVersionTokenMap, ConnTicket, ForceMigrateActorMsg, ForcePersistMsg,
+    ForceRespawnMsg, ImpersonatedValues, LoginToken, MigrationTestMsg,
+    ProcessDeferredMovementRequestsMsg, RegistrationRequestV3Msg, ScriptGarbageCollectMsg,
+    StackConfigChangedMsg, TypeIndexCrc,
 };
 pub use network_schema::{
     NetworkFieldConfidence, NetworkFieldDescriptor, NetworkRegistryEntry,
@@ -73,10 +75,10 @@ pub use serialize::{
     VlqU64Marshaler, WriteBuffer, WriteBufferMark,
 };
 pub use types::{
-    ActorRequestId, AfflictionData, AssetId, AzRtti, CharacterAttributeType, ComponentId, Crc32,
-    DyeData, EntityId, EntityRef, GameModeParticipantStatus, GatheringStatus, GdeId, GdeRef,
-    GeneralCooldownType, GridSides, PaperdollSlotAlias, RecipeCooldownData, RemoteServerContextRef,
-    RemoteServerFacetRefGameModeParticipantComponentServerFacet,
+    ActorRequestId, AfflictionData, AssetId, AzRtti, CharacterAttributeType, ClientRef,
+    ComponentId, Crc32, DyeData, EntityId, EntityRef, GameModeParticipantStatus, GatheringStatus,
+    GdeId, GdeRef, GeneralCooldownType, GridSides, PaperdollSlotAlias, RecipeCooldownData,
+    RemoteServerContextRef, RemoteServerFacetRefGameModeParticipantComponentServerFacet,
     RemoteServerFacetRefHousingPlotComponentServerFacet, RemoteServerGdeRef,
     RemoteTypelessServerFacetRef, ReplicationCategory, TemporaryAffiliationRelationship,
     TemporaryAffiliationType, TimePoint, TypeRegistryEntry, WallClockTimePoint,

@@ -13,6 +13,7 @@ pub use nw_network_types::{
 use uuid::Uuid;
 
 use crate::Marshaler;
+use crate::hub::ActorRef;
 
 /// Runtime type identity: stable UUID plus a human-readable type name.
 pub trait AzRtti {
@@ -142,6 +143,19 @@ impl From<Uuid> for GdeRef {
 impl From<GdeRef> for Uuid {
     fn from(value: GdeRef) -> Self {
         value.value()
+    }
+}
+
+/// Client endpoint reference carried by server-context messages.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Marshaler)]
+pub struct ClientRef {
+    pub client_ref: ActorRef,
+}
+
+impl ClientRef {
+    #[must_use]
+    pub const fn new(client_ref: ActorRef) -> Self {
+        Self { client_ref }
     }
 }
 
