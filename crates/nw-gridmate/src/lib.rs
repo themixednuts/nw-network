@@ -11,6 +11,7 @@ pub mod carrier;
 pub mod driver;
 pub mod error;
 pub mod message;
+pub mod replay;
 #[cfg(feature = "server")]
 pub mod server;
 pub mod session;
@@ -34,6 +35,9 @@ pub use message::{
     Actor, ClientToServer, CorrelatedMetadata, EgressPath, IMESSAGE_BASE_UUID, IngressPath,
     Message as NetworkMessage, MessageEnvelope, MessageEnvelopeView, MessageMetadata, MessagePath,
     MessageTypeId, Receivable, Sendable, ServerToClient, SizedEnvelopeMetadata,
+};
+pub use replay::{
+    ReplayError, ReplaySummary, TypeKey, TypeTraffic, replay_ledger_bytes, replay_ledger_file,
 };
 #[cfg(feature = "server")]
 pub use server::{OutboundTyped, ServerListenerHandle};
