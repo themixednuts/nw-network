@@ -1,4 +1,5 @@
 use std::{
+    collections::BTreeSet,
     env, fs,
     io::{self, Read},
     path::{Path, PathBuf},
@@ -13,7 +14,10 @@ use nw_serialize_codegen::{
     SerializeCodegenItemKind, SerializeCodegenRootMode, SerializeCodegenRootSelection,
     SerializeCodegenUnit, SerializeContextCompileInputs, SerializeContextCompiler,
     SerializeContextDocument, complete_known_missing_reflected_bodies, module_descriptor_capture,
-    module_descriptors_root, module_name_from_resource_name, resolve_codegen_root_type_ids,
+    module_descriptors_root, module_name_from_resource_name,
+    network_schema::NetworkFieldHandlerVtable, network_schema::NetworkNestedTypeShape,
+    network_schema::NetworkReplicatedContainerShape, resolve_codegen_root_type_ids,
+    rust_type_ident,
 };
 use serde::Deserialize;
 use serde_json::Value;
@@ -63,7 +67,11 @@ fn main() -> Result<()> {
         &message_signatures_file,
     )?;
     let out_dir = PathBuf::from(env::var_os("OUT_DIR").context("OUT_DIR")?);
-    let output_root = out_dir.join("nw_network");
+    let output_root = stable_generated_root(&out_dir, "nw-network")?;
+    println!(
+        "cargo:rustc-env=NW_NETWORK_GENERATED_DIR={}",
+        output_root.display()
+    );
     let stamp_path = output_root.join(".generated-states-input-hash");
     let state_source_path = output_root.join("generated_states.rs");
     let state_report_path = output_root.join("generated-states.rust-report.json");
@@ -121,8 +129,9 @@ fn main() -> Result<()> {
             override_report.ambiguous_field_count
         );
     }
-    let generated_types = selected_generated_type_unit(&generated_type_selection_file)
-        .context("compile selected generated network data types")?;
+    let generated_types =
+        selected_generated_type_unit(&generated_type_selection_file, &network_schema)
+            .context("compile selected generated network data types")?;
     network_schema.merge_serialize_codegen_unit(
         &generated_types,
         Some(generated_type_selection_file.display().to_string()),
@@ -130,18 +139,35 @@ fn main() -> Result<()> {
     let generated_state_denylist =
         GeneratedStateDenylistFile::from_path(&generated_state_denylist_file)?;
     let replicated_state_type_indices = replicated_state_type_indices(&network_schema);
-    let denied_type_indices = generated_state_denylist.denied_type_indices;
+    let denied_type_indices = generated_state_denylist
+        .denied_type_indices
+        .into_iter()
+        .collect::<BTreeSet<_>>();
+    let registered_type_indices = replicated_state_type_indices
+        .iter()
+        .copied()
+        .filter(|type_index| !denied_type_indices.contains(type_index))
+        .collect::<Vec<_>>();
     let output = NetworkRustEmitter::emit_replicated_states_with_options(
         &network_schema,
         replicated_state_type_indices,
-        NetworkReplicatedStateEmitOptions::deny_type_registry(denied_type_indices),
+        NetworkReplicatedStateEmitOptions::register_only(registered_type_indices),
     )
     .context("emit generated replicated states")?;
     let message_output =
         NetworkRustEmitter::emit_messages(&network_schema).context("emit generated messages")?;
+    let required_source_struct_types =
+        required_source_struct_type_names(output.source.as_str(), message_output.source.as_str());
     let conversion_items = generated_types.items.iter().filter(|item| {
-        item.kind != SerializeCodegenItemKind::Struct
-            || !MANUAL_SOURCE_MARSHALERS.contains(&item.source_name.as_str())
+        let rust_name = rust_type_ident(source_name_leaf(&item.source_name));
+        match item.kind {
+            SerializeCodegenItemKind::Enum => true,
+            SerializeCodegenItemKind::Struct => {
+                required_source_struct_types.contains(&rust_name)
+                    && !MANUAL_SOURCE_MARSHALERS.contains(&item.source_name.as_str())
+                    && !MANUAL_SOURCE_MARSHALERS.contains(&source_name_leaf(&item.source_name))
+            }
+        }
     });
     let conversion_output = NetworkRustEmitter::emit_marshaler_conversions(conversion_items)
         .context("emit generated marshaler conversions")?;
@@ -279,7 +305,10 @@ fn network_fields_from_signature(signature: &NetworkMessageSignature) -> Vec<Net
             filter_group_attribute: None,
             handler_offset: None,
             handler_expression: None,
+            handler_kind: None,
             handler_vtable: None,
+            handler_vtable_slots: None,
+            physical_field_count: None,
             native_type: field.native_type.clone(),
             source_type_name: None,
             source_type_id: None,
@@ -347,6 +376,17 @@ fn rerun_if_changed(path: &Path) {
     println!("cargo:rerun-if-changed={}", path.display());
 }
 
+fn stable_generated_root(out_dir: &Path, name: &str) -> Result<PathBuf> {
+    let build_dir = out_dir
+        .ancestors()
+        .find(|path| path.file_name().is_some_and(|name| name == "build"))
+        .context("OUT_DIR is not under Cargo build directory")?;
+    let profile_dir = build_dir
+        .parent()
+        .context("Cargo build directory has no profile parent")?;
+    Ok(profile_dir.join("generated").join(name))
+}
+
 fn input_hash(
     build_script: &Path,
     generated_state_denylist_file: &Path,
@@ -393,7 +433,10 @@ fn input_hash(
 
 fn load_network_schema(path: &Path) -> Result<NetworkSchema> {
     let bytes = fs::read(path).with_context(|| format!("read {}", path.display()))?;
-    serde_json::from_slice(&bytes).with_context(|| format!("parse {}", path.display()))
+    let mut schema: NetworkSchema =
+        serde_json::from_slice(&bytes).with_context(|| format!("parse {}", path.display()))?;
+    schema.normalize_derived_shapes();
+    Ok(schema)
 }
 
 fn replicated_state_type_indices(schema: &NetworkSchema) -> Vec<u32> {
@@ -412,7 +455,10 @@ fn replicated_state_type_indices(schema: &NetworkSchema) -> Vec<u32> {
     type_indices
 }
 
-fn selected_generated_type_unit(selection_file: &Path) -> Result<SerializeCodegenUnit> {
+fn selected_generated_type_unit(
+    selection_file: &Path,
+    network_schema: &NetworkSchema,
+) -> Result<SerializeCodegenUnit> {
     let context = CodegenContext::automatic();
     let selection = GeneratedTypeSelectionFile::from_path(selection_file)?;
     let document = SerializeContextDocument::from_slice(nw_resources::SERIALIZE_JSON)
@@ -431,7 +477,7 @@ fn selected_generated_type_unit(selection_file: &Path) -> Result<SerializeCodege
         bail!("SerializeContext codegen has errors");
     }
 
-    let roots = selection.root_specs();
+    let roots = selected_source_root_specs(&selection, network_schema);
     let root_type_ids = resolve_codegen_root_type_ids(
         &compile_unit.codegen_unit,
         roots.iter().map(String::as_str),
@@ -441,6 +487,277 @@ fn selected_generated_type_unit(selection_file: &Path) -> Result<SerializeCodege
         .select_unit(&compile_unit.codegen_unit);
     let completed = complete_known_missing_reflected_bodies(selected, compile_unit.codegen_unit);
     Ok(completed.emitted)
+}
+
+fn selected_source_root_specs(
+    selection: &GeneratedTypeSelectionFile,
+    schema: &NetworkSchema,
+) -> Vec<String> {
+    let mut roots = selection.root_specs().into_iter().collect::<BTreeSet<_>>();
+    let source_roots = SchemaSourceRootIndex::from_schema(schema);
+    add_schema_source_roots(&mut roots, schema, &source_roots);
+    roots.into_iter().collect()
+}
+
+struct SchemaSourceRootIndex {
+    type_ids: BTreeSet<String>,
+    names: BTreeSet<String>,
+}
+
+impl SchemaSourceRootIndex {
+    fn from_schema(schema: &NetworkSchema) -> Self {
+        let mut type_ids = BTreeSet::new();
+        let mut names = BTreeSet::new();
+        let mut duplicate_names = BTreeSet::new();
+        for serialize in &schema.serialize_types {
+            if !is_semantic_source_name(&serialize.name) {
+                type_ids.insert(serialize.type_id.to_string());
+                if !names.insert(serialize.name.clone()) {
+                    duplicate_names.insert(serialize.name.clone());
+                }
+            }
+        }
+        for name in duplicate_names {
+            names.remove(&name);
+        }
+        Self { type_ids, names }
+    }
+
+    fn contains(&self, type_id: Option<&str>, name: Option<&str>) -> bool {
+        type_id.is_some_and(|type_id| self.type_ids.contains(type_id))
+            || name.is_some_and(|name| self.names.contains(name.trim()))
+    }
+}
+
+fn add_schema_source_roots(
+    roots: &mut BTreeSet<String>,
+    schema: &NetworkSchema,
+    source_roots: &SchemaSourceRootIndex,
+) {
+    for network_type in &schema.types {
+        if let Some(serialize) = network_type.serialize.as_ref() {
+            add_source_root(
+                roots,
+                Some(serialize.type_id.to_string()),
+                Some(&serialize.name),
+                source_roots,
+            );
+        }
+        for field in &network_type.fields {
+            if let Some(serialize) = field.serialize.as_ref() {
+                add_source_root(
+                    roots,
+                    Some(serialize.type_id.to_string()),
+                    Some(&serialize.name),
+                    source_roots,
+                );
+            }
+            add_source_root(
+                roots,
+                field.source_type_id.map(|type_id| type_id.to_string()),
+                field.source_type_name.as_deref(),
+                source_roots,
+            );
+            if let Some(shape) = field.nested_type_shape.as_ref() {
+                add_nested_shape_source_roots(roots, shape, source_roots);
+            }
+        }
+    }
+    for vtable in &schema.field_handler_vtables {
+        add_field_handler_source_roots(roots, vtable, source_roots);
+    }
+}
+
+fn add_field_handler_source_roots(
+    roots: &mut BTreeSet<String>,
+    vtable: &NetworkFieldHandlerVtable,
+    source_roots: &SchemaSourceRootIndex,
+) {
+    add_source_root(
+        roots,
+        vtable.value_type_id.clone(),
+        vtable.value_type_name.as_deref(),
+        source_roots,
+    );
+    for candidate in &vtable.value_type_candidates {
+        add_source_root(
+            roots,
+            candidate.type_id.map(|type_id| type_id.to_string()),
+            candidate.name.as_deref(),
+            source_roots,
+        );
+    }
+    if let Some(shape) = vtable.value_type_shape.as_ref() {
+        add_nested_shape_source_roots(roots, shape, source_roots);
+    }
+    for shape in &vtable.embedded_value_type_shapes {
+        add_nested_shape_source_roots(roots, shape, source_roots);
+    }
+    if let Some(container) = vtable.container_shape.as_ref() {
+        add_container_shape_source_roots(roots, container, source_roots);
+    }
+}
+
+fn add_container_shape_source_roots(
+    roots: &mut BTreeSet<String>,
+    container: &NetworkReplicatedContainerShape,
+    source_roots: &SchemaSourceRootIndex,
+) {
+    add_source_root(
+        roots,
+        container.value_type_id.map(|type_id| type_id.to_string()),
+        container.value_type_name.as_deref(),
+        source_roots,
+    );
+    if let Some(shape) = container.key_type_shape.as_ref() {
+        add_nested_shape_source_roots(roots, shape, source_roots);
+    }
+    if let Some(shape) = container.value_type_shape.as_ref() {
+        add_nested_shape_source_roots(roots, shape, source_roots);
+    }
+    for shape in &container.embedded_value_type_shapes {
+        add_nested_shape_source_roots(roots, shape, source_roots);
+    }
+}
+
+fn add_nested_shape_source_roots(
+    roots: &mut BTreeSet<String>,
+    shape: &NetworkNestedTypeShape,
+    source_roots: &SchemaSourceRootIndex,
+) {
+    add_source_root(
+        roots,
+        shape.type_id.map(|type_id| type_id.to_string()),
+        shape
+            .type_name_full
+            .as_deref()
+            .or(shape.type_name.as_deref()),
+        source_roots,
+    );
+    for member in &shape.members {
+        if let Some(native_type) = member.native_type.as_deref() {
+            add_source_root(roots, None, Some(native_type), source_roots);
+        }
+    }
+}
+
+fn add_source_root(
+    roots: &mut BTreeSet<String>,
+    type_id: Option<String>,
+    name: Option<&str>,
+    source_roots: &SchemaSourceRootIndex,
+) {
+    if name.is_some_and(is_semantic_source_name) {
+        return;
+    }
+    if !source_roots.contains(type_id.as_deref(), name) {
+        return;
+    }
+    if let Some(type_id) = type_id {
+        roots.insert(type_id);
+        return;
+    }
+    let Some(name) = name.map(str::trim).filter(|name| !name.is_empty()) else {
+        return;
+    };
+    if is_semantic_source_name(name) || !is_probable_source_type_name(name) {
+        return;
+    }
+    roots.insert(name.to_owned());
+}
+
+fn is_probable_source_type_name(name: &str) -> bool {
+    let leaf = name.rsplit("::").next().unwrap_or(name);
+    leaf.chars()
+        .next()
+        .is_some_and(|first| first.is_ascii_uppercase())
+        && !name.contains('<')
+        && !name.contains(',')
+        && !name.starts_with("AZ::")
+        && !name.starts_with("AZStd::")
+        && !name.starts_with("std::")
+}
+
+fn is_semantic_source_name(name: &str) -> bool {
+    matches!(
+        name.trim().rsplit("::").next().unwrap_or(name.trim()),
+        "Vec2"
+            | "Vector2"
+            | "Vec3"
+            | "Vector3"
+            | "Vec4"
+            | "Vector4"
+            | "Quat"
+            | "Quaternion"
+            | "Matrix3x3"
+            | "Transform"
+            | "Uuid"
+            | "UID"
+    )
+}
+
+fn required_source_struct_type_names(state_source: &str, message_source: &str) -> BTreeSet<String> {
+    let mut names = BTreeSet::new();
+    let compact_state = compact_rust_source(state_source);
+    names.extend(source_type_names_after(
+        &compact_state,
+        "DefaultMarshaler<::nw_network::source::",
+    ));
+    names.extend(source_type_names_after(
+        &compact_state,
+        "ReplicatedFieldHandler<::nw_network::source::",
+    ));
+    names.extend(source_type_names(message_source));
+    names
+}
+
+fn compact_rust_source(source: &str) -> String {
+    source.chars().filter(|ch| !ch.is_whitespace()).collect()
+}
+
+fn source_type_names_after(source: &str, prefix: &str) -> BTreeSet<String> {
+    let mut names = BTreeSet::new();
+    let mut remaining = source;
+    while let Some(offset) = remaining.find(prefix) {
+        let after_prefix = &remaining[offset + prefix.len()..];
+        if let Some((name, rest)) = split_leading_rust_ident(after_prefix) {
+            names.insert(name.to_owned());
+            remaining = rest;
+        } else {
+            remaining = after_prefix;
+        }
+    }
+    names
+}
+
+fn source_type_names(source: &str) -> BTreeSet<String> {
+    const PREFIX: &str = "::nw_network::source::";
+    let mut names = BTreeSet::new();
+    let mut remaining = source;
+    while let Some(offset) = remaining.find(PREFIX) {
+        let after_prefix = &remaining[offset + PREFIX.len()..];
+        if let Some((name, rest)) = split_leading_rust_ident(after_prefix) {
+            names.insert(name.to_owned());
+            remaining = rest;
+        } else {
+            remaining = after_prefix;
+        }
+    }
+    names
+}
+
+fn split_leading_rust_ident(value: &str) -> Option<(&str, &str)> {
+    let ident_len = value
+        .char_indices()
+        .take_while(|(_, ch)| ch.is_ascii_alphanumeric() || *ch == '_')
+        .map(|(index, ch)| index + ch.len_utf8())
+        .last()
+        .unwrap_or(0);
+    (ident_len != 0).then_some((&value[..ident_len], &value[ident_len..]))
+}
+
+fn source_name_leaf(value: &str) -> &str {
+    value.rsplit("::").next().unwrap_or(value).trim()
 }
 
 fn embedded_module_descriptors(context: &CodegenContext) -> Result<Value> {

@@ -16,7 +16,9 @@ use nw_serialize_codegen::{
     RustStandaloneProjectFile, SerializeCodegenRootMode, SerializeCodegenRootSelection,
     SerializeContextCompileInputs, SerializeContextCompiler, SerializeContextDocument,
     complete_known_missing_reflected_bodies, module_descriptor_capture, module_descriptors_root,
-    module_name_from_resource_name, resolve_codegen_root_type_ids,
+    module_name_from_resource_name, network_schema::NetworkFieldHandlerVtable,
+    network_schema::NetworkNestedTypeShape, network_schema::NetworkReplicatedContainerShape,
+    resolve_codegen_root_type_ids,
 };
 use serde::Deserialize;
 use serde_json::Value;
@@ -48,7 +50,11 @@ fn main() -> Result<()> {
         &network_field_overrides_file,
     )?;
     let out_dir = PathBuf::from(env::var_os("OUT_DIR").context("OUT_DIR")?);
-    let output_root = out_dir.join("nw_network");
+    let output_root = stable_generated_root(&out_dir, "nw-network-types")?;
+    println!(
+        "cargo:rustc-env=NW_NETWORK_TYPES_GENERATED_DIR={}",
+        output_root.display()
+    );
     let stamp_path = output_root.join(".input-hash");
     if output_root.join("src/lib.rs").is_file()
         && fs::read_to_string(&stamp_path).is_ok_and(|stamp| stamp == input_hash)
@@ -57,38 +63,6 @@ fn main() -> Result<()> {
     }
 
     let selection = SelectionFile::from_path(&selection_file)?;
-    let document = SerializeContextDocument::from_slice(nw_resources::SERIALIZE_JSON)
-        .context("parse embedded nw-tools SerializeContext JSON")?;
-    let module_descriptors = embedded_module_descriptors(&context)?;
-    let compile_unit = SerializeContextCompiler::compile_with_inputs(
-        document,
-        SerializeContextCompileInputs {
-            module_descriptors_root: Some(&module_descriptors),
-            serialize_porting_root: None,
-            class_registration_trace_root: None,
-        },
-        &context,
-    );
-    if compile_unit.has_errors() {
-        bail!("SerializeContext codegen has errors");
-    }
-
-    let roots = selection.root_specs();
-    let root_type_ids = resolve_codegen_root_type_ids(
-        &compile_unit.codegen_unit,
-        roots.iter().map(String::as_str),
-    )?;
-    let selected = SerializeCodegenRootSelection::new(SerializeCodegenRootMode::Explicit)
-        .with_explicit_roots(root_type_ids)
-        .select_unit(&compile_unit.codegen_unit);
-    let completed = complete_known_missing_reflected_bodies(selected, compile_unit.codegen_unit);
-    let rust_unit = RustCodegenPlanner::standalone().plan_serialize_codegen_units(
-        &completed.emitted,
-        &completed.context,
-        &context,
-    );
-    let project = RustSourceEmitter::emit_standalone_project(&rust_unit, &context)
-        .with_context(|| "emit nw-network standalone Rust crate")?;
     let mut network_schema = load_network_schema(&network_schema_file)?;
     let message_signatures = load_message_signatures(&message_signatures_file)?;
     apply_message_signature_field_overrides(&mut network_schema, &message_signatures);
@@ -129,6 +103,38 @@ fn main() -> Result<()> {
             );
         }
     }
+    let document = SerializeContextDocument::from_slice(nw_resources::SERIALIZE_JSON)
+        .context("parse embedded nw-tools SerializeContext JSON")?;
+    let module_descriptors = embedded_module_descriptors(&context)?;
+    let compile_unit = SerializeContextCompiler::compile_with_inputs(
+        document,
+        SerializeContextCompileInputs {
+            module_descriptors_root: Some(&module_descriptors),
+            serialize_porting_root: None,
+            class_registration_trace_root: None,
+        },
+        &context,
+    );
+    if compile_unit.has_errors() {
+        bail!("SerializeContext codegen has errors");
+    }
+
+    let roots = selected_source_root_specs(&selection, &network_schema);
+    let root_type_ids = resolve_codegen_root_type_ids(
+        &compile_unit.codegen_unit,
+        roots.iter().map(String::as_str),
+    )?;
+    let selected = SerializeCodegenRootSelection::new(SerializeCodegenRootMode::Explicit)
+        .with_explicit_roots(root_type_ids)
+        .select_unit(&compile_unit.codegen_unit);
+    let completed = complete_known_missing_reflected_bodies(selected, compile_unit.codegen_unit);
+    let rust_unit = RustCodegenPlanner::standalone().plan_serialize_codegen_units(
+        &completed.emitted,
+        &completed.context,
+        &context,
+    );
+    let project = RustSourceEmitter::emit_standalone_project(&rust_unit, &context)
+        .with_context(|| "emit nw-network standalone Rust crate")?;
     network_schema.merge_serialize_codegen_unit(
         &completed.emitted,
         Some(selection_file.display().to_string()),
@@ -173,6 +179,210 @@ impl SelectionFile {
     }
 }
 
+fn selected_source_root_specs(selection: &SelectionFile, schema: &NetworkSchema) -> Vec<String> {
+    let mut roots = selection.root_specs().into_iter().collect::<BTreeSet<_>>();
+    let source_roots = SchemaSourceRootIndex::from_schema(schema);
+    add_schema_source_roots(&mut roots, schema, &source_roots);
+    roots.into_iter().collect()
+}
+
+struct SchemaSourceRootIndex {
+    type_ids: BTreeSet<String>,
+    names: BTreeSet<String>,
+}
+
+impl SchemaSourceRootIndex {
+    fn from_schema(schema: &NetworkSchema) -> Self {
+        let mut type_ids = BTreeSet::new();
+        let mut names = BTreeSet::new();
+        let mut duplicate_names = BTreeSet::new();
+        for serialize in &schema.serialize_types {
+            if !is_semantic_source_name(&serialize.name) {
+                type_ids.insert(serialize.type_id.to_string());
+                if !names.insert(serialize.name.clone()) {
+                    duplicate_names.insert(serialize.name.clone());
+                }
+            }
+        }
+        for name in duplicate_names {
+            names.remove(&name);
+        }
+        Self { type_ids, names }
+    }
+
+    fn contains(&self, type_id: Option<&str>, name: Option<&str>) -> bool {
+        type_id.is_some_and(|type_id| self.type_ids.contains(type_id))
+            || name.is_some_and(|name| self.names.contains(name.trim()))
+    }
+}
+
+fn add_schema_source_roots(
+    roots: &mut BTreeSet<String>,
+    schema: &NetworkSchema,
+    source_roots: &SchemaSourceRootIndex,
+) {
+    for network_type in &schema.types {
+        if let Some(serialize) = network_type.serialize.as_ref() {
+            add_source_root(
+                roots,
+                Some(serialize.type_id.to_string()),
+                Some(&serialize.name),
+                source_roots,
+            );
+        }
+        for field in &network_type.fields {
+            if let Some(serialize) = field.serialize.as_ref() {
+                add_source_root(
+                    roots,
+                    Some(serialize.type_id.to_string()),
+                    Some(&serialize.name),
+                    source_roots,
+                );
+            }
+            add_source_root(
+                roots,
+                field.source_type_id.map(|type_id| type_id.to_string()),
+                field.source_type_name.as_deref(),
+                source_roots,
+            );
+            if let Some(shape) = field.nested_type_shape.as_ref() {
+                add_nested_shape_source_roots(roots, shape, source_roots);
+            }
+        }
+    }
+    for vtable in &schema.field_handler_vtables {
+        add_field_handler_source_roots(roots, vtable, source_roots);
+    }
+}
+
+fn add_field_handler_source_roots(
+    roots: &mut BTreeSet<String>,
+    vtable: &NetworkFieldHandlerVtable,
+    source_roots: &SchemaSourceRootIndex,
+) {
+    add_source_root(
+        roots,
+        vtable.value_type_id.clone(),
+        vtable.value_type_name.as_deref(),
+        source_roots,
+    );
+    for candidate in &vtable.value_type_candidates {
+        add_source_root(
+            roots,
+            candidate.type_id.map(|type_id| type_id.to_string()),
+            candidate.name.as_deref(),
+            source_roots,
+        );
+    }
+    if let Some(shape) = vtable.value_type_shape.as_ref() {
+        add_nested_shape_source_roots(roots, shape, source_roots);
+    }
+    for shape in &vtable.embedded_value_type_shapes {
+        add_nested_shape_source_roots(roots, shape, source_roots);
+    }
+    if let Some(container) = vtable.container_shape.as_ref() {
+        add_container_shape_source_roots(roots, container, source_roots);
+    }
+}
+
+fn add_container_shape_source_roots(
+    roots: &mut BTreeSet<String>,
+    container: &NetworkReplicatedContainerShape,
+    source_roots: &SchemaSourceRootIndex,
+) {
+    add_source_root(
+        roots,
+        container.value_type_id.map(|type_id| type_id.to_string()),
+        container.value_type_name.as_deref(),
+        source_roots,
+    );
+    if let Some(shape) = container.key_type_shape.as_ref() {
+        add_nested_shape_source_roots(roots, shape, source_roots);
+    }
+    if let Some(shape) = container.value_type_shape.as_ref() {
+        add_nested_shape_source_roots(roots, shape, source_roots);
+    }
+    for shape in &container.embedded_value_type_shapes {
+        add_nested_shape_source_roots(roots, shape, source_roots);
+    }
+}
+
+fn add_nested_shape_source_roots(
+    roots: &mut BTreeSet<String>,
+    shape: &NetworkNestedTypeShape,
+    source_roots: &SchemaSourceRootIndex,
+) {
+    add_source_root(
+        roots,
+        shape.type_id.map(|type_id| type_id.to_string()),
+        shape
+            .type_name_full
+            .as_deref()
+            .or(shape.type_name.as_deref()),
+        source_roots,
+    );
+    for member in &shape.members {
+        if let Some(native_type) = member.native_type.as_deref() {
+            add_source_root(roots, None, Some(native_type), source_roots);
+        }
+    }
+}
+
+fn add_source_root(
+    roots: &mut BTreeSet<String>,
+    type_id: Option<String>,
+    name: Option<&str>,
+    source_roots: &SchemaSourceRootIndex,
+) {
+    if name.is_some_and(is_semantic_source_name) {
+        return;
+    }
+    if !source_roots.contains(type_id.as_deref(), name) {
+        return;
+    }
+    if let Some(type_id) = type_id {
+        roots.insert(type_id);
+        return;
+    }
+    let Some(name) = name.map(str::trim).filter(|name| !name.is_empty()) else {
+        return;
+    };
+    if is_semantic_source_name(name) || !is_probable_source_type_name(name) {
+        return;
+    }
+    roots.insert(name.to_owned());
+}
+
+fn is_probable_source_type_name(name: &str) -> bool {
+    let leaf = name.rsplit("::").next().unwrap_or(name);
+    leaf.chars()
+        .next()
+        .is_some_and(|first| first.is_ascii_uppercase())
+        && !name.contains('<')
+        && !name.contains(',')
+        && !name.starts_with("AZ::")
+        && !name.starts_with("AZStd::")
+        && !name.starts_with("std::")
+}
+
+fn is_semantic_source_name(name: &str) -> bool {
+    matches!(
+        name.trim().rsplit("::").next().unwrap_or(name.trim()),
+        "Vec2"
+            | "Vector2"
+            | "Vec3"
+            | "Vector3"
+            | "Vec4"
+            | "Vector4"
+            | "Quat"
+            | "Quaternion"
+            | "Matrix3x3"
+            | "Transform"
+            | "Uuid"
+            | "UID"
+    )
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
 enum RootEntry {
@@ -195,6 +405,17 @@ impl RootEntry {
 
 fn rerun_if_changed(path: &Path) {
     println!("cargo:rerun-if-changed={}", path.display());
+}
+
+fn stable_generated_root(out_dir: &Path, name: &str) -> Result<PathBuf> {
+    let build_dir = out_dir
+        .ancestors()
+        .find(|path| path.file_name().is_some_and(|name| name == "build"))
+        .context("OUT_DIR is not under Cargo build directory")?;
+    let profile_dir = build_dir
+        .parent()
+        .context("Cargo build directory has no profile parent")?;
+    Ok(profile_dir.join("generated").join(name))
 }
 
 fn input_hash(
@@ -235,7 +456,10 @@ fn input_hash(
 
 fn load_network_schema(path: &Path) -> Result<NetworkSchema> {
     let bytes = fs::read(path).with_context(|| format!("read {}", path.display()))?;
-    serde_json::from_slice(&bytes).with_context(|| format!("parse {}", path.display()))
+    let mut schema: NetworkSchema =
+        serde_json::from_slice(&bytes).with_context(|| format!("parse {}", path.display()))?;
+    schema.normalize_derived_shapes();
+    Ok(schema)
 }
 
 fn load_message_signatures(path: &Path) -> Result<Vec<NetworkMessageSignature>> {
@@ -413,7 +637,10 @@ fn network_fields_from_signature(signature: &NetworkMessageSignature) -> Vec<Net
             filter_group_attribute: None,
             handler_offset: None,
             handler_expression: None,
+            handler_kind: None,
             handler_vtable: None,
+            handler_vtable_slots: None,
+            physical_field_count: None,
             native_type: field.native_type.clone(),
             source_type_name: None,
             source_type_id: None,
