@@ -86,7 +86,7 @@ pub fn az_rtti(args: TokenStream, input: TokenStream) -> TokenStream {
         .into()
 }
 
-/// Implements type-index registration metadata for network fragments/messages.
+/// Implements type-index metadata and, with `class`, descriptor dispatch.
 #[proc_macro_attribute]
 pub fn type_registry(args: TokenStream, input: TokenStream) -> TokenStream {
     type_registry::attribute(args.into(), input.into())

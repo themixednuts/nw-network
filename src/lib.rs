@@ -35,13 +35,13 @@ pub use context::{
 };
 pub use generated::messages as generated_messages;
 pub use hub::{
-    ActorId, ActorRef, BandwidthMode, BaselineableFragment, BaselineableFragmentRef,
-    ClientActorHash, ClientContextId, CrashTarget, Duration, DynFragment, FieldGroup,
-    FieldGroupMut, FieldVector, FieldVectorMut, FixedMergeOutcome, FixedReplicatedState,
-    FixedReplicatedStateFields, FixedStateRegister, Fragment, FragmentBase, FragmentCategory,
-    FragmentCategoryBitset, FragmentKey, FragmentRegistration, FragmentTypeInfo, GroupBaselines,
-    GroupIndex, HubId, InterestId, MAX_REPLICATION_CONTROL_MESSAGE_IDS, MarshalContext,
-    MigratedPersistenceMetadata, MovementInteractionId, NamedField, NamedFieldMut,
+    ActorId, ActorInstantiationParameters, ActorRef, BandwidthMode, BaselineableFragment,
+    BaselineableFragmentRef, ClientActorHash, ClientContextId, CrashTarget, Duration, DynFragment,
+    FieldGroup, FieldGroupMut, FieldVector, FieldVectorMut, FixedMergeOutcome,
+    FixedReplicatedState, FixedReplicatedStateFields, FixedStateRegister, Fragment, FragmentBase,
+    FragmentCategory, FragmentCategoryBitset, FragmentKey, FragmentRegistration, FragmentTypeInfo,
+    GroupBaselines, GroupIndex, HubId, InterestId, MAX_REPLICATION_CONTROL_MESSAGE_IDS,
+    MarshalContext, MigratedPersistenceMetadata, MovementInteractionId, NamedField, NamedFieldMut,
     ReplicatedDefaultBits, ReplicatedFieldInfo, ReplicatedFieldInfoMut, ReplicatedFilterGroup,
     ReplicatedMergeOutcome, ReplicatedState, ReplicatedStateBundle, ReplicatedStateBundleView,
     ReplicationControl, ReplicationControlData, ReplicationPerformanceData, SequenceNumber,
@@ -68,10 +68,11 @@ pub use nw_network_derive::{
     fixed_replicated_state, replicated_state, type_registry,
 };
 pub use serialize::{
-    Codec, ConversionMarshaler, DefaultMarshaler, Marshal, Marshaler, MarshalerConversion,
-    MarshalerError, ReadBuffer, ReadBufferMark, ReplicatedContainer, ReplicatedFieldHandler,
-    ReplicatedFieldHandlerBase, Unmarshal, VlqU16, VlqU16Marshaler, VlqU32, VlqU32Marshaler,
-    VlqU64, VlqU64Marshaler, WriteBuffer, WriteBufferMark,
+    ClassValue, Codec, ConversionMarshaler, DefaultMarshaler, Marshal, Marshaler,
+    MarshalerConversion, MarshalerError, NetworkClassRegistration, ReadBuffer, ReadBufferMark,
+    ReplicatedContainer, ReplicatedFieldHandler, ReplicatedFieldHandlerBase, Unmarshal, VlqU16,
+    VlqU16Marshaler, VlqU32, VlqU32Marshaler, VlqU64, VlqU64Marshaler, WriteBuffer,
+    WriteBufferMark,
 };
 pub use types::{
     ActorRequestId, AfflictionData, AssetId, AzRtti, CharacterAttributeType, ClientRef,

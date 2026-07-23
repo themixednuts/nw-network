@@ -13,6 +13,7 @@
 //! `Marshaler<bool>` is strict: only `0` and `1` are accepted on read.
 
 pub mod buffer;
+pub mod class_value;
 pub mod composite_marshal;
 pub mod compression_marshal;
 pub mod container_marshal;
@@ -32,6 +33,7 @@ pub mod vlq;
 pub use buffer::{
     CARRIER_ENDIAN, Endian, ReadBuffer, ReadBufferMark, WriteBuffer, WriteBufferMark,
 };
+pub use class_value::{ClassValue, NetworkClassRegistration};
 pub use composite_marshal::{
     BooleanChoice, BooleanChoiceCodec, DefaultOmittedTupleCodec, OptionalCodec, TupleCodec,
 };

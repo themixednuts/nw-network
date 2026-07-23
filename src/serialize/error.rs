@@ -56,6 +56,9 @@ pub enum MarshalerError {
     /// variant of the receiving enum.
     #[error("polymorphic value carried unknown class UUID {uuid}")]
     UnknownClassUuid { uuid: uuid::Uuid },
+
+    #[error("actor instantiation parameter carried a null polymorphic value")]
+    NullPolymorphicValue,
 }
 
 impl MarshalerError {

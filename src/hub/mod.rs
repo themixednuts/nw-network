@@ -1,3 +1,4 @@
+pub mod actor_instantiation_parameters;
 pub mod address;
 pub mod fixed_replicated_state;
 pub mod fragment;
@@ -11,6 +12,7 @@ pub mod state_bundle_view;
 pub mod time;
 mod type_index_only;
 
+pub use actor_instantiation_parameters::ActorInstantiationParameters;
 pub use address::ActorRef;
 pub use fixed_replicated_state::{
     FieldGroup, FieldGroupMut, FieldVector, FieldVectorMut, FixedMergeOutcome,
