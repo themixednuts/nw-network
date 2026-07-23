@@ -1,6 +1,55 @@
 //! Actor movement message payloads.
 
+use crate::hub::{
+    ActorId, ActorRef, CrashTarget, Duration, HubId, MovementInteractionId, Timestamp,
+};
 use crate::{Marshaler, az_rtti, type_registry};
+
+/// Requests migration of an actor using the coordinator's selected target hub.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Marshaler)]
+#[az_rtti("5570CFB7-0C5C-475E-BB19-D8FBC3FD8D32")]
+#[type_registry(710)]
+pub struct MoveActorMsg {
+    pub actor_id: ActorId,
+}
+
+/// Queries the state of an in-flight actor migration.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Marshaler)]
+#[az_rtti("44BA8334-C3AA-476E-855C-27364BF8A964")]
+#[type_registry(747)]
+pub struct CheckMovementStatusMsg {
+    pub actor_id: ActorId,
+    pub movement_interaction_timeout: Timestamp,
+    pub originating_move_coordinator: ActorRef,
+    pub movement_interaction_id: MovementInteractionId,
+}
+
+/// Requests an actor migration while selecting which endpoint should terminate.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Marshaler)]
+#[az_rtti("059B0DE2-4789-4DC1-945C-3728873D68F2")]
+#[type_registry(5044)]
+pub struct CrashMoveActorMsg {
+    pub actor_id: ActorId,
+    pub target: CrashTarget,
+}
+
+/// Requests migration to a specific hub while selecting which endpoint should terminate.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Marshaler)]
+#[az_rtti("6F298C98-A99E-4210-AD2A-E48D3CD775EE")]
+#[type_registry(5045)]
+pub struct CrashMoveActorToHubMsg {
+    pub actor_id: ActorId,
+    pub hub_id: HubId,
+    pub target: CrashTarget,
+}
+
+/// Initializes a movement coordinator with its migration timeout.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Marshaler)]
+#[az_rtti("E13CE79F-F318-42D2-BADD-991AAE4F3185")]
+#[type_registry(755)]
+pub struct MoveCoordinatorInitMsg {
+    pub movement_timeout: Duration,
+}
 
 /// Requests a pass over movement requests that were deferred earlier.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Marshaler)]
@@ -13,15 +62,11 @@ mod tests {
     use uuid::uuid;
 
     use crate::generated_messages::{
-        AbortMovementMsg, CancelMovementMsg, CheckMovementStatusMsg, CommitMovementMsg,
-        CompleteDelayedMigrationsMsg, CrashMoveActorMsg, CrashMoveActorToHubMsg,
-        DelayMigrationsMsg, MoveActorMsg, MoveActorToHubMsg, MoveCoordinatorInitMsg,
-        MovementTimeoutMsg, StartMovementCommunicationMsg, TimeoutMigrationsAtCommitMsg,
-        TimeoutMigrationsMsg,
+        AbortMovementMsg, CancelMovementMsg, CommitMovementMsg, CompleteDelayedMigrationsMsg,
+        DelayMigrationsMsg, MoveActorToHubMsg, MovementTimeoutMsg, StartMovementCommunicationMsg,
+        TimeoutMigrationsAtCommitMsg, TimeoutMigrationsMsg,
     };
-    use crate::hub::{
-        ActorId, ActorRef, Duration, HubId, MovementInteractionId, SyncedTimestamp, Timestamp,
-    };
+    use crate::hub::SyncedTimestamp;
     use crate::serialize::{CARRIER_ENDIAN, WriteBuffer};
 
     use super::*;

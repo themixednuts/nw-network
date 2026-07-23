@@ -6,11 +6,12 @@
 //! omitted-component quaternions, bounded fixed-width buckets, and VLQ bit
 //! sizes so replicated state can avoid sending raw 32-bit values when a
 //! narrower protocol shape is known.
+use crate::serialize::marshaler::{Marshal, Unmarshal};
 
 use super::{
     buffer::{ReadBuffer, WriteBuffer},
     error::MarshalerError,
-    marshaler::{Codec, Marshaler},
+    marshaler::Codec,
     quantize::{f32_to_i32, f32_to_u8, f32_to_u16, f32_to_u32, i32_to_f32, u32_to_f32},
     utility_marshal::HalfF32,
 };
@@ -104,7 +105,7 @@ impl Default for QuatCompNormQuantized {
     }
 }
 
-impl Marshaler for QuatCompNormQuantized {
+impl Marshal for QuatCompNormQuantized {
     fn marshal(&self, wb: &mut WriteBuffer) {
         let [x, y, z] = self.euler_degrees();
         let mut flags = 0u8;
@@ -117,7 +118,9 @@ impl Marshaler for QuatCompNormQuantized {
         Self::write_axis_payload(y, flags, Self::Y_ZERO, Self::Y_ONE, wb);
         Self::write_axis_payload(z, flags, Self::Z_ZERO, Self::Z_ONE, wb);
     }
+}
 
+impl Unmarshal for QuatCompNormQuantized {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         let flags = rb.read_u8()?;
         let x = Self::read_axis(rb, flags, Self::X_ZERO, Self::X_ONE)?;
@@ -149,12 +152,14 @@ pub struct QuatCompNormQuantizedAngles {
     pub second: u32,
 }
 
-impl Marshaler for QuatCompNormQuantizedAngles {
+impl Marshal for QuatCompNormQuantizedAngles {
     fn marshal(&self, wb: &mut WriteBuffer) {
         self.first.marshal(wb);
         self.second.marshal(wb);
     }
+}
 
+impl Unmarshal for QuatCompNormQuantizedAngles {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         Ok(Self {
             first: u32::unmarshal(rb)?,
@@ -237,7 +242,7 @@ impl Default for QuatSmallestThreeQuantized {
     }
 }
 
-impl Marshaler for QuatSmallestThreeQuantized {
+impl Marshal for QuatSmallestThreeQuantized {
     fn marshal(&self, wb: &mut WriteBuffer) {
         let mut largest_index = 0usize;
         let mut largest_abs = self.components[0].abs();
@@ -266,7 +271,9 @@ impl Marshaler for QuatSmallestThreeQuantized {
             }
         }
     }
+}
 
+impl Unmarshal for QuatSmallestThreeQuantized {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         let flags = rb.read_u8()?;
         let largest_index = usize::from((flags >> Self::INDEX_SHIFT) & 0x03);
@@ -307,6 +314,35 @@ impl Codec<QuatSmallestThreeQuantized> for QuatSmallestThreeQuantizedMarshaler {
 
     fn unmarshal(rb: &mut ReadBuffer) -> Result<QuatSmallestThreeQuantized, MarshalerError> {
         QuatSmallestThreeQuantized::unmarshal(rb)
+    }
+}
+
+impl Codec<Quat> for QuatSmallestThreeQuantizedMarshaler {
+    fn marshal(value: &Quat, wb: &mut WriteBuffer) {
+        QuatSmallestThreeQuantized::from_xyzw(value.x, value.y, value.z, value.w).marshal(wb);
+    }
+
+    fn unmarshal(rb: &mut ReadBuffer) -> Result<Quat, MarshalerError> {
+        Ok(QuatSmallestThreeQuantized::unmarshal(rb)?.as_quat())
+    }
+}
+
+/// Packs normalized three-component vectors with smallest-three quantization.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct PackedNormalizedVec3Marshaller;
+
+impl Codec<Vec3> for PackedNormalizedVec3Marshaller {
+    fn marshal(value: &Vec3, wb: &mut WriteBuffer) {
+        QuatSmallestThreeQuantized::from_xyzw(value.x, value.y, value.z, 0.0).marshal(wb);
+    }
+
+    fn unmarshal(rb: &mut ReadBuffer) -> Result<Vec3, MarshalerError> {
+        let packed = QuatSmallestThreeQuantized::unmarshal(rb)?;
+        Ok(Vec3::new(
+            packed.components[0],
+            packed.components[1],
+            packed.components[2],
+        ))
     }
 }
 
@@ -417,11 +453,13 @@ impl Codec<QuatCompNorm> for QuatCompNormMarshaler {
     }
 }
 
-impl Marshaler for QuatCompNorm {
+impl Marshal for QuatCompNorm {
     fn marshal(&self, wb: &mut WriteBuffer) {
         QuatCompNormMarshaler::marshal(self, wb);
     }
+}
 
+impl Unmarshal for QuatCompNorm {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         QuatCompNormMarshaler::unmarshal(rb)
     }
@@ -548,6 +586,46 @@ impl Float16Marshaler {
         let q = u16::unmarshal(rb)?;
         let value = self.min + (f32::from(q) / f32::from(u16::MAX)) * self.range;
         Ok(value.clamp(self.min, self.min + self.range))
+    }
+}
+
+/// Packs a world position as full-precision horizontal coordinates and a
+/// bounded 16-bit height.
+///
+/// The const parameters are the exact IEEE-754 bit patterns for the inclusive
+/// height range. Bit-pattern parameters keep the codec zero-sized while
+/// allowing each protocol specialization to retain its native bounds.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct PackedPositionMarshaller<const MINIMUM_BITS: u32, const MAXIMUM_BITS: u32>;
+
+impl<const MINIMUM_BITS: u32, const MAXIMUM_BITS: u32>
+    PackedPositionMarshaller<MINIMUM_BITS, MAXIMUM_BITS>
+{
+    pub const MINIMUM: f32 = f32::from_bits(MINIMUM_BITS);
+    pub const MAXIMUM: f32 = f32::from_bits(MAXIMUM_BITS);
+
+    #[inline]
+    fn height_codec() -> Float16Marshaler {
+        Float16Marshaler::new(Self::MINIMUM, Self::MAXIMUM)
+    }
+}
+
+impl<const MINIMUM_BITS: u32, const MAXIMUM_BITS: u32> Codec<Vec3>
+    for PackedPositionMarshaller<MINIMUM_BITS, MAXIMUM_BITS>
+{
+    const MARSHAL_SIZE: usize = 10;
+
+    fn marshal(value: &Vec3, wb: &mut WriteBuffer) {
+        value.x.marshal(wb);
+        value.y.marshal(wb);
+        Self::height_codec().marshal(wb, value.z);
+    }
+
+    fn unmarshal(rb: &mut ReadBuffer) -> Result<Vec3, MarshalerError> {
+        let x = f32::unmarshal(rb)?;
+        let y = f32::unmarshal(rb)?;
+        let z = Self::height_codec().unmarshal(rb)?;
+        Ok(Vec3::new(x, y, z))
     }
 }
 
@@ -828,12 +906,14 @@ impl PackedSize {
     }
 }
 
-impl Marshaler for PackedSize {
+impl Marshal for PackedSize {
     fn marshal(&self, wb: &mut WriteBuffer) {
         use crate::serialize::vlq::VlqU32Marshaler;
         VlqU32Marshaler.marshal(wb, self.total_size_in_bits());
     }
+}
 
+impl Unmarshal for PackedSize {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         use crate::serialize::vlq::VlqU32Marshaler;
         let total_bits = VlqU32Marshaler.unmarshal(rb)?;

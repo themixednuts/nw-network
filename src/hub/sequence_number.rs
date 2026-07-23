@@ -1,5 +1,6 @@
+use crate::serialize::marshaler::{Marshal, Unmarshal};
 use crate::serialize::vlq::VlqU64;
-use crate::serialize::{Marshaler, MarshalerError, ReadBuffer, WriteBuffer};
+use crate::serialize::{MarshalerError, ReadBuffer, WriteBuffer};
 use std::hash::{Hash, Hasher};
 
 /// Hub-level replication sequence number.
@@ -133,7 +134,7 @@ impl Ord for SequenceNumber {
     }
 }
 
-impl Marshaler for SequenceNumber {
+impl Marshal for SequenceNumber {
     fn marshal(&self, wb: &mut WriteBuffer) {
         let raw = match Self::from_raw(self.raw_value()) {
             Self::Invalid => None,
@@ -142,7 +143,9 @@ impl Marshaler for SequenceNumber {
         };
         raw.marshal(wb);
     }
+}
 
+impl Unmarshal for SequenceNumber {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         match Option::<VlqU64>::unmarshal(rb)? {
             None => Ok(Self::Invalid),

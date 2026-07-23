@@ -10,6 +10,7 @@ pub mod serialize;
 pub mod source {
     //! Generated data types used by packet and state ports.
 
+    pub use nw_network_types::az::uuid::Uuid as AzUuid;
     pub use nw_network_types::types::*;
 }
 pub mod network_schema {
@@ -48,8 +49,9 @@ pub use hub::{
     StateRecordHeader, StateRecordWriter, SyncedTimestamp, Timestamp, TypeIndex,
 };
 pub use messages::{
-    AuthToken, ClientVersionTokenMap, ConnTicket, ForceMigrateActorMsg, ForcePersistMsg,
-    ForceRespawnMsg, ImpersonatedValues, LoginToken, MigrationTestMsg,
+    AuthToken, CheckMovementStatusMsg, ClientVersionTokenMap, ConnTicket, CrashMoveActorMsg,
+    CrashMoveActorToHubMsg, ForceMigrateActorMsg, ForcePersistMsg, ForceRespawnMsg,
+    ImpersonatedValues, LoginToken, MigrationTestMsg, MoveActorMsg, MoveCoordinatorInitMsg,
     ProcessDeferredMovementRequestsMsg, RegistrationRequestV3Msg, ScriptGarbageCollectMsg,
     StackConfigChangedMsg, TypeIndexCrc,
 };
@@ -65,20 +67,21 @@ pub use network_schema::{
     type_indices_missing_field_wire_shapes, unknown_type_indices,
 };
 pub use nw_network_derive::{
-    FixedReplicatedStateFields, Fragment, Marshaler, az_rtti, fixed_replicated_state,
-    replicated_state, type_registry,
+    FixedReplicatedStateFields, Fragment, Marshal, Marshaler, Unmarshal, az_rtti,
+    fixed_replicated_state, replicated_state, type_registry,
 };
 pub use serialize::{
-    Codec, ConversionMarshaler, DefaultMarshaler, Marshaler, MarshalerConversion, MarshalerError,
-    ReadBuffer, ReadBufferMark, ReplicatedContainer, ReplicatedFieldHandler,
-    ReplicatedFieldHandlerBase, VlqU16, VlqU16Marshaler, VlqU32, VlqU32Marshaler, VlqU64,
-    VlqU64Marshaler, WriteBuffer, WriteBufferMark,
+    Codec, ConversionMarshaler, DefaultMarshaler, Marshal, Marshaler, MarshalerConversion,
+    MarshalerError, ReadBuffer, ReadBufferMark, ReplicatedContainer, ReplicatedFieldHandler,
+    ReplicatedFieldHandlerBase, Unmarshal, VlqU16, VlqU16Marshaler, VlqU32, VlqU32Marshaler,
+    VlqU64, VlqU64Marshaler, WriteBuffer, WriteBufferMark,
 };
 pub use types::{
     ActorRequestId, AfflictionData, AssetId, AzRtti, CharacterAttributeType, ClientRef,
-    ComponentId, Crc32, DyeData, EntityId, EntityRef, GameModeParticipantStatus, GatheringStatus,
-    GdeId, GdeRef, GeneralCooldownType, GridSides, PaperdollSlotAlias, RecipeCooldownData,
-    RemoteServerContextRef, RemoteServerFacetRefGameModeParticipantComponentServerFacet,
+    ComponentId, Crc32, CrcId, DyeData, EntityId, EntityRef, GameModeParticipantStatus,
+    GatheringStatus, GdeId, GdeRef, GeneralCooldownType, GridSides, PaperdollSlotAlias,
+    RecipeCooldownData, RemoteServerContextRef,
+    RemoteServerFacetRefGameModeParticipantComponentServerFacet,
     RemoteServerFacetRefHousingPlotComponentServerFacet, RemoteServerGdeRef,
     RemoteTypelessServerFacetRef, ReplicationCategory, TemporaryAffiliationRelationship,
     TemporaryAffiliationType, TimePoint, TypeRegistryEntry, WallClockTimePoint,

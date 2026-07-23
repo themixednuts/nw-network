@@ -1,6 +1,6 @@
 //! Game-mode instance replication for timers, participants, events, and map UI.
 
-use crate::{Marshaler, az_rtti, replicated_state, type_registry};
+use crate::{Marshal, Marshaler, Unmarshal, az_rtti, replicated_state, type_registry};
 
 use glam::Vec2;
 
@@ -31,7 +31,7 @@ pub type GameModeParticipantStatuses = ReplicatedContainer<
 pub struct GameModeParticipantStatusByte;
 
 impl Codec<GameModeParticipantStatus> for GameModeParticipantStatusByte {
-    const MARSHAL_SIZE: usize = <u8 as Marshaler>::MARSHAL_SIZE;
+    const MARSHAL_SIZE: usize = <u8 as Marshal>::MARSHAL_SIZE;
 
     fn marshal(value: &GameModeParticipantStatus, wb: &mut WriteBuffer) {
         let raw: u8 = match value {

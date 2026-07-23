@@ -34,7 +34,7 @@ fn generate_struct_unmarshal(_ident: &syn::Ident, fields: &Fields<MarshalerField
                 } else if let Some(as_type) = &f.r#as {
                     quote! {
                         let #field_name = <#field_type as ::core::convert::From<#as_type>>::from(
-                            <#as_type as ::nw_network::serialize::marshaler::Marshaler>::unmarshal(rb)?,
+                            <#as_type as ::nw_network::serialize::marshaler::Unmarshal>::unmarshal(rb)?,
                         );
                     }
                 } else if let Some(unmarshal_with) = &f.unmarshal_with {
@@ -44,7 +44,7 @@ fn generate_struct_unmarshal(_ident: &syn::Ident, fields: &Fields<MarshalerField
                 } else {
                     quote! {
                         let #field_name =
-                            <#field_type as ::nw_network::serialize::marshaler::Marshaler>::unmarshal(rb)?;
+                            <#field_type as ::nw_network::serialize::marshaler::Unmarshal>::unmarshal(rb)?;
                     }
                 })
             });
@@ -78,11 +78,11 @@ fn generate_struct_unmarshal(_ident: &syn::Ident, fields: &Fields<MarshalerField
                             <#codec as ::nw_network::serialize::marshaler::Codec<#field_type>>::unmarshal(rb)?;
                     }
                 } else if let Some(as_type) = &f.r#as {
-                    quote! { let #field_name = <#field_type as ::core::convert::From<#as_type>>::from(<#as_type>::unmarshal(rb)?); }
+                    quote! { let #field_name = <#field_type as ::core::convert::From<#as_type>>::from(<#as_type as ::nw_network::serialize::marshaler::Unmarshal>::unmarshal(rb)?); }
                 } else if let Some(unmarshal_with) = &f.unmarshal_with {
                     quote! { let #field_name = #unmarshal_with(rb)?; }
                 } else {
-                    quote! { let #field_name = <#field_type>::unmarshal(rb)?; }
+                    quote! { let #field_name = <#field_type as ::nw_network::serialize::marshaler::Unmarshal>::unmarshal(rb)?; }
                 })
             });
 
@@ -144,11 +144,11 @@ fn generate_enum_unmarshal(
                                 <#codec as ::nw_network::serialize::marshaler::Codec<#field_type>>::unmarshal(rb)?;
                         }
                     } else if let Some(as_type) = &f.r#as {
-                        quote! { let #field_name = <#field_type as ::core::convert::From<#as_type>>::from(<#as_type>::unmarshal(rb)?); }
+                        quote! { let #field_name = <#field_type as ::core::convert::From<#as_type>>::from(<#as_type as ::nw_network::serialize::marshaler::Unmarshal>::unmarshal(rb)?); }
                     } else if let Some(unmarshal_with) = &f.unmarshal_with {
                         quote! { let #field_name = #unmarshal_with(rb)?; }
                     } else {
-                        quote! { let #field_name = <#field_type>::unmarshal(rb)?; }
+                        quote! { let #field_name = <#field_type as ::nw_network::serialize::marshaler::Unmarshal>::unmarshal(rb)?; }
                     })
                 });
 
@@ -183,11 +183,11 @@ fn generate_enum_unmarshal(
                                 <#codec as ::nw_network::serialize::marshaler::Codec<#field_type>>::unmarshal(rb)?;
                         }
                     } else if let Some(as_type) = &f.r#as {
-                        quote! { let #field_name = <#field_type as ::core::convert::From<#as_type>>::from(<#as_type>::unmarshal(rb)?); }
+                        quote! { let #field_name = <#field_type as ::core::convert::From<#as_type>>::from(<#as_type as ::nw_network::serialize::marshaler::Unmarshal>::unmarshal(rb)?); }
                     } else if let Some(unmarshal_with) = &f.unmarshal_with {
                         quote! { let #field_name = #unmarshal_with(rb)?; }
                     } else {
-                        quote! { let #field_name = <#field_type>::unmarshal(rb)?; }
+                        quote! { let #field_name = <#field_type as ::nw_network::serialize::marshaler::Unmarshal>::unmarshal(rb)?; }
                     })
                 });
 
@@ -211,7 +211,7 @@ fn generate_enum_unmarshal(
     });
 
     quote! {
-        let discriminant = u8::unmarshal(rb)?;
+        let discriminant = <u8 as ::nw_network::serialize::marshaler::Unmarshal>::unmarshal(rb)?;
         match discriminant {
             #(#match_arms)*
             _ => Err(::nw_network::serialize::error::MarshalerError::InvalidDiscriminant { value: discriminant }),
@@ -265,7 +265,7 @@ fn generate_direct_repr_enum_unmarshal(variants: &[MarshalerVariant], repr: &Typ
     });
 
     quote! {
-        let discriminant = <#repr>::unmarshal(rb)?;
+        let discriminant = <#repr as ::nw_network::serialize::marshaler::Unmarshal>::unmarshal(rb)?;
         match discriminant {
             #(#match_arms)*
             #unknown_arm

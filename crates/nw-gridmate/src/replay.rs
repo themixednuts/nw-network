@@ -505,7 +505,7 @@ fn record_state_fragment_error(err: MarshalerError, stats: &mut ReplaySummary) {
 fn is_fragment_decode_error(err: &MarshalerError) -> bool {
     matches!(
         err,
-        MarshalerError::UnknownTypeIndex { .. } | MarshalerError::UnknownClassUuid
+        MarshalerError::UnknownTypeIndex { .. } | MarshalerError::UnknownClassUuid { .. }
     )
 }
 

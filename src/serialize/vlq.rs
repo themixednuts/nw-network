@@ -1,9 +1,10 @@
+use crate::serialize::marshaler::{Marshal, Unmarshal};
 use derive_more::{AsRef, Deref, DerefMut, Display, From, Into};
 
 use super::{
     buffer::{ReadBuffer, WriteBuffer},
     error::MarshalerError,
-    marshaler::{Codec, Marshaler},
+    marshaler::Codec,
 };
 
 #[inline]
@@ -125,11 +126,13 @@ impl PartialEq<VlqU16> for u16 {
     }
 }
 
-impl Marshaler for VlqU16 {
+impl Marshal for VlqU16 {
     fn marshal(&self, wb: &mut WriteBuffer) {
         VlqU16Marshaler.marshal(wb, self.0);
     }
+}
 
+impl Unmarshal for VlqU16 {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         Ok(VlqU16(VlqU16Marshaler.unmarshal(rb)?))
     }
@@ -310,11 +313,13 @@ impl PartialEq<VlqU32> for u32 {
     }
 }
 
-impl Marshaler for VlqU32 {
+impl Marshal for VlqU32 {
     fn marshal(&self, wb: &mut WriteBuffer) {
         VlqU32Marshaler.marshal(wb, self.0);
     }
+}
 
+impl Unmarshal for VlqU32 {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         Ok(VlqU32(VlqU32Marshaler.unmarshal(rb)?))
     }
@@ -585,11 +590,13 @@ impl PartialEq<VlqU64> for u64 {
     }
 }
 
-impl Marshaler for VlqU64 {
+impl Marshal for VlqU64 {
     fn marshal(&self, wb: &mut WriteBuffer) {
         VlqU64Marshaler.marshal(wb, self.0);
     }
+}
 
+impl Unmarshal for VlqU64 {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         Ok(VlqU64(VlqU64Marshaler.unmarshal(rb)?))
     }

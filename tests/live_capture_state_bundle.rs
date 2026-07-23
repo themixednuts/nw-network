@@ -451,8 +451,12 @@ fn full_live_and_vendor_bundles_walk_all_fragments() {
             .unwrap_or_else(|err| panic!("{}: {err}", fixture.name));
         let fragments = view
             .fragments()
-            .collect::<Result<Vec<_>, _>>()
-            .unwrap_or_else(|err| panic!("{}: state fragments: {err}", fixture.name));
+            .enumerate()
+            .map(|(index, fragment)| {
+                fragment
+                    .unwrap_or_else(|err| panic!("{}: state fragment {index}: {err}", fixture.name))
+            })
+            .collect::<Vec<_>>();
 
         assert_eq!(fragments.len(), fragment_count, "{}", fixture.name);
         assert_eq!(

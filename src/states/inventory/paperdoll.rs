@@ -1,4 +1,5 @@
 //! Equipped item, loadout, ammo, and visual paperdoll replication.
+use crate::serialize::marshaler::{Marshal, Unmarshal};
 
 use crate::{az_rtti, replicated_state, type_registry};
 
@@ -26,7 +27,7 @@ pub struct ItemVisualData {
     pub entitlement_flags: [u8; 4],
 }
 
-impl Marshaler for ItemVisualData {
+impl Marshal for ItemVisualData {
     fn marshal(&self, wb: &mut WriteBuffer) {
         self.visual_id.marshal(wb);
         self.flags.marshal(wb);
@@ -39,7 +40,9 @@ impl Marshaler for ItemVisualData {
         self.entitlement_version.marshal(wb);
         wb.write_bytes(&self.entitlement_flags);
     }
+}
 
+impl Unmarshal for ItemVisualData {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         let visual_id = VlqU32::unmarshal(rb)?;
         let flags = u8::unmarshal(rb)?;

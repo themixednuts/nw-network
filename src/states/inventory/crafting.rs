@@ -1,24 +1,25 @@
 //! Crafting recipe cooldown and gear-score bonus replication.
+use crate::serialize::marshaler::{Marshal, Unmarshal};
 
 use crate::{az_rtti, replicated_state, type_registry};
 
-use crate::serialize::{
-    IndexMap, Marshaler, MarshalerError, ReadBuffer, ReplicatedContainer, WriteBuffer,
-};
+use crate::serialize::{IndexMap, MarshalerError, ReadBuffer, ReplicatedContainer, WriteBuffer};
 use crate::types::{Crc32, RecipeCooldownData, WallClockTimePoint};
 
 pub const MAX_CRAFTING_RECIPE_COOLDOWNS: usize = 0x1d;
 pub const MAX_CRAFTING_GS_BONUSES: usize = 7;
 
-impl Marshaler for RecipeCooldownData {
+impl Marshal for RecipeCooldownData {
     const MARSHAL_SIZE: usize =
-        <u8 as Marshaler>::MARSHAL_SIZE + <WallClockTimePoint as Marshaler>::MARSHAL_SIZE;
+        <u8 as Marshal>::MARSHAL_SIZE + <WallClockTimePoint as Marshal>::MARSHAL_SIZE;
 
     fn marshal(&self, wb: &mut WriteBuffer) {
         self.count.marshal(wb);
         self.cooldown_end.marshal(wb);
     }
+}
 
+impl Unmarshal for RecipeCooldownData {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         Ok(Self {
             count: u8::unmarshal(rb)?,

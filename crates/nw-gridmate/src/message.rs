@@ -1,6 +1,6 @@
 use crate::network_schema::type_by_type_id;
 use crate::serialize::{
-    CARRIER_ENDIAN, Marshaler, MarshalerError, ReadBuffer, VlqU32Marshaler, WriteBuffer,
+    CARRIER_ENDIAN, Marshal, MarshalerError, ReadBuffer, Unmarshal, VlqU32Marshaler, WriteBuffer,
 };
 use crate::types::{AzRtti, TypeRegistryEntry};
 use std::{any::Any, fmt::Debug, marker::PhantomData};
@@ -20,7 +20,7 @@ pub trait Actor: Any + Debug + Send + Sync {}
 /// ([`TypeRegistryEntry`]). The compact index is what normal Hub message
 /// envelopes carry; UUID envelopes are still accepted and resolved through the
 /// generated network schema.
-pub trait Message: AzRtti + TypeRegistryEntry + Marshaler + Debug + Send + Sync {
+pub trait Message: AzRtti + TypeRegistryEntry + Debug + Send + Sync {
     /// Message envelope index.
     const TYPE_INDEX: u32 = <Self as TypeRegistryEntry>::TYPE_INDEX;
 
@@ -43,7 +43,7 @@ pub trait Message: AzRtti + TypeRegistryEntry + Marshaler + Debug + Send + Sync 
     }
 }
 
-impl<T> Message for T where T: AzRtti + TypeRegistryEntry + Marshaler + Debug + Send + Sync {}
+impl<T> Message for T where T: AzRtti + TypeRegistryEntry + Debug + Send + Sync {}
 
 /// Source-level direction markers for the Hub message wrapper.
 pub mod path {
@@ -86,7 +86,7 @@ pub trait EgressPath: MessagePath + Sized + 'static {
     /// Path-specific framing input supplied at the call site.
     type Context: Default + Send + 'static;
 
-    fn marshal_framed<T: Message + Marshaler>(msg: T, context: Self::Context, wb: &mut WriteBuffer);
+    fn marshal_framed<T: Message + Marshal>(msg: T, context: Self::Context, wb: &mut WriteBuffer);
 
     fn validate_message<T: Message>() -> crate::Result<()> {
         ensure_direct_message::<T>(Self::NAME)
@@ -95,7 +95,7 @@ pub trait EgressPath: MessagePath + Sized + 'static {
 
 impl EgressPath for ClientToServer {
     type Context = Uuid;
-    fn marshal_framed<T: Message + Marshaler>(msg: T, correlation_id: Uuid, wb: &mut WriteBuffer) {
+    fn marshal_framed<T: Message + Marshal>(msg: T, correlation_id: Uuid, wb: &mut WriteBuffer) {
         let mut meta = MessageMetadata::<T, Self>::with_correlation_id(msg, correlation_id);
         meta.marshal(wb);
     }
@@ -103,7 +103,7 @@ impl EgressPath for ClientToServer {
 
 impl EgressPath for ServerToClient {
     type Context = ();
-    fn marshal_framed<T: Message + Marshaler>(msg: T, _: (), wb: &mut WriteBuffer) {
+    fn marshal_framed<T: Message + Marshal>(msg: T, _: (), wb: &mut WriteBuffer) {
         let mut meta = MessageMetadata::<T, Self>::new(msg);
         meta.marshal(wb);
     }
@@ -116,13 +116,13 @@ impl EgressPath for ServerToClient {
 /// roles: [`ClientToServer`] reads/writes the correlated C→S frame,
 /// and [`ServerToClient`] reads/writes the sized S→C frame.
 pub trait IngressPath: MessagePath + Sized + 'static {
-    fn read_framed<T: Message + Marshaler>(
+    fn read_framed<T: Message + Unmarshal>(
         rb: &mut ReadBuffer,
     ) -> Result<MessageMetadata<T, Self>, MarshalerError>;
 }
 
 impl IngressPath for ClientToServer {
-    fn read_framed<T: Message + Marshaler>(
+    fn read_framed<T: Message + Unmarshal>(
         rb: &mut ReadBuffer,
     ) -> Result<MessageMetadata<T, Self>, MarshalerError> {
         MessageMetadata::<T, Self>::unmarshal(rb)
@@ -130,7 +130,7 @@ impl IngressPath for ClientToServer {
 }
 
 impl IngressPath for ServerToClient {
-    fn read_framed<T: Message + Marshaler>(
+    fn read_framed<T: Message + Unmarshal>(
         rb: &mut ReadBuffer,
     ) -> Result<MessageMetadata<T, Self>, MarshalerError> {
         MessageMetadata::<T, Self>::unmarshal(rb)
@@ -152,25 +152,25 @@ impl IngressPath for ServerToClient {
 /// direction (`#[message(client_to_server)]` / `#[message(server_to_client)]`).
 /// Hand-written impls remain appropriate for bidirectional or exceptional
 /// Hub messages.
-pub trait Sendable<P: EgressPath>: Message + Marshaler + Send + 'static {}
+pub trait Sendable<P: EgressPath>: Message + Marshal + Send + 'static {}
 
 /// A message that arrives over wire ingress path `P`. Mirror of
 /// [`Sendable<P>`]: parameterised by the path so a single message
 /// type can implement [`Receivable`] for both [`ClientToServer`] and
 /// [`ServerToClient`] when the protocol uses the same shape in both
 /// directions (`PingMsg`).
-pub trait Receivable<P: IngressPath>: Message + Marshaler + Send + 'static {}
+pub trait Receivable<P: IngressPath>: Message + Unmarshal + Send + 'static {}
 
 impl<T, P> Sendable<P> for T
 where
-    T: Message + Marshaler + Send + 'static,
+    T: Message + Marshal + Send + 'static,
     P: EgressPath,
 {
 }
 
 impl<T, P> Receivable<P> for T
 where
-    T: Message + Marshaler + Send + 'static,
+    T: Message + Unmarshal + Send + 'static,
     P: IngressPath,
 {
 }
@@ -307,7 +307,10 @@ impl<T: Message> MessageEnvelope<T> {
         Self { message }
     }
 
-    pub(crate) fn marshal(&self, wb: &mut WriteBuffer) {
+    pub(crate) fn marshal(&self, wb: &mut WriteBuffer)
+    where
+        T: Marshal,
+    {
         0u8.marshal(wb);
         1u8.marshal(wb);
         VlqU32Marshaler.marshal(wb, <T as Message>::TYPE_INDEX);
@@ -358,11 +361,17 @@ impl<T: Message> MessageMetadata<T, ClientToServer> {
         self.metadata.correlation_id = correlation_id;
     }
 
-    pub fn marshal(&mut self, wb: &mut WriteBuffer) {
+    pub fn marshal(&mut self, wb: &mut WriteBuffer)
+    where
+        T: Marshal,
+    {
         marshal_correlated_into(&mut self.metadata, &self.envelope, wb);
     }
 
-    pub fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
+    pub fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError>
+    where
+        T: Unmarshal,
+    {
         let (metadata, view) = read_correlated_message(rb)?;
         Ok(Self::from_parts(metadata, decode_typed_envelope(view)?))
     }
@@ -376,10 +385,16 @@ impl<T: Message> MessageMetadata<T, ServerToClient> {
         )
     }
 
-    pub fn marshal(&mut self, wb: &mut WriteBuffer) {
+    pub fn marshal(&mut self, wb: &mut WriteBuffer)
+    where
+        T: Marshal,
+    {
         marshal_sized_into(&mut self.metadata, &self.envelope, wb);
     }
-    pub fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
+    pub fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError>
+    where
+        T: Unmarshal,
+    {
         let (metadata, view) = read_sized_message(rb)?;
         Ok(Self::from_parts(metadata, decode_typed_envelope(view)?))
     }
@@ -507,7 +522,7 @@ pub fn read_sized_message<'a>(
     Ok((SizedEnvelopeMetadata { envelope_size }, view))
 }
 
-fn marshal_correlated_into<T: Message>(
+fn marshal_correlated_into<T: Message + Marshal>(
     metadata: &mut CorrelatedMetadata,
     envelope: &MessageEnvelope<T>,
     wb: &mut WriteBuffer,
@@ -533,7 +548,7 @@ fn marshal_correlated_into<T: Message>(
     debug_assert!(wrote);
 }
 
-fn marshal_sized_into<T: Message>(
+fn marshal_sized_into<T: Message + Marshal>(
     metadata: &mut SizedEnvelopeMetadata,
     envelope: &MessageEnvelope<T>,
     wb: &mut WriteBuffer,
@@ -545,7 +560,7 @@ fn marshal_sized_into<T: Message>(
     wb.write_bytes(envelope_buf.as_slice());
 }
 
-fn decode_typed_envelope<T: Message>(
+fn decode_typed_envelope<T: Message + Unmarshal>(
     parsed: MessageEnvelopeView<'_>,
 ) -> Result<MessageEnvelope<T>, MarshalerError> {
     if !parsed.type_id.matches::<T>() {

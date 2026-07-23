@@ -165,7 +165,7 @@ mod tests {
         hub::{
             DynFragment, FragmentBase, FragmentKey, FragmentTypeInfo, InterestId, StateRecordWriter,
         },
-        serialize::{Marshaler, WriteBuffer},
+        serialize::{Marshal, Unmarshal, WriteBuffer},
         type_registry,
     };
 

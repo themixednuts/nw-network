@@ -2,15 +2,6 @@
   "fields": [
     {
       "typeIndex": 13,
-      "fieldIndex": 0,
-      "field": "position",
-      "nativeType": "MB::ReplicatedFieldHandler<AZ::Vector3, PositionAnchorMarshaler>",
-      "rustType": "::nw_network::serialize::ReplicatedFieldHandler<(f32, f32, f32), ::nw_network::serialize::PositionAnchorMarshaler>",
-      "wireShapeSource": "field-override:PositionInTheWorldReplicatedState.position",
-      "confidence": "high"
-    },
-    {
-      "typeIndex": 13,
       "fieldIndex": 1,
       "field": "rotation",
       "nativeType": "MB::ReplicatedFieldHandler<AZ::Quaternion, GridMate::QuatCompNormMarshaler>",

@@ -5,8 +5,8 @@ use crate::{az_rtti, replicated_state, type_registry};
 use glam::Vec3;
 
 use crate::serialize::{
-    HalfF32Marshaler, HalfVec3Marshaler, PositionAnchorMarshaler, ReplicatedContainer,
-    ReplicatedFieldHandler, VlqU32Marshaler,
+    HalfF32Marshaler, PackedPositionMarshaller, ReplicatedContainer, ReplicatedFieldHandler,
+    Vec3CompMarshaler, VlqU32Marshaler,
 };
 use crate::{GdeId, Marshaler};
 
@@ -24,9 +24,10 @@ pub struct PiercingHitData {
 #[az_rtti("39B4C919-3A6D-46B5-92D0-3B4ACB284B1D")]
 #[type_registry(16)]
 pub struct ProjectileReplicatedState {
-    pub position_anchor: ReplicatedFieldHandler<(f32, f32, f32), PositionAnchorMarshaler>,
+    pub position_anchor:
+        ReplicatedFieldHandler<Vec3, PackedPositionMarshaller<0xc2c8_0000, 0x44fa_0000>>,
     pub anchor_height_delta: ReplicatedFieldHandler<f32, HalfF32Marshaler>,
-    pub spawn_velocity: ReplicatedFieldHandler<(f32, f32, f32), HalfVec3Marshaler>,
+    pub spawn_velocity: ReplicatedFieldHandler<Vec3, Vec3CompMarshaler>,
     pub gravity_override: ReplicatedFieldHandler<f32, HalfF32Marshaler>,
     pub time_anchor_us: ReplicatedFieldHandler<u64>,
     pub time_offset_start_accel_ms: ReplicatedFieldHandler<u16>,
@@ -42,7 +43,7 @@ pub struct ProjectileReplicatedState {
     pub damage_table_row_index: ReplicatedFieldHandler<u16>,
     pub piercing_hits: ReplicatedContainer<Vec<PiercingHitData>>,
     pub magnet_entity_id: ReplicatedFieldHandler<u64>,
-    pub magnet_root_offset: ReplicatedFieldHandler<(f32, f32, f32), HalfVec3Marshaler>,
+    pub magnet_root_offset: ReplicatedFieldHandler<Vec3, Vec3CompMarshaler>,
     pub combat_settings_exp_idx: ReplicatedFieldHandler<u8>,
 }
 
@@ -51,6 +52,6 @@ impl ProjectileReplicatedState {
         self.position_anchor
             .value()
             .copied()
-            .map(|(x, y, height)| Vec3::new(x, height, y))
+            .map(|position| Vec3::new(position.x, position.z, position.y))
     }
 }

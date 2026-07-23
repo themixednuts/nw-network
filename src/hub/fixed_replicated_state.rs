@@ -31,7 +31,7 @@ use crate::serialize::replicated_field::{
     ReplicatedFieldHandlerBase,
 };
 use crate::serialize::vlq::{VlqU32Marshaler, VlqU64Marshaler};
-use crate::serialize::{Marshaler, MarshalerError, ReadBuffer, WriteBuffer};
+use crate::serialize::{Marshal, MarshalerError, ReadBuffer, Unmarshal, WriteBuffer};
 use arrayvec::ArrayVec;
 use glam::Vec3;
 

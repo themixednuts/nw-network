@@ -1,9 +1,9 @@
+use crate::serialize::marshaler::{Marshal, Unmarshal};
 // Utility marshalers: UUID as 16 bytes; Duration as u32 milliseconds
 
 use super::{
     buffer::{ReadBuffer, WriteBuffer},
     error::MarshalerError,
-    marshaler::Marshaler,
 };
 use uuid::Uuid;
 
@@ -35,8 +35,8 @@ impl From<Sentinel> for Option<u32> {
     }
 }
 
-impl Marshaler for Sentinel {
-    const MARSHAL_SIZE: usize = <u32 as Marshaler>::MARSHAL_SIZE;
+impl Marshal for Sentinel {
+    const MARSHAL_SIZE: usize = <u32 as Marshal>::MARSHAL_SIZE;
 
     fn marshal(&self, wb: &mut WriteBuffer) {
         match self.0 {
@@ -44,7 +44,9 @@ impl Marshaler for Sentinel {
             None => u32::MAX.marshal(wb),
         }
     }
+}
 
+impl Unmarshal for Sentinel {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         match u32::unmarshal(rb)? {
             u32::MAX => Ok(Sentinel(None)),
@@ -54,13 +56,15 @@ impl Marshaler for Sentinel {
 }
 
 // UUID marshaled as 16 raw bytes
-impl Marshaler for Uuid {
+impl Marshal for Uuid {
     const MARSHAL_SIZE: usize = 16;
 
     fn marshal(&self, wb: &mut WriteBuffer) {
         wb.write_bytes(self.as_bytes());
     }
+}
 
+impl Unmarshal for Uuid {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         let bytes = rb.read_bytes(16)?;
         Ok(Uuid::from_slice(bytes)?)
@@ -78,13 +82,15 @@ impl Marshaler for Uuid {
 )]
 pub struct RawSequenceNumber(pub u64);
 
-impl Marshaler for RawSequenceNumber {
+impl Marshal for RawSequenceNumber {
     const MARSHAL_SIZE: usize = 8;
 
     fn marshal(&self, wb: &mut WriteBuffer) {
         wb.write_bytes(&self.0.to_ne_bytes());
     }
+}
 
+impl Unmarshal for RawSequenceNumber {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         let bytes = rb.read_bytes(8)?;
         let mut raw = [0u8; 8];
@@ -105,13 +111,15 @@ impl Marshaler for RawSequenceNumber {
 #[derive(Debug, Clone, Copy, Default, PartialEq, derive_more::From, derive_more::Into)]
 pub struct HalfF32(pub f32);
 
-impl Marshaler for HalfF32 {
+impl Marshal for HalfF32 {
     const MARSHAL_SIZE: usize = 2;
 
     fn marshal(&self, wb: &mut WriteBuffer) {
         wb.write_u16(half::f16::from_f32(self.0).to_bits());
     }
+}
 
+impl Unmarshal for HalfF32 {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         let bits = rb.read_u16()?;
         Ok(HalfF32(half::f16::from_bits(bits).to_f32()))
@@ -119,14 +127,17 @@ impl Marshaler for HalfF32 {
 }
 
 // std::time::Duration as u32 milliseconds
-impl Marshaler for std::time::Duration {
-    const MARSHAL_SIZE: usize = <u32 as Marshaler>::MARSHAL_SIZE;
+impl Marshal for std::time::Duration {
+    const MARSHAL_SIZE: usize = <u32 as Marshal>::MARSHAL_SIZE;
 
     fn marshal(&self, wb: &mut WriteBuffer) {
         let ms = self.as_millis().min(u128::from(u32::MAX));
         let ms = u32::try_from(ms).expect("duration milliseconds are clamped to u32::MAX");
         ms.marshal(wb);
     }
+}
+
+impl Unmarshal for std::time::Duration {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         let ms = u32::unmarshal(rb)?;
         Ok(std::time::Duration::from_millis(u64::from(ms)))
@@ -137,14 +148,16 @@ impl Marshaler for std::time::Duration {
 ///
 /// Lets recursive value types compose with the existing derives without
 /// hand-written impls. `T` is required to be sized because
-/// [`Marshaler::unmarshal`] returns `Result<T, _>`.
-impl<T: Marshaler> Marshaler for Box<T> {
+/// [`Unmarshal::unmarshal`] returns `Result<T, _>`.
+impl<T: Marshal> Marshal for Box<T> {
     const MARSHAL_SIZE: usize = T::MARSHAL_SIZE;
 
     fn marshal(&self, wb: &mut WriteBuffer) {
         (**self).marshal(wb);
     }
+}
 
+impl<T: Unmarshal> Unmarshal for Box<T> {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         Ok(Box::new(T::unmarshal(rb)?))
     }
@@ -211,13 +224,15 @@ impl<const WORDS: usize> BitSet<WORDS> {
     }
 }
 
-impl<const WORDS: usize> Marshaler for BitSet<WORDS> {
+impl<const WORDS: usize> Marshal for BitSet<WORDS> {
     fn marshal(&self, wb: &mut WriteBuffer) {
         for &word in &self.0 {
             word.marshal(wb);
         }
     }
+}
 
+impl<const WORDS: usize> Unmarshal for BitSet<WORDS> {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         let mut words = [0u64; WORDS];
         for word in &mut words {
@@ -230,7 +245,7 @@ impl<const WORDS: usize> Marshaler for BitSet<WORDS> {
 // Generic Option<T> marshaler
 // Wire format: 0x00 = None, 0x01 = Some(T)
 // If Some, follows with T's marshaled representation
-impl<T: Marshaler> Marshaler for Option<T> {
+impl<T: Marshal> Marshal for Option<T> {
     fn marshal(&self, wb: &mut WriteBuffer) {
         match self {
             Some(inner) => {
@@ -242,7 +257,9 @@ impl<T: Marshaler> Marshaler for Option<T> {
             }
         }
     }
+}
 
+impl<T: Unmarshal> Unmarshal for Option<T> {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         let discriminant = u8::unmarshal(rb)?;
         match discriminant {

@@ -371,7 +371,7 @@ dependencies = [
  "spin",
  "wasm-bindgen",
  "wasm-bindgen-futures",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -657,7 +657,7 @@ version = "4.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2ce8604710f6733aa641a2b3731eaa1e8b3d9973d5e3565da11800813f997a9"
 dependencies = [
- "heck 0.5.0",
+ "heck",
  "proc-macro2",
  "quote",
  "syn",
@@ -816,6 +816,15 @@ name = "critical-section"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "790eea4361631c5e7d22598ecd5723ff611904e3344ce8720784c93e3d83d40b"
+
+[[package]]
+name = "crossbeam-channel"
+version = "0.5.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d85363c37faeca707aef026efa9f3b34d077bce547e48f770770625c6013679e"
+dependencies = [
+ "crossbeam-utils",
+]
 
 [[package]]
 name = "crossbeam-deque"
@@ -990,12 +999,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "diff"
-version = "0.1.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "56254986775e3233ffa9c4d7d3faaf6d36a2c09d30b20687e9f88bc8bafc16c8"
-
-[[package]]
 name = "digest"
 version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1107,7 +1110,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -1302,21 +1305,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gofmt"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e69eb85ea8ce256d32efa063b3b02d8971db69ada12ded24f2cc255e211feb79"
-dependencies = [
- "anyhow",
- "libm",
- "pretty_assertions",
- "strum 0.25.0",
- "thiserror",
- "unic-ucd-category",
- "unicode-width 0.2.0",
-]
-
-[[package]]
 name = "half"
 version = "2.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1383,12 +1371,6 @@ dependencies = [
  "portable-atomic",
  "stable_deref_trait",
 ]
-
-[[package]]
-name = "heck"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95505c38b4572b2d910cecb0281560f54b440a19336cbbcb27bf6ce6adc6f5a8"
 
 [[package]]
 name = "heck"
@@ -1590,12 +1572,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "matches"
-version = "0.1.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2532096657941c2fea9c289d370a250971c689d4f143798ff67113ec042024a5"
-
-[[package]]
 name = "memchr"
 version = "2.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1656,7 +1632,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -1728,11 +1704,11 @@ dependencies = [
 [[package]]
 name = "nw-asset"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git?rev=ab903637109d2ec41439428f22e20a21bcc10f6f#ab903637109d2ec41439428f22e20a21bcc10f6f"
+source = "git+https://github.com/themixednuts/nw-tools.git?rev=284699b559e0e5a66ec2031df0f23bf35f14c44f#284699b559e0e5a66ec2031df0f23bf35f14c44f"
 dependencies = [
  "nw-filesystem",
+ "nw-jobs",
  "nw-pak",
- "sha1",
  "thiserror",
  "uuid",
 ]
@@ -1740,7 +1716,7 @@ dependencies = [
 [[package]]
 name = "nw-filesystem"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git?rev=ab903637109d2ec41439428f22e20a21bcc10f6f#ab903637109d2ec41439428f22e20a21bcc10f6f"
+source = "git+https://github.com/themixednuts/nw-tools.git?rev=284699b559e0e5a66ec2031df0f23bf35f14c44f#284699b559e0e5a66ec2031df0f23bf35f14c44f"
 dependencies = [
  "thiserror",
 ]
@@ -1780,8 +1756,9 @@ dependencies = [
 [[package]]
 name = "nw-jobs"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git?rev=ab903637109d2ec41439428f22e20a21bcc10f6f#ab903637109d2ec41439428f22e20a21bcc10f6f"
+source = "git+https://github.com/themixednuts/nw-tools.git?rev=284699b559e0e5a66ec2031df0f23bf35f14c44f#284699b559e0e5a66ec2031df0f23bf35f14c44f"
 dependencies = [
+ "crossbeam-channel",
  "rayon",
  "signal-hook 0.4.4",
  "thiserror",
@@ -1846,11 +1823,12 @@ dependencies = [
 [[package]]
 name = "nw-objectstream"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git?rev=ab903637109d2ec41439428f22e20a21bcc10f6f#ab903637109d2ec41439428f22e20a21bcc10f6f"
+source = "git+https://github.com/themixednuts/nw-tools.git?rev=284699b559e0e5a66ec2031df0f23bf35f14c44f#284699b559e0e5a66ec2031df0f23bf35f14c44f"
 dependencies = [
  "arcstr",
  "arrayvec",
  "crc32fast",
+ "glam",
  "hex",
  "nw-asset",
  "quick-xml",
@@ -1863,7 +1841,7 @@ dependencies = [
 [[package]]
 name = "nw-pak"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git?rev=ab903637109d2ec41439428f22e20a21bcc10f6f#ab903637109d2ec41439428f22e20a21bcc10f6f"
+source = "git+https://github.com/themixednuts/nw-tools.git?rev=284699b559e0e5a66ec2031df0f23bf35f14c44f#284699b559e0e5a66ec2031df0f23bf35f14c44f"
 dependencies = [
  "crc32fast",
  "flate2",
@@ -1879,18 +1857,17 @@ dependencies = [
 [[package]]
 name = "nw-resources"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git?rev=ab903637109d2ec41439428f22e20a21bcc10f6f#ab903637109d2ec41439428f22e20a21bcc10f6f"
+source = "git+https://github.com/themixednuts/nw-tools.git?rev=284699b559e0e5a66ec2031df0f23bf35f14c44f#284699b559e0e5a66ec2031df0f23bf35f14c44f"
 
 [[package]]
 name = "nw-serialize-codegen"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git?rev=ab903637109d2ec41439428f22e20a21bcc10f6f#ab903637109d2ec41439428f22e20a21bcc10f6f"
+source = "git+https://github.com/themixednuts/nw-tools.git?rev=284699b559e0e5a66ec2031df0f23bf35f14c44f#284699b559e0e5a66ec2031df0f23bf35f14c44f"
 dependencies = [
  "anyhow",
  "blake3",
  "clap",
- "gofmt",
- "heck 0.5.0",
+ "heck",
  "nw-jobs",
  "nw-objectstream",
  "oxc_allocator",
@@ -2425,16 +2402,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "439ee305def115ba05938db6eb1644ff94165c5ab5e9420d1c1bcedbba909391"
 
 [[package]]
-name = "pretty_assertions"
-version = "1.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ae130e2f271fbc2ac3a40fb1d07180839cdbbe443c7a27e1e3c13c5cac0116d"
-dependencies = [
- "diff",
- "yansi",
-]
-
-[[package]]
 name = "prettyplease"
 version = "0.2.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2544,7 +2511,7 @@ dependencies = [
  "itertools 0.13.0",
  "lru",
  "paste",
- "strum 0.26.3",
+ "strum",
  "unicode-segmentation",
  "unicode-truncate",
  "unicode-width 0.2.0",
@@ -2686,7 +2653,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.12.1",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -2955,33 +2922,11 @@ checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 
 [[package]]
 name = "strum"
-version = "0.25.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "290d54ea6f91c969195bdbcd7442c8c2a2ba87da8bf60a7ee86a235d4bc1e125"
-dependencies = [
- "strum_macros 0.25.3",
-]
-
-[[package]]
-name = "strum"
 version = "0.26.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8fec0f0aef304996cf250b31b5a10dee7980c85da9d759361292b8bca5a18f06"
 dependencies = [
- "strum_macros 0.26.4",
-]
-
-[[package]]
-name = "strum_macros"
-version = "0.25.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23dc1fa9ac9c169a78ba62f0b841814b7abae11bdd047b9c58f893439e309ea0"
-dependencies = [
- "heck 0.4.1",
- "proc-macro2",
- "quote",
- "rustversion",
- "syn",
+ "strum_macros",
 ]
 
 [[package]]
@@ -2990,7 +2935,7 @@ version = "0.26.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4c6bee85a5a24955dc440386795aa378cd9cf82acd5f764469152d2270e581be"
 dependencies = [
- "heck 0.5.0",
+ "heck",
  "proc-macro2",
  "quote",
  "rustversion",
@@ -3272,48 +3217,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "214ca0b2191785cbc06209b9ca1861e048e39b5ba33574b3cedd58363d5bb5f6"
 
 [[package]]
-name = "unic-char-property"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8c57a407d9b6fa02b4795eb81c5b6652060a15a7903ea981f3d723e6c0be221"
-dependencies = [
- "unic-char-range",
-]
-
-[[package]]
-name = "unic-char-range"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0398022d5f700414f6b899e10b8348231abf9173fa93144cbc1a43b9793c1fbc"
-
-[[package]]
-name = "unic-common"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "80d7ff825a6a654ee85a63e80f92f054f904f21e7d12da4e22f9834a4aaa35bc"
-
-[[package]]
-name = "unic-ucd-category"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b8d4591f5fcfe1bd4453baaf803c40e1b1e69ff8455c47620440b46efef91c0"
-dependencies = [
- "matches",
- "unic-char-property",
- "unic-char-range",
- "unic-ucd-version",
-]
-
-[[package]]
-name = "unic-ucd-version"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "96bd2f2237fe450fcd0a1d2f5f4e91711124f7857ba2e964247776ebeeb7b0c4"
-dependencies = [
- "unic-common",
-]
-
-[[package]]
 name = "unicode-id-start"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3552,7 +3455,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -3663,12 +3566,6 @@ name = "wit-bindgen"
 version = "0.57.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
-
-[[package]]
-name = "yansi"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cfe53a6657fd280eaa890a3bc59152892ffa3e30101319d168b781ed6529b049"
 
 [[package]]
 name = "zerocopy"

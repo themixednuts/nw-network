@@ -4,11 +4,11 @@
 //! marker. When bit 7 is set, another mask byte follows. Reading stops at the
 //! first byte without the continuation marker, and fields beyond the decoded
 //! chain are treated as absent. The empty mask is a single `0x00` terminator.
+use crate::serialize::marshaler::{Marshal, Unmarshal};
 
 use super::{
     buffer::{ReadBuffer, WriteBuffer},
     error::MarshalerError,
-    marshaler::Marshaler,
 };
 
 /// Field-presence chain encoded as `u8` bytes with continuation: bits 0–6
@@ -117,11 +117,13 @@ impl MaskChain {
     }
 }
 
-impl Marshaler for MaskChain {
+impl Marshal for MaskChain {
     fn marshal(&self, wb: &mut WriteBuffer) {
         wb.write_bytes(&self.bytes);
     }
+}
 
+impl Unmarshal for MaskChain {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         let mut bytes = Vec::new();
         loop {

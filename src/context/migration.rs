@@ -46,6 +46,7 @@ mod tests {
 
     use super::*;
     use crate::serialize::{ReadBuffer, WriteBuffer, buffer::CARRIER_ENDIAN};
+    use crate::{Marshal, Unmarshal};
 
     #[test]
     fn runtime_added_component_uses_entity_uuid_component_order() {

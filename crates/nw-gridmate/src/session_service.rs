@@ -104,7 +104,7 @@ impl Event {
     /// through the blanket [`crate::message::Message`] implementation.
     pub fn typed_message<T>(&self) -> std::result::Result<Option<T>, crate::MarshalerError>
     where
-        T: crate::message::Message,
+        T: crate::message::Message + crate::Unmarshal,
     {
         let Event::TypedReceived {
             type_index, data, ..
@@ -117,7 +117,7 @@ impl Event {
         }
 
         let mut rb = crate::ReadBuffer::new(crate::serialize::CARRIER_ENDIAN, data.as_ref());
-        <T as crate::Marshaler>::unmarshal(&mut rb).map(Some)
+        <T as crate::Unmarshal>::unmarshal(&mut rb).map(Some)
     }
 
     /// Borrow-decode a replicated state bundle event.
@@ -1042,7 +1042,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Marshaler;
+    use crate::Marshal;
     use crate::carrier::DataReliability;
     use crate::generated::messages::ClientAddEntryMsg;
     use std::sync::Mutex;

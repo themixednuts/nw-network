@@ -1,10 +1,11 @@
 //! Buildable-grid side activity replication.
+use crate::serialize::marshaler::{Marshal, Unmarshal};
 
 use crate::{az_rtti, replicated_state, type_registry};
 
 use crate::serialize::{
-    Codec, ConversionMarshaler, IndexMap, Marshaler, MarshalerError, ReadBuffer,
-    ReplicatedContainer, VlqU64, WriteBuffer,
+    Codec, ConversionMarshaler, IndexMap, MarshalerError, ReadBuffer, ReplicatedContainer, VlqU64,
+    WriteBuffer,
 };
 use crate::types::GridSides;
 
@@ -18,16 +19,17 @@ pub struct BuildableGridSideActive {
     pub active: bool,
 }
 
-impl Marshaler for BuildableGridSideActive {
-    const MARSHAL_SIZE: usize =
-        2 * <u8 as Marshaler>::MARSHAL_SIZE + <bool as Marshaler>::MARSHAL_SIZE;
+impl Marshal for BuildableGridSideActive {
+    const MARSHAL_SIZE: usize = 2 * <u8 as Marshal>::MARSHAL_SIZE + <bool as Marshal>::MARSHAL_SIZE;
 
     fn marshal(&self, wb: &mut WriteBuffer) {
         GridSideByte::marshal(&self.my_grid_side, wb);
         GridSideByte::marshal(&self.their_grid_side, wb);
         self.active.marshal(wb);
     }
+}
 
+impl Unmarshal for BuildableGridSideActive {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         Ok(Self {
             my_grid_side: GridSideByte::unmarshal(rb)?,

@@ -1,4 +1,5 @@
 //! Temporary player affiliation replication.
+use crate::serialize::marshaler::{Marshal, Unmarshal};
 
 use crate::{az_rtti, replicated_state, type_registry};
 
@@ -10,13 +11,15 @@ use crate::types::{TemporaryAffiliationRelationship, TemporaryAffiliationType};
 
 pub const MAX_TEMPORARY_AFFILIATION_CHANGES: usize = 0x3fff;
 
-impl Marshaler for TemporaryAffiliationType {
-    const MARSHAL_SIZE: usize = <i32 as Marshaler>::MARSHAL_SIZE;
+impl Marshal for TemporaryAffiliationType {
+    const MARSHAL_SIZE: usize = <i32 as Marshal>::MARSHAL_SIZE;
 
     fn marshal(&self, wb: &mut WriteBuffer) {
         i32::from(*self).marshal(wb);
     }
+}
 
+impl Unmarshal for TemporaryAffiliationType {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         let value = i32::unmarshal(rb)?;
         Self::try_from(value).map_err(|_| MarshalerError::InvalidRange {
@@ -27,13 +30,15 @@ impl Marshaler for TemporaryAffiliationType {
     }
 }
 
-impl Marshaler for TemporaryAffiliationRelationship {
-    const MARSHAL_SIZE: usize = <i32 as Marshaler>::MARSHAL_SIZE;
+impl Marshal for TemporaryAffiliationRelationship {
+    const MARSHAL_SIZE: usize = <i32 as Marshal>::MARSHAL_SIZE;
 
     fn marshal(&self, wb: &mut WriteBuffer) {
         i32::from(*self).marshal(wb);
     }
+}
 
+impl Unmarshal for TemporaryAffiliationRelationship {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         let value = i32::unmarshal(rb)?;
         Self::try_from(value).map_err(|_| MarshalerError::InvalidRange {

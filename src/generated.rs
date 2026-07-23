@@ -1,22 +1,30 @@
 //! Generated network types and protocol glue.
 
 pub mod states {
-    #![allow(dead_code, unused_imports)]
+    #![allow(clippy::type_complexity, dead_code, unused_imports)]
 
-    include!(concat!(env!("OUT_DIR"), "/nw_network/generated_states.rs"));
+    include!(concat!(
+        env!("NW_NETWORK_GENERATED_DIR"),
+        "/generated_states.rs"
+    ));
 }
 
 pub mod messages {
     include!(concat!(
-        env!("OUT_DIR"),
-        "/nw_network/generated_messages.rs"
+        env!("NW_NETWORK_GENERATED_DIR"),
+        "/generated_messages.rs"
     ));
+
+    pub use crate::messages::actor_mover::{
+        CheckMovementStatusMsg, CrashMoveActorMsg, CrashMoveActorToHubMsg, MoveActorMsg,
+        MoveCoordinatorInitMsg,
+    };
 }
 
 mod conversions {
     include!(concat!(
-        env!("OUT_DIR"),
-        "/nw_network/generated_conversions.rs"
+        env!("NW_NETWORK_GENERATED_DIR"),
+        "/generated_conversions.rs"
     ));
 }
 

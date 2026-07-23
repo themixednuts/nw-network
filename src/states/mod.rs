@@ -48,12 +48,11 @@ pub use combat::{
     DynamicScalingStatusEffectData, GritHalfFloatField, GritReplicatedState, HotAfflictionData,
     LightweightStatusEffectData, ManaComponentReplicatedState, PersistentAbilityData,
     PersistentAbilityEntry, PersistentAttributeData, PiercingHitData, ProjectileReplicatedState,
-    ProjectileSpawnerReplicatedState, ReactionHalfVec3, ReactionTrackingReplicatedState,
-    RemoteStatusEffectData, ReplicatedGeneralCooldown, SpellComponentReplicatedState,
-    StaminaComponentReplicatedState, StatMultiplierSnapshot,
-    StatMultiplierTableComponentReplicatedState, StatMultiplierValue, StatusEffectInstanceData,
-    StatusEffectsComponentReplicatedState, StatusEffectsSnapshot, TerritoryStatusEffect,
-    VitalsComponentReplicatedState, VitalsStateData,
+    ReactionHalfVec3, ReactionTrackingReplicatedState, RemoteStatusEffectData,
+    ReplicatedGeneralCooldown, SpellComponentReplicatedState, StaminaComponentReplicatedState,
+    StatMultiplierSnapshot, StatMultiplierTableComponentReplicatedState, StatMultiplierValue,
+    StatusEffectInstanceData, StatusEffectsComponentReplicatedState, StatusEffectsSnapshot,
+    TerritoryStatusEffect, VitalsComponentReplicatedState, VitalsStateData,
 };
 pub use economy::{
     AggregateContractCountComponentReplicatedState, ContributionComponentReplicatedState,

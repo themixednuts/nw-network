@@ -10,15 +10,12 @@ use std::{
 use anyhow::{Context, Result, bail};
 use nw_resources::EmbeddedResource;
 use nw_serialize_codegen::{
-    CodegenContext, NETWORK_RUST_EMITTER_VERSION, NetworkConfidence, NetworkEvidence,
-    NetworkEvidenceKind, NetworkField, NetworkFieldOverrideFile, NetworkMessageSignature,
-    NetworkRustEmitter, NetworkSchema, NetworkType, RustCodegenPlanner, RustSourceEmitter,
-    RustStandaloneProjectFile, SerializeCodegenRootMode, SerializeCodegenRootSelection,
-    SerializeContextCompileInputs, SerializeContextCompiler, SerializeContextDocument,
-    complete_known_missing_reflected_bodies, module_descriptor_capture, module_descriptors_root,
-    module_name_from_resource_name, network_schema::NetworkFieldHandlerVtable,
-    network_schema::NetworkNestedTypeShape, network_schema::NetworkReplicatedContainerShape,
-    resolve_codegen_root_type_ids,
+    CodegenContext, NETWORK_RUST_EMITTER_VERSION, NetworkFieldOverrideFile,
+    NetworkMessageSignature, NetworkRustEmitter, NetworkSchema, NetworkSerializeRootPlanner,
+    RustCodegenPlanner, RustSourceEmitter, RustStandaloneProjectFile, SerializeCodegenRootMode,
+    SerializeCodegenRootSelection, SerializeContextCompileInputs, SerializeContextCompiler,
+    SerializeContextDocument, complete_known_missing_reflected_bodies, module_descriptor_capture,
+    module_descriptors_root, module_name_from_resource_name, resolve_codegen_root_type_ids,
 };
 use serde::Deserialize;
 use serde_json::Value;
@@ -65,7 +62,6 @@ fn main() -> Result<()> {
     let selection = SelectionFile::from_path(&selection_file)?;
     let mut network_schema = load_network_schema(&network_schema_file)?;
     let message_signatures = load_message_signatures(&message_signatures_file)?;
-    apply_message_signature_field_overrides(&mut network_schema, &message_signatures);
     let signature_report = network_schema.merge_message_signatures(
         &message_signatures,
         Some(message_signatures_file.display().to_string()),
@@ -119,7 +115,11 @@ fn main() -> Result<()> {
         bail!("SerializeContext codegen has errors");
     }
 
-    let roots = selected_source_root_specs(&selection, &network_schema);
+    network_schema.merge_serialize_type_catalog(&compile_unit.catalog);
+    let roots = NetworkSerializeRootPlanner::new(&network_schema)
+        .with_compile_unit(&compile_unit)
+        .plan(selection.root_specs())
+        .root_specs;
     let root_type_ids = resolve_codegen_root_type_ids(
         &compile_unit.codegen_unit,
         roots.iter().map(String::as_str),
@@ -177,210 +177,6 @@ impl SelectionFile {
     fn root_specs(&self) -> Vec<String> {
         self.roots.iter().map(RootEntry::spec).collect()
     }
-}
-
-fn selected_source_root_specs(selection: &SelectionFile, schema: &NetworkSchema) -> Vec<String> {
-    let mut roots = selection.root_specs().into_iter().collect::<BTreeSet<_>>();
-    let source_roots = SchemaSourceRootIndex::from_schema(schema);
-    add_schema_source_roots(&mut roots, schema, &source_roots);
-    roots.into_iter().collect()
-}
-
-struct SchemaSourceRootIndex {
-    type_ids: BTreeSet<String>,
-    names: BTreeSet<String>,
-}
-
-impl SchemaSourceRootIndex {
-    fn from_schema(schema: &NetworkSchema) -> Self {
-        let mut type_ids = BTreeSet::new();
-        let mut names = BTreeSet::new();
-        let mut duplicate_names = BTreeSet::new();
-        for serialize in &schema.serialize_types {
-            if !is_semantic_source_name(&serialize.name) {
-                type_ids.insert(serialize.type_id.to_string());
-                if !names.insert(serialize.name.clone()) {
-                    duplicate_names.insert(serialize.name.clone());
-                }
-            }
-        }
-        for name in duplicate_names {
-            names.remove(&name);
-        }
-        Self { type_ids, names }
-    }
-
-    fn contains(&self, type_id: Option<&str>, name: Option<&str>) -> bool {
-        type_id.is_some_and(|type_id| self.type_ids.contains(type_id))
-            || name.is_some_and(|name| self.names.contains(name.trim()))
-    }
-}
-
-fn add_schema_source_roots(
-    roots: &mut BTreeSet<String>,
-    schema: &NetworkSchema,
-    source_roots: &SchemaSourceRootIndex,
-) {
-    for network_type in &schema.types {
-        if let Some(serialize) = network_type.serialize.as_ref() {
-            add_source_root(
-                roots,
-                Some(serialize.type_id.to_string()),
-                Some(&serialize.name),
-                source_roots,
-            );
-        }
-        for field in &network_type.fields {
-            if let Some(serialize) = field.serialize.as_ref() {
-                add_source_root(
-                    roots,
-                    Some(serialize.type_id.to_string()),
-                    Some(&serialize.name),
-                    source_roots,
-                );
-            }
-            add_source_root(
-                roots,
-                field.source_type_id.map(|type_id| type_id.to_string()),
-                field.source_type_name.as_deref(),
-                source_roots,
-            );
-            if let Some(shape) = field.nested_type_shape.as_ref() {
-                add_nested_shape_source_roots(roots, shape, source_roots);
-            }
-        }
-    }
-    for vtable in &schema.field_handler_vtables {
-        add_field_handler_source_roots(roots, vtable, source_roots);
-    }
-}
-
-fn add_field_handler_source_roots(
-    roots: &mut BTreeSet<String>,
-    vtable: &NetworkFieldHandlerVtable,
-    source_roots: &SchemaSourceRootIndex,
-) {
-    add_source_root(
-        roots,
-        vtable.value_type_id.clone(),
-        vtable.value_type_name.as_deref(),
-        source_roots,
-    );
-    for candidate in &vtable.value_type_candidates {
-        add_source_root(
-            roots,
-            candidate.type_id.map(|type_id| type_id.to_string()),
-            candidate.name.as_deref(),
-            source_roots,
-        );
-    }
-    if let Some(shape) = vtable.value_type_shape.as_ref() {
-        add_nested_shape_source_roots(roots, shape, source_roots);
-    }
-    for shape in &vtable.embedded_value_type_shapes {
-        add_nested_shape_source_roots(roots, shape, source_roots);
-    }
-    if let Some(container) = vtable.container_shape.as_ref() {
-        add_container_shape_source_roots(roots, container, source_roots);
-    }
-}
-
-fn add_container_shape_source_roots(
-    roots: &mut BTreeSet<String>,
-    container: &NetworkReplicatedContainerShape,
-    source_roots: &SchemaSourceRootIndex,
-) {
-    add_source_root(
-        roots,
-        container.value_type_id.map(|type_id| type_id.to_string()),
-        container.value_type_name.as_deref(),
-        source_roots,
-    );
-    if let Some(shape) = container.key_type_shape.as_ref() {
-        add_nested_shape_source_roots(roots, shape, source_roots);
-    }
-    if let Some(shape) = container.value_type_shape.as_ref() {
-        add_nested_shape_source_roots(roots, shape, source_roots);
-    }
-    for shape in &container.embedded_value_type_shapes {
-        add_nested_shape_source_roots(roots, shape, source_roots);
-    }
-}
-
-fn add_nested_shape_source_roots(
-    roots: &mut BTreeSet<String>,
-    shape: &NetworkNestedTypeShape,
-    source_roots: &SchemaSourceRootIndex,
-) {
-    add_source_root(
-        roots,
-        shape.type_id.map(|type_id| type_id.to_string()),
-        shape
-            .type_name_full
-            .as_deref()
-            .or(shape.type_name.as_deref()),
-        source_roots,
-    );
-    for member in &shape.members {
-        if let Some(native_type) = member.native_type.as_deref() {
-            add_source_root(roots, None, Some(native_type), source_roots);
-        }
-    }
-}
-
-fn add_source_root(
-    roots: &mut BTreeSet<String>,
-    type_id: Option<String>,
-    name: Option<&str>,
-    source_roots: &SchemaSourceRootIndex,
-) {
-    if name.is_some_and(is_semantic_source_name) {
-        return;
-    }
-    if !source_roots.contains(type_id.as_deref(), name) {
-        return;
-    }
-    if let Some(type_id) = type_id {
-        roots.insert(type_id);
-        return;
-    }
-    let Some(name) = name.map(str::trim).filter(|name| !name.is_empty()) else {
-        return;
-    };
-    if is_semantic_source_name(name) || !is_probable_source_type_name(name) {
-        return;
-    }
-    roots.insert(name.to_owned());
-}
-
-fn is_probable_source_type_name(name: &str) -> bool {
-    let leaf = name.rsplit("::").next().unwrap_or(name);
-    leaf.chars()
-        .next()
-        .is_some_and(|first| first.is_ascii_uppercase())
-        && !name.contains('<')
-        && !name.contains(',')
-        && !name.starts_with("AZ::")
-        && !name.starts_with("AZStd::")
-        && !name.starts_with("std::")
-}
-
-fn is_semantic_source_name(name: &str) -> bool {
-    matches!(
-        name.trim().rsplit("::").next().unwrap_or(name.trim()),
-        "Vec2"
-            | "Vector2"
-            | "Vec3"
-            | "Vector3"
-            | "Vec4"
-            | "Vector4"
-            | "Quat"
-            | "Quaternion"
-            | "Matrix3x3"
-            | "Transform"
-            | "Uuid"
-            | "UID"
-    )
 }
 
 #[derive(Debug, Deserialize)]
@@ -566,105 +362,6 @@ fn network_registry_source(schema: &NetworkSchema) -> String {
     );
     source.push_str("}\n");
     source
-}
-
-fn apply_message_signature_field_overrides(
-    schema: &mut NetworkSchema,
-    signatures: &[NetworkMessageSignature],
-) {
-    for signature in signatures {
-        if signature.fields.is_empty() {
-            continue;
-        }
-
-        let candidates = schema
-            .types
-            .iter()
-            .enumerate()
-            .filter(|(_, network_type)| message_signature_identity_matches(network_type, signature))
-            .map(|(index, _)| index)
-            .collect::<Vec<_>>();
-        let [network_type_index] = candidates.as_slice() else {
-            continue;
-        };
-
-        schema.types[*network_type_index].fields = network_fields_from_signature(signature);
-    }
-}
-
-fn message_signature_identity_matches(
-    network_type: &NetworkType,
-    signature: &NetworkMessageSignature,
-) -> bool {
-    let has_identity = signature.type_id.is_some() || signature.type_index.is_some();
-    if has_identity {
-        if let Some(type_id) = signature.type_id
-            && network_type.type_id != Some(type_id)
-        {
-            return false;
-        }
-        if let Some(type_index) = signature.type_index
-            && network_type.type_index != Some(type_index)
-        {
-            return false;
-        }
-        return true;
-    }
-
-    if let Some(name) = signature.name.as_deref()
-        && network_type.name.as_deref() != Some(name)
-        && network_type.registration_type_name.as_deref() != Some(name)
-    {
-        return false;
-    }
-    true
-}
-
-fn network_fields_from_signature(signature: &NetworkMessageSignature) -> Vec<NetworkField> {
-    let source = signature
-        .source
-        .clone()
-        .unwrap_or_else(|| "message-signature-notes".to_owned());
-    signature
-        .fields
-        .iter()
-        .map(|field| NetworkField {
-            index: field.index,
-            name: Some(field.name.clone()),
-            name_address: None,
-            group: None,
-            registration_kind: None,
-            filter_group_attribute: None,
-            handler_offset: None,
-            handler_expression: None,
-            handler_kind: None,
-            handler_vtable: None,
-            handler_vtable_slots: None,
-            physical_field_count: None,
-            native_type: field.native_type.clone(),
-            source_type_name: None,
-            source_type_id: None,
-            rust_type: field.rust_type.clone(),
-            storage_expression: None,
-            storage_offset: None,
-            raw_byte_length: None,
-            wire_shape: field.wire_shape,
-            wire_shape_source: field.wire_shape.map(|_| source.clone()),
-            constructor_writes: Vec::new(),
-            unmarshal_evidence: None,
-            nested_type_shape: None,
-            serialize: None,
-            callsite: None,
-            confidence: NetworkConfidence::High,
-            evidence: vec![NetworkEvidence {
-                kind: NetworkEvidenceKind::MessageSource,
-                source: source.clone(),
-                address: None,
-                detail: Some(field.name.clone()),
-                confidence: NetworkConfidence::High,
-            }],
-        })
-        .collect()
 }
 
 fn embedded_module_descriptors(context: &CodegenContext) -> Result<Value> {

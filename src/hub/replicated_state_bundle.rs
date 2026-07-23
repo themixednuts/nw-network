@@ -32,6 +32,7 @@
 //!
 //! Fragment bodies are not length-prefixed. Readers must decode each body with
 //! the resolved fragment descriptor before they can reach the next fragment.
+use crate::serialize::marshaler::{Marshal, Unmarshal};
 
 use std::{cell::Cell, ops::AddAssign};
 
@@ -107,9 +108,9 @@ fn sequence_number_wire_len(sequence: SequenceNumber) -> usize {
 }
 
 fn replication_control_data_wire_len(replication_control: &ReplicationControlData) -> usize {
-    <u8 as Marshaler>::MARSHAL_SIZE
-        + <u8 as Marshaler>::MARSHAL_SIZE
-        + replication_control.len() * <u16 as Marshaler>::MARSHAL_SIZE
+    <u8 as Marshal>::MARSHAL_SIZE
+        + <u8 as Marshal>::MARSHAL_SIZE
+        + replication_control.len() * <u16 as Marshal>::MARSHAL_SIZE
 }
 
 fn bundle_buffer_wire_len(bundle_buffer: &[u8]) -> usize {
@@ -283,7 +284,7 @@ impl ReplicationControl {
     }
 }
 
-impl Marshaler for ReplicationControl {
+impl Marshal for ReplicationControl {
     fn marshal(&self, wb: &mut WriteBuffer) {
         self.seq.marshal(wb);
         self.client_context_instance_id.marshal(wb);
@@ -293,7 +294,9 @@ impl Marshaler for ReplicationControl {
             interest_id.get().marshal(wb);
         }
     }
+}
 
+impl Unmarshal for ReplicationControl {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         let seq = SequenceNumber::unmarshal(rb)?;
         let client_context_instance_id = u8::unmarshal(rb)?;
@@ -467,7 +470,7 @@ impl ReplicationControlData {
     }
 }
 
-impl Marshaler for ReplicationControlData {
+impl Marshal for ReplicationControlData {
     fn marshal(&self, wb: &mut WriteBuffer) {
         debug_assert!(
             self.pause_start() <= self.interest_ids.len(),
@@ -479,7 +482,9 @@ impl Marshaler for ReplicationControlData {
             interest_id.get().marshal(wb);
         }
     }
+}
 
+impl Unmarshal for ReplicationControlData {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         let len = usize::from(rb.read_u8()?);
         if len > MAX_REPLICATION_CONTROL_IDS {
@@ -688,10 +693,10 @@ impl ReplicatedStateBundle {
     #[must_use]
     pub fn total_bundle_size(&self) -> usize {
         sequence_number_wire_len(self.seq)
-            + <u8 as Marshaler>::MARSHAL_SIZE
-            + <u8 as Marshaler>::MARSHAL_SIZE
-            + <bool as Marshaler>::MARSHAL_SIZE
-            + <bool as Marshaler>::MARSHAL_SIZE
+            + <u8 as Marshal>::MARSHAL_SIZE
+            + <u8 as Marshal>::MARSHAL_SIZE
+            + <bool as Marshal>::MARSHAL_SIZE
+            + <bool as Marshal>::MARSHAL_SIZE
             + self
                 .replication_control
                 .as_ref()
@@ -737,7 +742,7 @@ impl ReplicatedStateBundle {
     }
 }
 
-impl Marshaler for ReplicatedStateBundle {
+impl Marshal for ReplicatedStateBundle {
     fn marshal(&self, wb: &mut WriteBuffer) {
         self.seq.marshal(wb);
         self.client_context_instance_id.marshal(wb);
@@ -749,7 +754,9 @@ impl Marshaler for ReplicatedStateBundle {
         }
         marshal_bundle_buffer(&self.bundle_buffer, wb);
     }
+}
 
+impl Unmarshal for ReplicatedStateBundle {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         ReplicatedStateBundleView::read_from(rb).map(ReplicatedStateBundleView::into_owned)
     }
@@ -1020,7 +1027,7 @@ impl FragmentTypeInfo {
             Self::TypeIndex(type_index) => fragment_registration_by_type_index(type_index)
                 .ok_or(MarshalerError::UnknownTypeIndex { type_index }),
             Self::RawUuid(uuid) => {
-                fragment_registration_by_uuid(uuid).ok_or(MarshalerError::UnknownClassUuid)
+                fragment_registration_by_uuid(uuid).ok_or(MarshalerError::UnknownClassUuid { uuid })
             }
         }
     }
@@ -1166,12 +1173,14 @@ impl From<BaselineableFragmentRef<'_>> for BaselineableFragment {
     }
 }
 
-impl Marshaler for BaselineableFragment {
+impl Marshal for BaselineableFragment {
     fn marshal(&self, wb: &mut WriteBuffer) {
         self.type_info.write_to(wb);
         wb.write_bytes(&self.body);
     }
+}
 
+impl Unmarshal for BaselineableFragment {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         BaselineableFragmentRef::read_from(rb).map(Into::into)
     }

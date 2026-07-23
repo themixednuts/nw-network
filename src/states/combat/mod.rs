@@ -16,8 +16,7 @@ pub mod status_effect;
 pub mod vitals;
 
 pub use crate::generated::states::{
-    ChargeComponentReplicatedState, ManaComponentReplicatedState, ProjectileSpawnerReplicatedState,
-    StaminaComponentReplicatedState,
+    ChargeComponentReplicatedState, ManaComponentReplicatedState, StaminaComponentReplicatedState,
 };
 pub use ability::{
     AbilityComponentReplicatedState, AbilitySnapshot, AbilityU32Pair, PersistentAbilityData,

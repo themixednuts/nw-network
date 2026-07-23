@@ -1,4 +1,5 @@
 //! Status-effect instance and tray-icon replication.
+use crate::serialize::marshaler::{Marshal, Unmarshal};
 
 use crate::{az_rtti, replicated_state, type_registry};
 
@@ -21,12 +22,14 @@ pub struct RemoteStatusEffectData {
     pub value: u8,
 }
 
-impl Marshaler for RemoteStatusEffectData {
+impl Marshal for RemoteStatusEffectData {
     fn marshal(&self, wb: &mut WriteBuffer) {
         let raw = (self.value & 0x7f) | if self.high_bit_set { 0x80 } else { 0 };
         raw.marshal(wb);
     }
+}
 
+impl Unmarshal for RemoteStatusEffectData {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         let raw = u8::unmarshal(rb)?;
         Ok(Self {

@@ -1,7 +1,7 @@
 use criterion::{BatchSize, Criterion, Throughput, criterion_group, criterion_main};
 use nw_network::{
     hub::{DynFragment, MarshalContext, SequenceNumber},
-    serialize::{Marshaler, ReadBuffer, ReplicatedFieldHandler, WriteBuffer},
+    serialize::{Marshal, ReadBuffer, ReplicatedFieldHandler, WriteBuffer},
 };
 use std::hint::black_box;
 

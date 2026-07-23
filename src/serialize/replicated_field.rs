@@ -21,12 +21,12 @@
 //! `<` bounds so endpoint quantization buckets remain available for sentinel
 //! encodings such as the byte value `255` and the relative-position
 //! `[255, 255, 255]` marker.
+use crate::serialize::marshaler::{Marshal, Unmarshal};
 
 use super::{
     buffer::{ReadBuffer, WriteBuffer},
-    compression_marshal::Float16Marshaler,
     error::MarshalerError,
-    marshaler::{Codec, DefaultMarshaler, Marshaler},
+    marshaler::{Codec, DefaultMarshaler},
     quantize::{f32_to_u8, f32_to_u32, u32_to_f32},
 };
 use crate::hub::SequenceNumber;
@@ -583,13 +583,15 @@ impl<T: Default + PartialEq + Clone + 'static, M: Codec<T> + 'static> Replicated
     }
 }
 
-impl<T: Default, M: Codec<T>> Marshaler for ReplicatedFieldHandler<T, M> {
+impl<T: Default, M: Codec<T>> Marshal for ReplicatedFieldHandler<T, M> {
     fn marshal(&self, wb: &mut WriteBuffer) {
         if let Some(ref v) = self.value {
             M::marshal(v, wb);
         }
     }
+}
 
+impl<T: Default, M: Codec<T>> Unmarshal for ReplicatedFieldHandler<T, M> {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         Ok(Self {
             value: Some(M::unmarshal(rb)?),
@@ -648,46 +650,6 @@ impl Codec<(f32, f32, f32)> for HalfVec3Marshaler {
         let y = half::f16::from_bits(rb.read_u16()?).to_f32();
         let z = half::f16::from_bits(rb.read_u16()?).to_f32();
         Ok((x, y, z))
-    }
-}
-
-/// Custom world-position layout. Full precision in the horizontal plane,
-/// bounded 16-bit quantization in height.
-///
-/// Use as `ReplicatedFieldHandler<(f32, f32, f32), PositionAnchorMarshaler>`.
-#[derive(Debug, Clone, Copy, Default)]
-pub struct PositionAnchorMarshaler;
-
-impl PositionAnchorMarshaler {
-    const HEIGHT_MIN: f32 = -100.0;
-    const HEIGHT_MAX: f32 = 2000.0;
-
-    #[inline]
-    fn marshal_height(wb: &mut WriteBuffer, value: f32) {
-        Float16Marshaler::new(Self::HEIGHT_MIN, Self::HEIGHT_MAX).marshal(wb, value);
-    }
-
-    #[inline]
-    fn unmarshal_height(rb: &mut ReadBuffer) -> Result<f32, MarshalerError> {
-        Float16Marshaler::new(Self::HEIGHT_MIN, Self::HEIGHT_MAX).unmarshal(rb)
-    }
-}
-
-impl Codec<(f32, f32, f32)> for PositionAnchorMarshaler {
-    const MARSHAL_SIZE: usize = 10;
-
-    fn marshal(value: &(f32, f32, f32), wb: &mut WriteBuffer) {
-        let (x, y, h) = *value;
-        x.marshal(wb);
-        y.marshal(wb);
-        Self::marshal_height(wb, h);
-    }
-
-    fn unmarshal(rb: &mut ReadBuffer) -> Result<(f32, f32, f32), MarshalerError> {
-        let x = f32::unmarshal(rb)?;
-        let y = f32::unmarshal(rb)?;
-        let h = Self::unmarshal_height(rb)?;
-        Ok((x, y, h))
     }
 }
 
@@ -1046,13 +1008,15 @@ pub fn unquantize_with_range(quantized: u8, delta_range: f32) -> f32 {
     2.0 * delta_range * f32::from(quantized) / 255.0 - delta_range
 }
 
-impl Marshaler for QuantizedRelativePosition {
+impl Marshal for QuantizedRelativePosition {
     fn marshal(&self, wb: &mut WriteBuffer) {
         wb.write_u8(self.quantized_values[0]);
         wb.write_u8(self.quantized_values[1]);
         wb.write_u8(self.quantized_values[2]);
     }
+}
 
+impl Unmarshal for QuantizedRelativePosition {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         Ok(Self {
             quantized_values: [rb.read_u8()?, rb.read_u8()?, rb.read_u8()?],

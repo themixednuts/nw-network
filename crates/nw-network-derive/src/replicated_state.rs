@@ -103,13 +103,17 @@ fn expand(input: &DeriveInput, opts: Opts) -> syn::Result<TokenStream> {
 
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     let marshaler_impl = quote! {
-        impl #impl_generics ::nw_network::serialize::marshaler::Marshaler
+        impl #impl_generics ::nw_network::serialize::marshaler::Marshal
         for #ident #ty_generics #where_clause
         {
             fn marshal(&self, wb: &mut ::nw_network::serialize::buffer::WriteBuffer) {
                 ::nw_network::hub::DynFragment::marshal_contents(self, wb);
             }
+        }
 
+        impl #impl_generics ::nw_network::serialize::marshaler::Unmarshal
+        for #ident #ty_generics #where_clause
+        {
             fn unmarshal(
                 rb: &mut ::nw_network::serialize::buffer::ReadBuffer,
             ) -> ::core::result::Result<Self, ::nw_network::serialize::error::MarshalerError> {
@@ -359,7 +363,7 @@ fn expand_generated_contents(
                     }
                     if (field_mask & (1 << (field_index % 7))) != 0 {
                         self.#ident =
-                            <#ty as ::nw_network::serialize::marshaler::Marshaler>::unmarshal(rb)?;
+                            <#ty as ::nw_network::serialize::marshaler::Unmarshal>::unmarshal(rb)?;
                     }
                     if (field_index % 7 == 6 || field_index + 1 == field_count)
                         && (field_mask & 0x80) == 0
@@ -432,9 +436,13 @@ fn expand_generated_contents(
                 let payloads = chunk_fields.iter().enumerate().map(|(bit, field)| {
                     let field_idx = chunk_start + bit;
                     let ident = &field.ident;
+                    let ty = &field.ty;
                     quote! {
                         if field_dirty[#field_idx] {
-                            self.#ident.marshal(wb);
+                            <#ty as ::nw_network::serialize::marshaler::Marshal>::marshal(
+                                &self.#ident,
+                                wb,
+                            );
                         }
                     }
                 });
@@ -575,7 +583,10 @@ fn expand_generated_contents(
         fields.iter().map(|field| {
             let ident = &field.ident;
             quote! {
-                ::nw_network::ReplicatedFieldHandlerBase::last_modified(&self.#ident).marshal(wb);
+                <::nw_network::hub::SequenceNumber as ::nw_network::serialize::marshaler::Marshal>::marshal(
+                    &::nw_network::ReplicatedFieldHandlerBase::last_modified(&self.#ident),
+                    wb,
+                );
             }
         })
     });
@@ -584,7 +595,7 @@ fn expand_generated_contents(
         fields.iter().map(|field| {
             let ident = &field.ident;
             quote! {
-                let sequence = ::nw_network::hub::SequenceNumber::unmarshal(rb)?;
+                let sequence = <::nw_network::hub::SequenceNumber as ::nw_network::serialize::marshaler::Unmarshal>::unmarshal(rb)?;
                 ::nw_network::ReplicatedFieldHandlerBase::set_last_modified(
                     &mut self.#ident,
                     sequence,
@@ -608,8 +619,6 @@ fn expand_generated_contents(
                 mc: &::nw_network::hub::MarshalContext<'_>,
                 wb: &mut ::nw_network::serialize::buffer::WriteBuffer,
             ) -> bool {
-                use ::nw_network::serialize::marshaler::Marshaler as _;
-
                 let mut descriptor_dirty = [false; #descriptor_count];
                 #(#dirty_groups)*
                 if !descriptor_dirty.iter().any(|dirty| *dirty) {
@@ -638,7 +647,6 @@ fn expand_generated_contents(
                 &self,
                 wb: &mut ::nw_network::serialize::buffer::WriteBuffer,
             ) -> bool {
-                use ::nw_network::serialize::marshaler::Marshaler as _;
                 #(#marshal_metadata_fields)*
                 true
             }
@@ -647,7 +655,6 @@ fn expand_generated_contents(
                 &mut self,
                 rb: &mut ::nw_network::serialize::buffer::ReadBuffer,
             ) -> ::core::result::Result<bool, ::nw_network::serialize::error::MarshalerError> {
-                use ::nw_network::serialize::marshaler::Marshaler as _;
                 #(#unmarshal_metadata_fields)*
                 Ok(true)
             }

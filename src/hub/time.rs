@@ -1,6 +1,7 @@
+use crate::serialize::marshaler::{Marshal, Unmarshal};
 use std::fmt;
 
-use crate::serialize::{Marshaler, MarshalerError, ReadBuffer, WriteBuffer};
+use crate::serialize::{MarshalerError, ReadBuffer, WriteBuffer};
 
 macro_rules! protocol_time {
     (
@@ -54,13 +55,16 @@ macro_rules! protocol_time {
             }
         }
 
-        impl Marshaler for $name {
-            const MARSHAL_SIZE: usize = <u64 as Marshaler>::MARSHAL_SIZE;
+        impl Marshal for $name {
+            const MARSHAL_SIZE: usize = <u64 as Marshal>::MARSHAL_SIZE;
 
             #[inline]
             fn marshal(&self, wb: &mut WriteBuffer) {
                 self.0.marshal(wb);
             }
+        }
+
+        impl Unmarshal for $name {
 
             #[inline]
             fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {

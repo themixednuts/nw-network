@@ -21,7 +21,7 @@ uuid = { version = "1.23", features = ["serde", "v4", "v7"] }
 [build-dependencies]
 anyhow = "1"
 blake3 = "1"
-nw-resources = { git = "https://github.com/themixednuts/nw-tools.git", rev = "ab903637109d2ec41439428f22e20a21bcc10f6f" }
-nw-serialize-codegen = { git = "https://github.com/themixednuts/nw-tools.git", rev = "ab903637109d2ec41439428f22e20a21bcc10f6f" }
+nw-resources = { git = "https://github.com/themixednuts/nw-tools.git", rev = "284699b559e0e5a66ec2031df0f23bf35f14c44f" }
+nw-serialize-codegen = { git = "https://github.com/themixednuts/nw-tools.git", rev = "284699b559e0e5a66ec2031df0f23bf35f14c44f" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

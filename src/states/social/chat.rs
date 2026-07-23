@@ -1,12 +1,13 @@
 //! Chat channel and mute-list replication.
+use crate::serialize::marshaler::{Marshal, Unmarshal};
 
 use crate::{az_rtti, replicated_state, type_registry};
 
 use crate::hub::SequenceNumber;
 use crate::serialize::container_marshal::marshal_wire_count;
 use crate::serialize::{
-    Marshaler, MarshalerError, ReadBuffer, ReplicatedFieldHandler, VlqU32Marshaler,
-    VlqU64Marshaler, WIRE_VEC_CAP, WriteBuffer,
+    MarshalerError, ReadBuffer, ReplicatedFieldHandler, VlqU32Marshaler, VlqU64Marshaler,
+    WIRE_VEC_CAP, WriteBuffer,
 };
 
 #[replicated_state]
@@ -68,7 +69,7 @@ pub struct ChatMutes {
     pub trailing_strings: Vec<String>,
 }
 
-impl Marshaler for ChatMutes {
+impl Marshal for ChatMutes {
     fn marshal(&self, wb: &mut WriteBuffer) {
         marshal_wire_count(wb, self.entries.len());
 
@@ -110,7 +111,9 @@ impl Marshaler for ChatMutes {
             index = batch_end;
         }
     }
+}
 
+impl Unmarshal for ChatMutes {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         let mut count = VlqU32Marshaler.unmarshal(rb)? as usize;
         if count > WIRE_VEC_CAP {

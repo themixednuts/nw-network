@@ -1,4 +1,5 @@
 //! Client pathing corridor replication.
+use crate::serialize::marshaler::{Marshal, Unmarshal};
 
 use crate::{az_rtti, replicated_state, type_registry};
 
@@ -6,8 +7,7 @@ use arrayvec::ArrayVec;
 use bevy_math::Vec3;
 
 use crate::serialize::{
-    HalfF32, Marshaler, MarshalerError, ReadBuffer, ReplicatedFieldHandler, VlqU32Marshaler,
-    WriteBuffer,
+    HalfF32, MarshalerError, ReadBuffer, ReplicatedFieldHandler, VlqU32Marshaler, WriteBuffer,
 };
 
 pub const MAX_CLIENT_PATHING_CORRIDOR_PATHS: usize = 6;
@@ -37,7 +37,7 @@ impl Default for ClientPathingCorridorPaths {
     }
 }
 
-impl Marshaler for ClientPathingCorridorPaths {
+impl Marshal for ClientPathingCorridorPaths {
     fn marshal(&self, wb: &mut WriteBuffer) {
         VlqU32Marshaler.marshal(
             wb,
@@ -51,7 +51,9 @@ impl Marshaler for ClientPathingCorridorPaths {
         }
         self.trailing_value.marshal(wb);
     }
+}
 
+impl Unmarshal for ClientPathingCorridorPaths {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         let count = usize::try_from(VlqU32Marshaler.unmarshal(rb)?).map_err(|_| {
             MarshalerError::ContainerOverflow {

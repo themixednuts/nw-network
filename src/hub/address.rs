@@ -1,6 +1,7 @@
+use crate::serialize::marshaler::{Marshal, Unmarshal};
 use uuid::Uuid;
 
-use crate::serialize::{Marshaler, MarshalerError, ReadBuffer, WriteBuffer};
+use crate::serialize::{MarshalerError, ReadBuffer, WriteBuffer};
 
 /// Routing reference used by replication control messages.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -23,7 +24,7 @@ impl ActorRef {
     }
 }
 
-impl Marshaler for ActorRef {
+impl Marshal for ActorRef {
     const MARSHAL_SIZE: usize = Self::MARSHAL_SIZE;
 
     #[inline]
@@ -32,7 +33,9 @@ impl Marshaler for ActorRef {
         self.context_id.marshal(wb);
         self.correlation_id.marshal(wb);
     }
+}
 
+impl Unmarshal for ActorRef {
     #[inline]
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         Ok(Self {

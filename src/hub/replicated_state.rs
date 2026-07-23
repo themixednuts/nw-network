@@ -1,3 +1,4 @@
+use crate::serialize::marshaler::{Marshal, Unmarshal};
 use uuid::Uuid;
 
 use super::{
@@ -7,7 +8,7 @@ use super::{
 use crate::serialize::container_marshal::ContainerMarshaler;
 use crate::serialize::replicated_field::{ReplicatedFieldHandler, ReplicatedFieldHandlerBase};
 use crate::serialize::vlq::VlqU64Marshaler;
-use crate::serialize::{Marshaler, MarshalerError, ReadBuffer, WriteBuffer};
+use crate::serialize::{MarshalerError, ReadBuffer, WriteBuffer};
 
 pub const REPLICATED_STATE_TYPE_ID: Uuid = Uuid::from_u128(0x261f7815_2be0_44f5_be4a_e8070677a57b);
 
@@ -30,12 +31,14 @@ impl FilterValue {
     }
 }
 
-impl Marshaler for FilterValue {
+impl Marshal for FilterValue {
     fn marshal(&self, wb: &mut WriteBuffer) {
         self.value.marshal(wb);
         self.ref_count.marshal(wb);
     }
+}
 
+impl Unmarshal for FilterValue {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         Ok(Self {
             value: ClientActorHash::unmarshal(rb)?,
@@ -93,11 +96,13 @@ impl ReplicatedDefaultBits {
     }
 }
 
-impl Marshaler for ReplicatedDefaultBits {
+impl Marshal for ReplicatedDefaultBits {
     fn marshal(&self, wb: &mut WriteBuffer) {
         self.0.marshal(wb);
     }
+}
 
+impl Unmarshal for ReplicatedDefaultBits {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         Ok(Self(u64::unmarshal(rb)?))
     }

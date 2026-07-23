@@ -11,10 +11,12 @@
 //! counted slots. Entries are serialized in iteration order; use [`IndexMap`]
 //! or [`IndexSet`] when byte order needs to be deterministic.
 
+use crate::serialize::marshaler::{Marshal, Unmarshal};
+
 use super::{
     buffer::{ReadBuffer, WriteBuffer},
     error::MarshalerError,
-    marshaler::{Codec, DefaultMarshaler, Marshaler},
+    marshaler::{Codec, DefaultMarshaler},
     vlq::VlqU32Marshaler,
 };
 use arrayvec::{ArrayString, ArrayVec};
@@ -41,6 +43,113 @@ pub(crate) fn marshal_wire_count(wb: &mut WriteBuffer, len: usize) {
     );
     let len = u32::try_from(len).expect("wire container count exceeds u32");
     VlqU32Marshaler.marshal(wb, len);
+}
+
+fn unmarshal_wire_count(rb: &mut ReadBuffer, capacity: usize) -> Result<usize, MarshalerError> {
+    let len = VlqU32Marshaler.unmarshal(rb)? as usize;
+    if len > capacity {
+        return Err(MarshalerError::ContainerOverflow { len, capacity });
+    }
+    Ok(len)
+}
+
+/// VLQ-counted sequence encoded through a field-local element codec.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct SequenceCodec<M>(PhantomData<fn() -> M>);
+
+impl<T, M: Codec<T>> Codec<Vec<T>> for SequenceCodec<M> {
+    fn marshal(value: &Vec<T>, wb: &mut WriteBuffer) {
+        marshal_wire_count(wb, value.len());
+        for item in value {
+            M::marshal(item, wb);
+        }
+    }
+
+    fn unmarshal(rb: &mut ReadBuffer) -> Result<Vec<T>, MarshalerError> {
+        let len = unmarshal_wire_count(rb, WIRE_VEC_CAP)?;
+        let mut value = Vec::with_capacity(len);
+        for _ in 0..len {
+            value.push(M::unmarshal(rb)?);
+        }
+        Ok(value)
+    }
+}
+
+impl<T, M: Codec<T>, const N: usize> Codec<ArrayVec<T, N>> for SequenceCodec<M> {
+    fn marshal(value: &ArrayVec<T, N>, wb: &mut WriteBuffer) {
+        marshal_wire_count(wb, value.len());
+        for item in value {
+            M::marshal(item, wb);
+        }
+    }
+
+    fn unmarshal(rb: &mut ReadBuffer) -> Result<ArrayVec<T, N>, MarshalerError> {
+        let len = unmarshal_wire_count(rb, N)?;
+        let mut value = ArrayVec::new();
+        for _ in 0..len {
+            value.push(M::unmarshal(rb)?);
+        }
+        Ok(value)
+    }
+}
+
+/// VLQ-counted ordered map encoded through field-local key and value codecs.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct MapSequenceCodec<KM, VM>(PhantomData<fn() -> (KM, VM)>);
+
+impl<K, V, KM, VM> Codec<IndexMap<K, V>> for MapSequenceCodec<KM, VM>
+where
+    K: Eq + Hash,
+    KM: Codec<K>,
+    VM: Codec<V>,
+{
+    fn marshal(value: &IndexMap<K, V>, wb: &mut WriteBuffer) {
+        marshal_wire_count(wb, value.len());
+        for (key, value) in value {
+            KM::marshal(key, wb);
+            VM::marshal(value, wb);
+        }
+    }
+
+    fn unmarshal(rb: &mut ReadBuffer) -> Result<IndexMap<K, V>, MarshalerError> {
+        let len = unmarshal_wire_count(rb, WIRE_VEC_CAP)?;
+        let mut value = IndexMap::with_capacity(len);
+        for _ in 0..len {
+            value.insert(KM::unmarshal(rb)?, VM::unmarshal(rb)?);
+        }
+        Ok(value)
+    }
+}
+
+/// Fixed-length array encoded through a field-local element codec.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct ArrayCodec<M>(PhantomData<fn() -> M>);
+
+impl<T, M: Codec<T>, const N: usize> Codec<[T; N]> for ArrayCodec<M> {
+    const MARSHAL_SIZE: usize = if M::MARSHAL_SIZE == 0 {
+        0
+    } else {
+        N * M::MARSHAL_SIZE
+    };
+
+    fn marshal(value: &[T; N], wb: &mut WriteBuffer) {
+        for item in value {
+            M::marshal(item, wb);
+        }
+    }
+
+    fn unmarshal(rb: &mut ReadBuffer) -> Result<[T; N], MarshalerError> {
+        let mut value = ArrayVec::<T, N>::new();
+        for _ in 0..N {
+            value.push(M::unmarshal(rb)?);
+        }
+        value
+            .into_inner()
+            .map_err(|_| MarshalerError::ContainerOverflow {
+                len: N + 1,
+                capacity: N,
+            })
+    }
 }
 
 /// Raw `u16` element count followed by each element through the selected inner
@@ -345,21 +454,18 @@ where
 ///
 /// Length is bounded by [`WIRE_VEC_CAP`] on read; counts above it are
 /// rejected to prevent oversized `VLQ` allocation attempts.
-impl<T: Marshaler> Marshaler for Vec<T> {
+impl<T: Marshal> Marshal for Vec<T> {
     fn marshal(&self, wb: &mut WriteBuffer) {
         marshal_wire_count(wb, self.len());
         for item in self {
             item.marshal(wb);
         }
     }
+}
+
+impl<T: Unmarshal> Unmarshal for Vec<T> {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
-        let len = VlqU32Marshaler.unmarshal(rb)? as usize;
-        if len > WIRE_VEC_CAP {
-            return Err(MarshalerError::ContainerOverflow {
-                len,
-                capacity: WIRE_VEC_CAP,
-            });
-        }
+        let len = unmarshal_wire_count(rb, WIRE_VEC_CAP)?;
         let mut v = Vec::with_capacity(len);
         for _ in 0..len {
             v.push(T::unmarshal(rb)?);
@@ -368,30 +474,52 @@ impl<T: Marshaler> Marshaler for Vec<T> {
     }
 }
 
-/// `(A, B)` encoded as: `A` then `B`.
-impl<A: Marshaler, B: Marshaler> Marshaler for (A, B) {
-    fn marshal(&self, wb: &mut WriteBuffer) {
-        self.0.marshal(wb);
-        self.1.marshal(wb);
-    }
-    fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
-        Ok((A::unmarshal(rb)?, B::unmarshal(rb)?))
-    }
+macro_rules! impl_tuple_marshaler {
+    ($(($($type:ident : $index:tt),+)),+ $(,)?) => {
+        $(
+            impl<$($type: Marshal),+> Marshal for ($($type,)+) {
+                fn marshal(&self, wb: &mut WriteBuffer) {
+                    $(self.$index.marshal(wb);)+
+                }
+            }
+
+            impl<$($type: Unmarshal),+> Unmarshal for ($($type,)+) {
+
+                fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
+                    Ok(($($type::unmarshal(rb)?,)+))
+                }
+            }
+        )+
+    };
 }
 
+impl_tuple_marshaler!(
+    (A: 0, B: 1),
+    (A: 0, B: 1, C: 2),
+    (A: 0, B: 1, C: 2, D: 3),
+    (A: 0, B: 1, C: 2, D: 3, E: 4),
+    (A: 0, B: 1, C: 2, D: 3, E: 4, F: 5),
+    (A: 0, B: 1, C: 2, D: 3, E: 4, F: 5, G: 6),
+    (A: 0, B: 1, C: 2, D: 3, E: 4, F: 5, G: 6, H: 7),
+    (A: 0, B: 1, C: 2, D: 3, E: 4, F: 5, G: 6, H: 7, I: 8),
+    (A: 0, B: 1, C: 2, D: 3, E: 4, F: 5, G: 6, H: 7, I: 8, J: 9),
+    (A: 0, B: 1, C: 2, D: 3, E: 4, F: 5, G: 6, H: 7, I: 8, J: 9, K: 10),
+    (A: 0, B: 1, C: 2, D: 3, E: 4, F: 5, G: 6, H: 7, I: 8, J: 9, K: 10, L: 11),
+);
+
 /// `ArrayVec<T, N>` encoded as VLQ32 length then `T` elements.
-impl<T: Marshaler, const N: usize> Marshaler for ArrayVec<T, N> {
+impl<T: Marshal, const N: usize> Marshal for ArrayVec<T, N> {
     fn marshal(&self, wb: &mut WriteBuffer) {
         marshal_wire_count(wb, self.len());
         for item in self {
             item.marshal(wb);
         }
     }
+}
+
+impl<T: Unmarshal, const N: usize> Unmarshal for ArrayVec<T, N> {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
-        let len = VlqU32Marshaler.unmarshal(rb)? as usize;
-        if len > N {
-            return Err(MarshalerError::ContainerOverflow { len, capacity: N });
-        }
+        let len = unmarshal_wire_count(rb, N)?;
         let mut v = ArrayVec::new();
         for _ in 0..len {
             v.push(T::unmarshal(rb)?);
@@ -400,11 +528,14 @@ impl<T: Marshaler, const N: usize> Marshaler for ArrayVec<T, N> {
     }
 }
 
-impl<const N: usize> Marshaler for ArrayString<N> {
+impl<const N: usize> Marshal for ArrayString<N> {
     fn marshal(&self, wb: &mut WriteBuffer) {
         marshal_wire_count(wb, self.len());
         wb.write_bytes(self.as_bytes());
     }
+}
+
+impl<const N: usize> Unmarshal for ArrayString<N> {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         let len = VlqU32Marshaler.unmarshal(rb)? as usize;
         if len > N {
@@ -421,12 +552,15 @@ impl<const N: usize> Marshaler for ArrayString<N> {
 }
 
 /// `[T; N]` encoded as exactly `N` consecutive `T` elements (no length prefix).
-impl<T: Marshaler, const N: usize> Marshaler for [T; N] {
+impl<T: Marshal, const N: usize> Marshal for [T; N] {
     fn marshal(&self, wb: &mut WriteBuffer) {
         for item in self {
             item.marshal(wb);
         }
     }
+}
+
+impl<T: Unmarshal, const N: usize> Unmarshal for [T; N] {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         let mut tmp = ArrayVec::<T, N>::new();
         for _ in 0..N {
@@ -443,9 +577,9 @@ impl<T: Marshaler, const N: usize> Marshaler for [T; N] {
 /// `IndexSet<T>` encoded as: VLQ32 length, then `T` elements in iteration order.
 ///
 /// `IndexSet` preserves insertion/wire order after unmarshal.
-impl<T> Marshaler for IndexSet<T>
+impl<T> Marshal for IndexSet<T>
 where
-    T: Marshaler + Eq + Hash,
+    T: Marshal + Eq + Hash,
 {
     fn marshal(&self, wb: &mut WriteBuffer) {
         marshal_wire_count(wb, self.len());
@@ -453,7 +587,12 @@ where
             item.marshal(wb);
         }
     }
+}
 
+impl<T> Unmarshal for IndexSet<T>
+where
+    T: Unmarshal + Eq + Hash,
+{
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         let len = VlqU32Marshaler.unmarshal(rb)? as usize;
         if len > WIRE_VEC_CAP {
@@ -473,10 +612,10 @@ where
 /// `IndexMap<K, V>` encoded as: VLQ32 length, then pairs `K`, `V` in iteration order.
 ///
 /// `IndexMap` preserves insertion/wire order after unmarshal.
-impl<K, V> Marshaler for IndexMap<K, V>
+impl<K, V> Marshal for IndexMap<K, V>
 where
-    K: Marshaler + Eq + Hash,
-    V: Marshaler,
+    K: Marshal + Eq + Hash,
+    V: Marshal,
 {
     fn marshal(&self, wb: &mut WriteBuffer) {
         marshal_wire_count(wb, self.len());
@@ -485,7 +624,13 @@ where
             v.marshal(wb);
         }
     }
+}
 
+impl<K, V> Unmarshal for IndexMap<K, V>
+where
+    K: Unmarshal + Eq + Hash,
+    V: Unmarshal,
+{
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         let len = VlqU32Marshaler.unmarshal(rb)? as usize;
         if len > WIRE_VEC_CAP {
@@ -509,9 +654,9 @@ where
 /// This matches the generic count-plus-entry byte shape, but it is not
 /// deterministic enough for byte-locked protocol fields. Use `IndexSet` or
 /// `BTreeSet` when the wire order must be stable.
-impl<T, S> Marshaler for HashSet<T, S>
+impl<T, S> Marshal for HashSet<T, S>
 where
-    T: Marshaler + Eq + Hash,
+    T: Marshal + Eq + Hash,
     S: BuildHasher + Default,
 {
     fn marshal(&self, wb: &mut WriteBuffer) {
@@ -520,6 +665,13 @@ where
             item.marshal(wb);
         }
     }
+}
+
+impl<T, S> Unmarshal for HashSet<T, S>
+where
+    T: Unmarshal + Eq + Hash,
+    S: BuildHasher + Default,
+{
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         let len = VlqU32Marshaler.unmarshal(rb)? as usize;
         if len > WIRE_VEC_CAP {
@@ -537,9 +689,9 @@ where
 }
 
 /// `BTreeSet<T>` encoded as: VLQ32 length, then `T` elements in sorted order.
-impl<T> Marshaler for BTreeSet<T>
+impl<T> Marshal for BTreeSet<T>
 where
-    T: Marshaler + Ord,
+    T: Marshal + Ord,
 {
     fn marshal(&self, wb: &mut WriteBuffer) {
         marshal_wire_count(wb, self.len());
@@ -547,7 +699,12 @@ where
             item.marshal(wb);
         }
     }
+}
 
+impl<T> Unmarshal for BTreeSet<T>
+where
+    T: Unmarshal + Ord,
+{
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         let len = VlqU32Marshaler.unmarshal(rb)? as usize;
         if len > WIRE_VEC_CAP {
@@ -569,10 +726,10 @@ where
 /// This matches the generic count-plus-entry byte shape, but it is not
 /// deterministic enough for byte-locked protocol fields. Use `IndexMap` or
 /// `BTreeMap` when the wire order must be stable.
-impl<K, V, S> Marshaler for HashMap<K, V, S>
+impl<K, V, S> Marshal for HashMap<K, V, S>
 where
-    K: Marshaler + Eq + Hash,
-    V: Marshaler,
+    K: Marshal + Eq + Hash,
+    V: Marshal,
     S: BuildHasher + Default,
 {
     fn marshal(&self, wb: &mut WriteBuffer) {
@@ -582,6 +739,14 @@ where
             v.marshal(wb);
         }
     }
+}
+
+impl<K, V, S> Unmarshal for HashMap<K, V, S>
+where
+    K: Unmarshal + Eq + Hash,
+    V: Unmarshal,
+    S: BuildHasher + Default,
+{
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         let len = VlqU32Marshaler.unmarshal(rb)? as usize;
         if len > WIRE_VEC_CAP {
@@ -602,10 +767,10 @@ where
 
 /// `BTreeMap<K, V>` encoded as: VLQ32 length, then pairs `K`, `V` in key order.
 /// Unlike `HashMap`, iteration order is deterministic (sorted by key).
-impl<K, V> Marshaler for std::collections::BTreeMap<K, V>
+impl<K, V> Marshal for std::collections::BTreeMap<K, V>
 where
-    K: Marshaler + Ord,
-    V: Marshaler,
+    K: Marshal + Ord,
+    V: Marshal,
 {
     fn marshal(&self, wb: &mut WriteBuffer) {
         marshal_wire_count(wb, self.len());
@@ -614,6 +779,13 @@ where
             v.marshal(wb);
         }
     }
+}
+
+impl<K, V> Unmarshal for std::collections::BTreeMap<K, V>
+where
+    K: Unmarshal + Ord,
+    V: Unmarshal,
+{
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         let len = VlqU32Marshaler.unmarshal(rb)? as usize;
         if len > WIRE_VEC_CAP {
@@ -637,7 +809,7 @@ mod tests {
     use super::*;
     use crate::serialize::buffer::CARRIER_ENDIAN;
 
-    fn read_len_only<T: Marshaler>(len: usize) -> Result<T, MarshalerError> {
+    fn read_len_only<T: Unmarshal>(len: usize) -> Result<T, MarshalerError> {
         let mut wb = WriteBuffer::new(CARRIER_ENDIAN);
         VlqU32Marshaler.marshal(&mut wb, u32::try_from(len).unwrap());
         let bytes = wb.into_vec();

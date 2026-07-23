@@ -2,8 +2,9 @@
 
 use crate::{az_rtti, replicated_state, type_registry};
 
-use crate::serialize::{PositionAnchorMarshaler, QuatCompNorm, ReplicatedFieldHandler};
+use crate::serialize::{PackedPositionMarshaller, QuatCompNorm, ReplicatedFieldHandler};
 use crate::types::{RemoteServerGdeRef, TimePoint};
+use glam::Vec3;
 
 #[replicated_state]
 #[derive(Debug, Clone, Default)]
@@ -11,9 +12,11 @@ use crate::types::{RemoteServerGdeRef, TimePoint};
 #[type_registry(2912)]
 pub struct SpellComponentReplicatedState {
     pub spell_data_id: ReplicatedFieldHandler<u32>,
-    pub start_position: ReplicatedFieldHandler<(f32, f32, f32), PositionAnchorMarshaler>,
+    pub start_position:
+        ReplicatedFieldHandler<Vec3, PackedPositionMarshaller<0xc2c8_0000, 0x44fa_0000>>,
     pub start_rotation: ReplicatedFieldHandler<QuatCompNorm>,
-    pub child_position: ReplicatedFieldHandler<(f32, f32, f32), PositionAnchorMarshaler>,
+    pub child_position:
+        ReplicatedFieldHandler<Vec3, PackedPositionMarshaller<0xc2c8_0000, 0x44fa_0000>>,
     pub child_rotation: ReplicatedFieldHandler<QuatCompNorm>,
     pub previous_attachment: ReplicatedFieldHandler<RemoteServerGdeRef>,
     pub attachment: ReplicatedFieldHandler<RemoteServerGdeRef>,

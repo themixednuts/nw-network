@@ -5,7 +5,7 @@ use crate::{az_rtti, replicated_state, type_registry};
 use glam::{Quat, Vec3};
 
 use crate::serialize::{
-    NonUniformScaleCompMarshaler, PositionAnchorMarshaler, QuatCompNorm, ReplicatedFieldHandler,
+    NonUniformScaleCompMarshaler, PackedPositionMarshaller, QuatCompNorm, ReplicatedFieldHandler,
 };
 
 /// Position, rotation, and scale state for an entity in the world.
@@ -14,14 +14,14 @@ use crate::serialize::{
 #[az_rtti("79C28008-4FC5-4EFB-88A1-538F4FB7DDE1")]
 #[type_registry(13)]
 pub struct PositionInTheWorldReplicatedState {
-    pub position: ReplicatedFieldHandler<(f32, f32, f32), PositionAnchorMarshaler>,
+    pub position: ReplicatedFieldHandler<Vec3, PackedPositionMarshaller<0xc2c8_0000, 0x44fa_0000>>,
     pub rotation: ReplicatedFieldHandler<QuatCompNorm>,
     pub scale: ReplicatedFieldHandler<Vec3, NonUniformScaleCompMarshaler>,
 }
 
 impl PositionInTheWorldReplicatedState {
     #[must_use]
-    pub fn with_anchor(position: (f32, f32, f32)) -> Self {
+    pub fn with_anchor(position: Vec3) -> Self {
         let mut state = Self::default();
         state.position.set_value(position);
         state
@@ -47,6 +47,6 @@ impl PositionInTheWorldReplicatedState {
 }
 
 #[must_use]
-pub const fn position_anchor_to_bevy_translation((x, y, height): (f32, f32, f32)) -> Vec3 {
-    Vec3::new(x, height, y)
+pub const fn position_anchor_to_bevy_translation(position: Vec3) -> Vec3 {
+    Vec3::new(position.x, position.z, position.y)
 }

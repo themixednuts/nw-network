@@ -13,6 +13,7 @@
 //! `Marshaler<bool>` is strict: only `0` and `1` are accepted on read.
 
 pub mod buffer;
+pub mod composite_marshal;
 pub mod compression_marshal;
 pub mod container_marshal;
 pub mod data_marshal;
@@ -31,21 +32,27 @@ pub mod vlq;
 pub use buffer::{
     CARRIER_ENDIAN, Endian, ReadBuffer, ReadBufferMark, WriteBuffer, WriteBufferMark,
 };
+pub use composite_marshal::{
+    BooleanChoice, BooleanChoiceCodec, DefaultOmittedTupleCodec, OptionalCodec, TupleCodec,
+};
 pub use compression_marshal::{
     Float16Marshaler, IntegerQuantizationMarshalerU8, IntegerQuantizationMarshalerU16,
-    IntegerQuantizationMarshalerU32, NonUniformScaleCompMarshaler, PackedSize, QuatCompMarshaler,
-    QuatCompNorm, QuatCompNormMarshaler, QuatCompNormQuantized, QuatCompNormQuantizedAngles,
-    QuatCompNormQuantizedMarshaler, QuatSmallestThreeQuantized,
-    QuatSmallestThreeQuantizedMarshaler, TransformCompressor, Vec2CompMarshaler, Vec3CompMarshaler,
-    Vec3CompNormMarshaler,
+    IntegerQuantizationMarshalerU32, NonUniformScaleCompMarshaler, PackedNormalizedVec3Marshaller,
+    PackedPositionMarshaller, PackedSize, QuatCompMarshaler, QuatCompNorm, QuatCompNormMarshaler,
+    QuatCompNormQuantized, QuatCompNormQuantizedAngles, QuatCompNormQuantizedMarshaler,
+    QuatSmallestThreeQuantized, QuatSmallestThreeQuantizedMarshaler, TransformCompressor,
+    Vec2CompMarshaler, Vec3CompMarshaler, Vec3CompNormMarshaler,
 };
-pub use container_marshal::WIRE_VEC_CAP;
-pub use data_marshal::{ConversionMarshaler, MarshalerConversion};
+pub use container_marshal::{
+    ArrayCodec, ContainerMarshaler, MapContainerMarshaler, MapSequenceCodec, SequenceCodec,
+    WIRE_VEC_CAP,
+};
+pub use data_marshal::{ConversionMarshaler, MarshalerConversion, RemoteServerGdeRefMarshaler};
 pub use error::MarshalerError;
 pub use flat_bitmask::FlatBitmask;
 pub use indexmap::{IndexMap, IndexSet};
 pub use live_mask::{read_live_mask_batches, write_live_mask_batches};
-pub use marshaler::{Codec, DefaultMarshaler, Marshaler};
+pub use marshaler::{Codec, DefaultMarshaler, Marshal, Marshaler, Unmarshal};
 pub use mask_chain::MaskChain;
 pub use replicated_container::{
     Change, ChangeOp, ChangeSet, REPLICATED_CONTAINER_FIXED_JOURNAL_SIZE, ReplicatedContainer,
@@ -53,9 +60,8 @@ pub use replicated_container::{
 pub use replicated_field::{
     DeltaCompressedCounterHandler, DeltaCompressedReplicatedFieldHandler, DeltaIntegerMarshaler,
     DeltaMarshaler, DynamicDeltaReplicatedFieldHandler, FloatTimerDeltaReplicatedField,
-    HalfF32Marshaler, HalfVec3Marshaler, IntegerOmitLowerByteMarshaler, PositionAnchorMarshaler,
-    QuantizedRelativePosition, ReplicatedFieldHandler, ReplicatedFieldHandlerBase,
-    quantize_with_range, unquantize_with_range,
+    HalfF32Marshaler, HalfVec3Marshaler, IntegerOmitLowerByteMarshaler, QuantizedRelativePosition,
+    ReplicatedFieldHandler, ReplicatedFieldHandlerBase, quantize_with_range, unquantize_with_range,
 };
 pub use utility_marshal::{BitSet, HalfF32, RawSequenceNumber};
 pub use vlq::{VlqU16, VlqU16Marshaler, VlqU32, VlqU32Marshaler, VlqU64, VlqU64Marshaler};

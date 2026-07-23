@@ -1,5 +1,4 @@
 //! Generic player invite replication.
-
 use crate::{az_rtti, replicated_state, type_registry};
 
 use uuid::Uuid;
@@ -10,9 +9,11 @@ use crate::types::{Crc32, TimePoint};
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct PlayerGenericInviteParticipants;
 
-impl crate::Marshaler for PlayerGenericInviteParticipants {
+impl crate::Marshal for PlayerGenericInviteParticipants {
     fn marshal(&self, _wb: &mut crate::WriteBuffer) {}
+}
 
+impl crate::Unmarshal for PlayerGenericInviteParticipants {
     fn unmarshal(_rb: &mut crate::ReadBuffer) -> Result<Self, crate::MarshalerError> {
         Ok(Self)
     }

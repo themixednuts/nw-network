@@ -54,8 +54,8 @@ pub enum MarshalerError {
 
     /// A polymorphic value field carried a UUID that is not declared as a
     /// variant of the receiving enum.
-    #[error("polymorphic value carried a UUID with no matching variant")]
-    UnknownClassUuid,
+    #[error("polymorphic value carried unknown class UUID {uuid}")]
+    UnknownClassUuid { uuid: uuid::Uuid },
 }
 
 impl MarshalerError {

@@ -8,6 +8,7 @@
 //!
 //! Group 0 carries character action data visible to observers. Group 1 carries
 //! owning-player-only data and is filtered through the replication whitelist.
+use crate::serialize::marshaler::{Marshal, Unmarshal};
 
 use crate::{Fragment, Marshaler, az_rtti, fixed_replicated_state, type_registry};
 
@@ -22,9 +23,10 @@ use crate::hub::{
 };
 use crate::serialize::{
     Codec, DeltaCompressedCounterHandler, DeltaCompressedReplicatedFieldHandler,
-    FloatTimerDeltaReplicatedField, HalfF32Marshaler, MarshalerError, PositionAnchorMarshaler,
-    QuantizedRelativePosition, QuatSmallestThreeQuantized, ReadBuffer, ReplicatedFieldHandler,
-    ReplicatedFieldHandlerBase, VlqU32, WriteBuffer, quantize_with_range, unquantize_with_range,
+    FloatTimerDeltaReplicatedField, HalfF32Marshaler, MarshalerError,
+    PackedNormalizedVec3Marshaller, PackedPositionMarshaller, QuantizedRelativePosition,
+    QuatSmallestThreeQuantized, ReadBuffer, ReplicatedFieldHandler, ReplicatedFieldHandlerBase,
+    VlqU32, WriteBuffer, quantize_with_range, unquantize_with_range,
 };
 
 /// Maximum number of scoped action entries encoded by the action-list blobs.
@@ -53,54 +55,7 @@ const ALC_CLIENT_WHITELIST_SIZE: usize = 1;
 type AlcFixedState =
     FixedReplicatedState<ALC_REPLICATION_GROUPS, ALC_FIELDS_PER_GROUP, ALC_CLIENT_WHITELIST_SIZE>;
 
-/// Absolute position anchor used by the action-list position codec.
-///
-/// The wire representation stores horizontal position and height through the
-/// packed position-anchor marshaler. Subsequent movement can be sent as a small
-/// quantized delta from this anchor.
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
-pub struct AlcPositionAnchor {
-    /// World X coordinate.
-    pub x: f32,
-    /// World Y coordinate.
-    pub y: f32,
-    /// World height coordinate.
-    pub height: f32,
-}
-
-impl AlcPositionAnchor {
-    #[must_use]
-    pub const fn new(x: f32, y: f32, height: f32) -> Self {
-        Self { x, y, height }
-    }
-
-    #[must_use]
-    pub fn as_vec3(self) -> Vec3 {
-        Vec3::new(self.x, self.y, self.height)
-    }
-
-    #[must_use]
-    pub fn from_vec3(value: Vec3) -> Self {
-        Self::new(value.x, value.y, value.z)
-    }
-}
-
-/// Marshals an [`AlcPositionAnchor`] with the protocol position-anchor codec.
-#[derive(Debug, Clone, Copy, Default)]
-pub struct AlcPositionAnchorMarshaler;
-
-impl Codec<AlcPositionAnchor> for AlcPositionAnchorMarshaler {
-    const MARSHAL_SIZE: usize = <PositionAnchorMarshaler as Codec<(f32, f32, f32)>>::MARSHAL_SIZE;
-
-    fn marshal(value: &AlcPositionAnchor, wb: &mut WriteBuffer) {
-        PositionAnchorMarshaler::marshal(&(value.x, value.y, value.height), wb);
-    }
-
-    fn unmarshal(rb: &mut ReadBuffer) -> Result<AlcPositionAnchor, MarshalerError> {
-        let (x, y, height) = PositionAnchorMarshaler::unmarshal(rb)?;
-        Ok(AlcPositionAnchor::new(x, y, height))
-    }
-}
+type AlcPackedPositionMarshaller = PackedPositionMarshaller<0xc2c8_0000, 0x447a_0000>;
 
 /// Three-part world-position field used by action-list replication.
 ///
@@ -111,7 +66,7 @@ impl Codec<AlcPositionAnchor> for AlcPositionAnchorMarshaler {
 #[derive(Debug, Clone, Default)]
 pub struct AlcWorldPositionHandler {
     /// Absolute position anchor for the current quantized range.
-    pub absolute_portion: ReplicatedFieldHandler<AlcPositionAnchor, AlcPositionAnchorMarshaler>,
+    pub absolute_portion: ReplicatedFieldHandler<Vec3, AlcPackedPositionMarshaller>,
     /// Quantized delta from `absolute_portion`.
     pub quantized_relative_portion: ReplicatedFieldHandler<QuantizedRelativePosition>,
     /// Range used to quantize and unquantize the relative delta.
@@ -121,7 +76,7 @@ pub struct AlcWorldPositionHandler {
 impl AlcWorldPositionHandler {
     #[must_use]
     pub fn value(&self) -> Option<Vec3> {
-        let anchor = self.absolute_portion.value().copied()?.as_vec3();
+        let anchor = self.absolute_portion.value().copied()?;
         let delta = self
             .quantized_relative_portion
             .value()
@@ -147,10 +102,10 @@ impl AlcWorldPositionHandler {
         self.absolute_portion.is_field_valid()
     }
 
-    pub fn set_value(&mut self, value: AlcPositionAnchor, quantization: f32) {
+    pub fn set_value(&mut self, value: Vec3, quantization: f32) {
         let needs_anchor = !self.absolute_portion.is_field_valid()
             || self.quantization.value().copied() != Some(quantization)
-            || !self.is_within_delta(value.as_vec3(), quantization);
+            || !self.is_within_delta(value, quantization);
 
         if needs_anchor {
             self.absolute_portion.set_value(value);
@@ -160,12 +115,8 @@ impl AlcWorldPositionHandler {
             return;
         }
 
-        let anchor = self
-            .absolute_portion
-            .value()
-            .copied()
-            .map_or(Vec3::ZERO, AlcPositionAnchor::as_vec3);
-        let diff = value.as_vec3() - anchor;
+        let anchor = self.absolute_portion.value().copied().unwrap_or(Vec3::ZERO);
+        let diff = value - anchor;
         self.quantized_relative_portion
             .set_value(QuantizedRelativePosition::new([
                 Self::quantize_delta(diff.x, quantization),
@@ -175,12 +126,7 @@ impl AlcWorldPositionHandler {
     }
 
     fn is_within_delta(&self, value: Vec3, quantization: f32) -> bool {
-        let Some(anchor) = self
-            .absolute_portion
-            .value()
-            .copied()
-            .map(AlcPositionAnchor::as_vec3)
-        else {
+        let Some(anchor) = self.absolute_portion.value().copied() else {
             return false;
         };
         let abs_diff = (anchor - value).abs();
@@ -214,25 +160,6 @@ impl Codec<Quat> for PackedQuaternionMarshaller {
     }
 }
 
-/// Packs normalized direction vectors with the protocol smallest-three codec.
-#[derive(Debug, Clone, Copy, Default)]
-pub struct PackedNormalizedVec3Marshaller;
-
-impl Codec<Vec3> for PackedNormalizedVec3Marshaller {
-    fn marshal(value: &Vec3, wb: &mut WriteBuffer) {
-        QuatSmallestThreeQuantized::from_xyzw(value.x, value.y, value.z, 0.0).marshal(wb);
-    }
-
-    fn unmarshal(rb: &mut ReadBuffer) -> Result<Vec3, MarshalerError> {
-        let packed = QuatSmallestThreeQuantized::unmarshal(rb)?;
-        Ok(Vec3::new(
-            packed.components[0],
-            packed.components[1],
-            packed.components[2],
-        ))
-    }
-}
-
 /// Compact global fragment-tag bit payload.
 pub type TagStateData = [u8; 12];
 
@@ -258,11 +185,13 @@ impl Default for GridAccessibility {
     }
 }
 
-impl Marshaler for GridAccessibility {
+impl Marshal for GridAccessibility {
     fn marshal(&self, wb: &mut WriteBuffer) {
         self.raw.marshal(wb);
     }
+}
 
+impl Unmarshal for GridAccessibility {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         Ok(Self::new(u8::unmarshal(rb)?))
     }
@@ -417,7 +346,7 @@ impl ALCReplicatedState {
         self.world_pos.value()
     }
 
-    pub fn set_world_pos(&mut self, value: AlcPositionAnchor, quantization: f32) {
+    pub fn set_world_pos(&mut self, value: Vec3, quantization: f32) {
         self.world_pos.set_value(value, quantization);
     }
 
@@ -832,11 +761,13 @@ impl
     }
 }
 
-impl Marshaler for ALCReplicatedState {
+impl Marshal for ALCReplicatedState {
     fn marshal(&self, wb: &mut WriteBuffer) {
         DynFragment::marshal_contents(self, wb);
     }
+}
 
+impl Unmarshal for ALCReplicatedState {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         let mut value = Self::default();
         DynFragment::unmarshal_contents(&mut value, rb)?;
@@ -854,11 +785,11 @@ mod tests {
         assert!(!Fragment::has_world_position(&state));
         assert_eq!(Fragment::world_position(&state), None);
 
-        let position = AlcPositionAnchor::new(10.0, 20.0, 30.0);
+        let position = Vec3::new(10.0, 20.0, 30.0);
         state.set_world_pos(position, 0.25);
 
         assert!(Fragment::has_world_position(&state));
-        assert_eq!(Fragment::world_position(&state), Some(position.as_vec3()));
+        assert_eq!(Fragment::world_position(&state), Some(position));
     }
 
     #[test]
@@ -882,15 +813,15 @@ mod tests {
     #[test]
     fn alc_position_anchor_uses_packed_height_range() {
         let mut min = WriteBuffer::default();
-        AlcPositionAnchorMarshaler::marshal(&AlcPositionAnchor::new(1.0, 2.0, -100.0), &mut min);
+        AlcPackedPositionMarshaller::marshal(&Vec3::new(1.0, 2.0, -100.0), &mut min);
         assert_eq!(
             min.as_slice().len(),
-            AlcPositionAnchorMarshaler::MARSHAL_SIZE
+            AlcPackedPositionMarshaller::MARSHAL_SIZE
         );
         assert_eq!(&min.as_slice()[8..], &[0x00, 0x00]);
 
         let mut max = WriteBuffer::default();
-        AlcPositionAnchorMarshaler::marshal(&AlcPositionAnchor::new(1.0, 2.0, 2000.0), &mut max);
+        AlcPackedPositionMarshaller::marshal(&Vec3::new(1.0, 2.0, 1000.0), &mut max);
         assert_eq!(&max.as_slice()[8..], &[0xff, 0xff]);
     }
 }

@@ -33,11 +33,21 @@ fn generate_struct_marshal(fields: &Fields<MarshalerField>) -> TokenStream {
                         );
                     }
                 } else if let Some(as_type) = &f.r#as {
-                    quote! { <#as_type as ::core::convert::From<_>>::from(self.#field_name.clone()).marshal(wb); }
+                    quote! {
+                        <#as_type as ::nw_network::serialize::marshaler::Marshal>::marshal(
+                            &<#as_type as ::core::convert::From<_>>::from(self.#field_name.clone()),
+                            wb,
+                        );
+                    }
                 } else if let Some(with) = &f.with {
                     quote! { #with(&self.#field_name, wb); }
                 } else {
-                    quote! { self.#field_name.marshal(wb); }
+                    quote! {
+                        <#field_type as ::nw_network::serialize::marshaler::Marshal>::marshal(
+                            &self.#field_name,
+                            wb,
+                        );
+                    }
                 })
             });
 
@@ -62,11 +72,21 @@ fn generate_struct_marshal(fields: &Fields<MarshalerField>) -> TokenStream {
                         );
                     }
                 } else if let Some(as_type) = &f.r#as {
-                    quote! { <#as_type as ::core::convert::From<_>>::from(self.#index.clone()).marshal(wb); }
+                    quote! {
+                        <#as_type as ::nw_network::serialize::marshaler::Marshal>::marshal(
+                            &<#as_type as ::core::convert::From<_>>::from(self.#index.clone()),
+                            wb,
+                        );
+                    }
                 } else if let Some(with) = &f.with {
                     quote! { #with(&self.#index, wb); }
                 } else {
-                    quote! { self.#index.marshal(wb); }
+                    quote! {
+                        <#field_type as ::nw_network::serialize::marshaler::Marshal>::marshal(
+                            &self.#index,
+                            wb,
+                        );
+                    }
                 })
             });
 
@@ -95,7 +115,10 @@ fn generate_enum_marshal(variants: &[MarshalerVariant], repr: Option<&Type>) -> 
             darling::ast::Style::Unit => {
                 quote! {
                     Self::#variant_ident => {
-                        (#discriminant as u8).marshal(wb);
+                        <u8 as ::nw_network::serialize::marshaler::Marshal>::marshal(
+                            &(#discriminant as u8),
+                            wb,
+                        );
                     }
                 }
             }
@@ -118,17 +141,30 @@ fn generate_enum_marshal(variants: &[MarshalerVariant], repr: Option<&Type>) -> 
                             );
                         }
                     } else if let Some(as_type) = &f.r#as {
-                        quote! { <#as_type as ::core::convert::From<_>>::from(#name.clone()).marshal(wb); }
+                        quote! {
+                            <#as_type as ::nw_network::serialize::marshaler::Marshal>::marshal(
+                                &<#as_type as ::core::convert::From<_>>::from(#name.clone()),
+                                wb,
+                            );
+                        }
                     } else if let Some(with) = &f.with {
                         quote! { #with(#name, wb); }
                     } else {
-                        quote! { #name.marshal(wb); }
+                        quote! {
+                            <#field_type as ::nw_network::serialize::marshaler::Marshal>::marshal(
+                                #name,
+                                wb,
+                            );
+                        }
                     })
                 });
 
                 quote! {
                     Self::#variant_ident(#(#field_names),*) => {
-                        (#discriminant as u8).marshal(wb);
+                        <u8 as ::nw_network::serialize::marshaler::Marshal>::marshal(
+                            &(#discriminant as u8),
+                            wb,
+                        );
                         #(#field_marshals)*
                     }
                 }
@@ -154,17 +190,30 @@ fn generate_enum_marshal(variants: &[MarshalerVariant], repr: Option<&Type>) -> 
                             );
                         }
                     } else if let Some(as_type) = &f.r#as {
-                        quote! { <#as_type as ::core::convert::From<_>>::from(#name.clone()).marshal(wb); }
+                        quote! {
+                            <#as_type as ::nw_network::serialize::marshaler::Marshal>::marshal(
+                                &<#as_type as ::core::convert::From<_>>::from(#name.clone()),
+                                wb,
+                            );
+                        }
                     } else if let Some(with) = &f.with {
                         quote! { #with(#name, wb); }
                     } else {
-                        quote! { #name.marshal(wb); }
+                        quote! {
+                            <#field_type as ::nw_network::serialize::marshaler::Marshal>::marshal(
+                                #name,
+                                wb,
+                            );
+                        }
                     })
                 });
 
                 quote! {
                     Self::#variant_ident { #(#field_names),* } => {
-                        (#discriminant as u8).marshal(wb);
+                        <u8 as ::nw_network::serialize::marshaler::Marshal>::marshal(
+                            &(#discriminant as u8),
+                            wb,
+                        );
                         #(#field_marshals)*
                     }
                 }
@@ -192,7 +241,7 @@ fn generate_direct_repr_enum_marshal(variants: &[MarshalerVariant], repr: &Type)
                     darling::ast::Style::Tuple => {
                         quote! {
                             Self::#variant_ident(raw) => {
-                                raw.marshal(wb);
+                                <#repr as ::nw_network::serialize::marshaler::Marshal>::marshal(raw, wb);
                             }
                         }
                     }
@@ -205,7 +254,10 @@ fn generate_direct_repr_enum_marshal(variants: &[MarshalerVariant], repr: &Type)
                             .expect("unknown struct variant has a field");
                         quote! {
                             Self::#variant_ident { #field_name } => {
-                                #field_name.marshal(wb);
+                                <#repr as ::nw_network::serialize::marshaler::Marshal>::marshal(
+                                    #field_name,
+                                    wb,
+                                );
                             }
                         }
                     }
@@ -213,7 +265,10 @@ fn generate_direct_repr_enum_marshal(variants: &[MarshalerVariant], repr: &Type)
                         quote! {
                             Self::#variant_ident => {
                                 let value: #repr = #discriminant as #repr;
-                                value.marshal(wb);
+                                <#repr as ::nw_network::serialize::marshaler::Marshal>::marshal(
+                                    &value,
+                                    wb,
+                                );
                             }
                         }
                     }
@@ -222,7 +277,10 @@ fn generate_direct_repr_enum_marshal(variants: &[MarshalerVariant], repr: &Type)
                 quote! {
                     Self::#variant_ident => {
                         let value: #repr = #discriminant as #repr;
-                        value.marshal(wb);
+                        <#repr as ::nw_network::serialize::marshaler::Marshal>::marshal(
+                            &value,
+                            wb,
+                        );
                     }
                 }
             }

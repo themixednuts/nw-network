@@ -505,7 +505,7 @@ mod tests {
 
     use super::*;
     use crate::hub::{DynFragment, FragmentBase};
-    use crate::serialize::{Marshaler, MarshalerError, ReadBuffer, WriteBuffer};
+    use crate::serialize::{Marshal, MarshalerError, ReadBuffer, Unmarshal, WriteBuffer};
     use crate::types::{GdeRef, RemoteServerContextRef};
 
     fn remote_ref(target_id: GdeId) -> RemoteServerGdeRef {

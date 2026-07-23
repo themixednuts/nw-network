@@ -19,32 +19,66 @@ use crate::error::darling_to_syn;
 use crate::{generics, marshal, unmarshal};
 
 pub fn derive(input: &DeriveInput) -> syn::Result<TokenStream> {
+    let opts = parse(input)?;
+    let marshal = marshal_impl(input, &opts)?;
+    let unmarshal = unmarshal_impl(input, &opts)?;
+    Ok(quote! {
+        #marshal
+        #unmarshal
+    })
+}
+
+pub fn derive_marshal(input: &DeriveInput) -> syn::Result<TokenStream> {
+    marshal_impl(input, &parse(input)?)
+}
+
+pub fn derive_unmarshal(input: &DeriveInput) -> syn::Result<TokenStream> {
+    unmarshal_impl(input, &parse(input)?)
+}
+
+fn parse(input: &DeriveInput) -> syn::Result<MarshalerOpts> {
     if let Data::Union(u) = &input.data {
         return Err(syn::Error::new_spanned(
             u.union_token,
-            "#[derive(Marshaler)] does not support unions",
+            "network codec derives do not support unions",
         ));
     }
 
-    let mut opts = MarshalerOpts::from_derive_input(input).map_err(|err| darling_to_syn(&err))?;
+    let opts = MarshalerOpts::from_derive_input(input).map_err(|err| darling_to_syn(&err))?;
     opts.validate()?;
-    opts.generics = generics::add_marshaler_bounds(&opts.generics);
+    Ok(opts)
+}
 
+fn marshal_impl(input: &DeriveInput, opts: &MarshalerOpts) -> syn::Result<TokenStream> {
     let ident = &opts.ident;
-    let (impl_generics, ty_generics, where_clause) = opts.generics.split_for_impl();
+    let generics = generics::add_marshal_bounds(&opts.generics);
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     let repr = primitive_repr(input)?;
     let marshal_body = marshal::generate_marshal_body(&opts.data, repr.as_ref());
-    let unmarshal_body = unmarshal::generate_unmarshal_body(ident, &opts.data, repr.as_ref());
 
     Ok(quote! {
-        impl #impl_generics ::nw_network::serialize::marshaler::Marshaler
+        impl #impl_generics ::nw_network::serialize::marshaler::Marshal
         for #ident #ty_generics #where_clause
         {
             fn marshal(&self, wb: &mut ::nw_network::serialize::buffer::WriteBuffer) {
                 #marshal_body
             }
+        }
+    })
+}
 
+fn unmarshal_impl(input: &DeriveInput, opts: &MarshalerOpts) -> syn::Result<TokenStream> {
+    let ident = &opts.ident;
+    let generics = generics::add_unmarshal_bounds(&opts.generics);
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+    let repr = primitive_repr(input)?;
+    let unmarshal_body = unmarshal::generate_unmarshal_body(ident, &opts.data, repr.as_ref());
+
+    Ok(quote! {
+        impl #impl_generics ::nw_network::serialize::marshaler::Unmarshal
+        for #ident #ty_generics #where_clause
+        {
             fn unmarshal(
                 rb: &mut ::nw_network::serialize::buffer::ReadBuffer,
             ) -> ::core::result::Result<Self, ::nw_network::serialize::error::MarshalerError> {

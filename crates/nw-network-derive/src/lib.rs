@@ -31,6 +31,16 @@ pub fn derive_marshaler(input: TokenStream) -> TokenStream {
     run(input, marshaler::derive)
 }
 
+#[proc_macro_derive(Marshal, attributes(marshal))]
+pub fn derive_marshal(input: TokenStream) -> TokenStream {
+    run(input, marshaler::derive_marshal)
+}
+
+#[proc_macro_derive(Unmarshal, attributes(marshal))]
+pub fn derive_unmarshal(input: TokenStream) -> TokenStream {
+    run(input, marshaler::derive_unmarshal)
+}
+
 /// Implements a descriptor-mask replicated-state fragment.
 ///
 /// Use this on structs whose fields are normal replicated fields grouped by

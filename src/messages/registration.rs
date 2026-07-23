@@ -177,6 +177,7 @@ impl Default for LoginToken {
 mod tests {
     use super::*;
     use crate::serialize::{CARRIER_ENDIAN, ReadBuffer, WriteBuffer};
+    use crate::{Marshal, Unmarshal};
 
     #[test]
     fn registration_request_v3_roundtrips() {

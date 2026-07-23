@@ -5,21 +5,18 @@ use super::{
     error::MarshalerError,
 };
 
-/// "This value type can encode itself" — the common case.
-///
-/// Used at every concrete `impl Marshaler for FooMessage` and emitted by
-/// `#[derive(Marshaler)]`. For *external* policies that encode some other
-/// type `T` with a non-default wire shape (`HalfF32Marshaler` for `f32`,
-/// `DeltaMarshaler` for `f32` / `Vec3`, `VlqU32Marshaler` for `u32`, etc.),
-/// see [`Codec`].
-pub trait Marshaler: Sized {
+/// A value that can encode itself into its network representation.
+pub trait Marshal {
     /// Fixed wire size, or `0` for dynamic/unspecified.
     const MARSHAL_SIZE: usize = 0;
 
     /// Serialize into the provided write buffer. `WriteBuffer` is
     /// infallible, so this stays `()`.
     fn marshal(&self, wb: &mut WriteBuffer);
+}
 
+/// A value that can be decoded from its network representation.
+pub trait Unmarshal: Sized {
     /// Deserialize from the provided read buffer.
     ///
     /// # Errors
@@ -27,6 +24,16 @@ pub trait Marshaler: Sized {
     /// Returns an error when the buffer does not contain a valid value of this type.
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError>;
 }
+
+/// A value with symmetric encode and decode support.
+///
+/// Transport APIs use [`Marshal`] or [`Unmarshal`] directly so native
+/// one-way messages do not need to expose behavior they do not implement.
+/// For external field policies that encode another type with a non-default
+/// representation, see [`Codec`].
+pub trait Marshaler: Marshal + Unmarshal {}
+
+impl<T: Marshal + Unmarshal> Marshaler for T {}
 
 /// "This zero-sized type is a wire codec for some `T`" — the policy slot
 /// in `ReplicatedFieldHandler<T, M>` and `ReplicatedContainer<C>`.
@@ -61,16 +68,16 @@ pub trait Codec<T> {
 pub struct DefaultMarshaler<T>(std::marker::PhantomData<fn() -> T>);
 
 impl<T: Marshaler> Codec<T> for DefaultMarshaler<T> {
-    const MARSHAL_SIZE: usize = T::MARSHAL_SIZE;
+    const MARSHAL_SIZE: usize = <T as Marshal>::MARSHAL_SIZE;
 
     #[inline]
     fn marshal(value: &T, wb: &mut WriteBuffer) {
-        value.marshal(wb);
+        <T as Marshal>::marshal(value, wb);
     }
 
     #[inline]
     fn unmarshal(rb: &mut ReadBuffer) -> Result<T, MarshalerError> {
-        <T as Marshaler>::unmarshal(rb)
+        <T as Unmarshal>::unmarshal(rb)
     }
 }
 
@@ -78,8 +85,8 @@ impl<T: Marshaler> Codec<T> for DefaultMarshaler<T> {
 pub struct IsFixedMarshaler<M>(std::marker::PhantomData<fn() -> M>);
 
 impl<M: Marshaler> IsFixedMarshaler<M> {
-    pub const MARSHAL_SIZE: usize = M::MARSHAL_SIZE;
-    pub const VALUE: bool = M::MARSHAL_SIZE != 0;
+    pub const MARSHAL_SIZE: usize = <M as Marshal>::MARSHAL_SIZE;
+    pub const VALUE: bool = <M as Marshal>::MARSHAL_SIZE != 0;
 }
 
 /// Fixed-size query for policy codecs (`ContainerMarshaler`, `HalfF32`, etc.).
@@ -100,13 +107,13 @@ impl<T, M: Codec<T>> IsMarshalerForType<T, M> {
 #[inline]
 #[must_use]
 pub const fn is_fixed_marshaler<M: Marshaler>() -> bool {
-    M::MARSHAL_SIZE != 0
+    <M as Marshal>::MARSHAL_SIZE != 0
 }
 
 #[inline]
 #[must_use]
 pub const fn fixed_marshal_size<M: Marshaler>() -> usize {
-    M::MARSHAL_SIZE
+    <M as Marshal>::MARSHAL_SIZE
 }
 
 #[inline]

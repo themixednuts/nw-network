@@ -21,6 +21,8 @@
 //! incoming network changes; local `push_*` writes mark data dirty for outbound
 //! replication but deliberately do not set that flag.
 
+use crate::serialize::marshaler::{Marshal, Unmarshal};
+
 use std::collections::HashMap;
 use std::hash::{BuildHasher, Hash};
 use std::marker::PhantomData;
@@ -36,7 +38,7 @@ use super::{
     container_marshal::{WIRE_VEC_CAP, marshal_wire_count},
     error::MarshalerError,
     live_mask::{read_live_mask_batches, write_live_mask_batches},
-    marshaler::{Codec, DefaultMarshaler, Marshaler},
+    marshaler::{Codec, DefaultMarshaler},
     quantize::usize_to_f32,
     vlq::{VlqU32Marshaler, VlqU64},
 };
@@ -1073,7 +1075,7 @@ where
 // Convenience round-trip codec for standalone container payloads. Replicated
 // state encoding should call `marshal_since` through `ReplicatedFieldHandlerBase`
 // so the caller's baseline can choose between full snapshots and deltas.
-impl<C, const CAP: usize, KM, VM> Marshaler for ReplicatedContainer<C, CAP, KM, VM>
+impl<C, const CAP: usize, KM, VM> Marshal for ReplicatedContainer<C, CAP, KM, VM>
 where
     C: ReplicatedContainerStorage,
     C::Value: Default + Clone,
@@ -1088,7 +1090,15 @@ where
 
         self.marshal_changes(wb, &self.current_changes);
     }
+}
 
+impl<C, const CAP: usize, KM, VM> Unmarshal for ReplicatedContainer<C, CAP, KM, VM>
+where
+    C: ReplicatedContainerStorage,
+    C::Value: Default + Clone,
+    KM: Codec<C::Key>,
+    VM: Codec<C::Value>,
+{
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         let mode = usize::try_from(VlqU32Marshaler.unmarshal(rb)?).map_err(|_| {
             MarshalerError::ContainerOverflow {

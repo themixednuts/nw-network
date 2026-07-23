@@ -4,23 +4,25 @@
 //! compression: vectors are component order, quaternions are `x`, `y`, `z`,
 //! `w`, matrices and affine transforms are basis columns followed by
 //! translation, and bounds are min then max.
+use crate::serialize::marshaler::{Marshal, Unmarshal};
 
 use super::{
     buffer::{ReadBuffer, WriteBuffer},
     error::MarshalerError,
-    marshaler::Marshaler,
 };
 use bevy_math::bounding::{Aabb2d, Aabb3d};
 use glam::{Affine3A, Mat3, Mat3A, Quat, Vec2, Vec3, Vec3A, Vec4};
 
-impl Marshaler for Vec2 {
+impl Marshal for Vec2 {
     const MARSHAL_SIZE: usize = 8;
 
     fn marshal(&self, wb: &mut WriteBuffer) {
         self.x.marshal(wb);
         self.y.marshal(wb);
     }
+}
 
+impl Unmarshal for Vec2 {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         let x = f32::unmarshal(rb)?;
         let y = f32::unmarshal(rb)?;
@@ -29,14 +31,16 @@ impl Marshaler for Vec2 {
 }
 
 /// 2D bounds wire layout: two raw `Vec2` values, min then max.
-impl Marshaler for Aabb2d {
+impl Marshal for Aabb2d {
     const MARSHAL_SIZE: usize = 16;
 
     fn marshal(&self, wb: &mut WriteBuffer) {
         self.min.marshal(wb);
         self.max.marshal(wb);
     }
+}
 
+impl Unmarshal for Aabb2d {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         Ok(Self {
             min: Vec2::unmarshal(rb)?,
@@ -45,7 +49,7 @@ impl Marshaler for Aabb2d {
     }
 }
 
-impl Marshaler for Vec3 {
+impl Marshal for Vec3 {
     const MARSHAL_SIZE: usize = 12;
 
     fn marshal(&self, wb: &mut WriteBuffer) {
@@ -53,7 +57,9 @@ impl Marshaler for Vec3 {
         self.y.marshal(wb);
         self.z.marshal(wb);
     }
+}
 
+impl Unmarshal for Vec3 {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         let x = f32::unmarshal(rb)?;
         let y = f32::unmarshal(rb)?;
@@ -62,7 +68,7 @@ impl Marshaler for Vec3 {
     }
 }
 
-impl Marshaler for Vec4 {
+impl Marshal for Vec4 {
     const MARSHAL_SIZE: usize = 16;
 
     fn marshal(&self, wb: &mut WriteBuffer) {
@@ -71,7 +77,9 @@ impl Marshaler for Vec4 {
         self.z.marshal(wb);
         self.w.marshal(wb);
     }
+}
 
+impl Unmarshal for Vec4 {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         let x = f32::unmarshal(rb)?;
         let y = f32::unmarshal(rb)?;
@@ -84,7 +92,7 @@ impl Marshaler for Vec4 {
 /// Raw quaternion wire layout: four `f32` components in `x`, `y`, `z`, `w`
 /// order. For the compressed normalized form see
 /// [`super::compression_marshal::QuatCompNorm`].
-impl Marshaler for Quat {
+impl Marshal for Quat {
     const MARSHAL_SIZE: usize = 16;
 
     fn marshal(&self, wb: &mut WriteBuffer) {
@@ -93,7 +101,9 @@ impl Marshaler for Quat {
         self.z.marshal(wb);
         self.w.marshal(wb);
     }
+}
 
+impl Unmarshal for Quat {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         let x = f32::unmarshal(rb)?;
         let y = f32::unmarshal(rb)?;
@@ -105,7 +115,7 @@ impl Marshaler for Quat {
 
 /// Matrix wire layout: three raw `Vec3` basis columns in `x_axis`, `y_axis`,
 /// `z_axis` order.
-impl Marshaler for Mat3 {
+impl Marshal for Mat3 {
     const MARSHAL_SIZE: usize = 36;
 
     fn marshal(&self, wb: &mut WriteBuffer) {
@@ -113,7 +123,9 @@ impl Marshaler for Mat3 {
         self.y_axis.marshal(wb);
         self.z_axis.marshal(wb);
     }
+}
 
+impl Unmarshal for Mat3 {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         let x_axis = Vec3::unmarshal(rb)?;
         let y_axis = Vec3::unmarshal(rb)?;
@@ -127,7 +139,7 @@ impl Marshaler for Mat3 {
 ///
 /// `Affine3A` stores SIMD-aligned vectors, so marshal converts through `Vec3`
 /// to keep the wire shape at 12 raw `f32` values.
-impl Marshaler for Affine3A {
+impl Marshal for Affine3A {
     const MARSHAL_SIZE: usize = 48;
 
     fn marshal(&self, wb: &mut WriteBuffer) {
@@ -136,7 +148,9 @@ impl Marshaler for Affine3A {
         Vec3::from(self.matrix3.z_axis).marshal(wb);
         Vec3::from(self.translation).marshal(wb);
     }
+}
 
+impl Unmarshal for Affine3A {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         let x_axis = Vec3::unmarshal(rb)?;
         let y_axis = Vec3::unmarshal(rb)?;
@@ -157,14 +171,16 @@ impl Marshaler for Affine3A {
 ///
 /// `Aabb3d` stores SIMD-aligned vectors, so marshal converts through `Vec3` to
 /// keep the wire shape at 6 raw `f32` values.
-impl Marshaler for Aabb3d {
+impl Marshal for Aabb3d {
     const MARSHAL_SIZE: usize = 24;
 
     fn marshal(&self, wb: &mut WriteBuffer) {
         Vec3::from(self.min).marshal(wb);
         Vec3::from(self.max).marshal(wb);
     }
+}
 
+impl Unmarshal for Aabb3d {
     fn unmarshal(rb: &mut ReadBuffer) -> Result<Self, MarshalerError> {
         let min = Vec3::unmarshal(rb)?;
         let max = Vec3::unmarshal(rb)?;

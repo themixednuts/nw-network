@@ -89,7 +89,7 @@ impl InstancedSlayerScriptReplicatedState {
 mod tests {
     use super::*;
     use crate::hub::DynFragment;
-    use crate::serialize::{CARRIER_ENDIAN, Marshaler, ReadBuffer, WriteBuffer};
+    use crate::serialize::{CARRIER_ENDIAN, Marshal, ReadBuffer, WriteBuffer};
 
     #[test]
     fn signed_script_state_id_uses_one_byte_wire_shape() {

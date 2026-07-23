@@ -137,6 +137,10 @@
       "reason": "game-event state data"
     },
     {
+      "root": "TerritoryUpgradeData",
+      "reason": "territory progression state data"
+    },
+    {
       "root": "TerritoryStatusEffect",
       "reason": "status-effect state data"
     },

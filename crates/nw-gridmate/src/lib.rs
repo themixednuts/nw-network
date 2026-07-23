@@ -21,8 +21,8 @@ pub mod spawn;
 pub mod state;
 
 pub use nw_network::{
-    AzRtti, Marshaler, MarshalerError, ReadBuffer, TypeRegistryEntry, WriteBuffer, generated,
-    network_schema, serialize, types,
+    AzRtti, Marshal, Marshaler, MarshalerError, ReadBuffer, TypeRegistryEntry, Unmarshal,
+    WriteBuffer, generated, network_schema, serialize, types,
 };
 
 #[cfg(feature = "client")]

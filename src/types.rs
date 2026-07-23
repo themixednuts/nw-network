@@ -146,6 +146,35 @@ impl From<GdeRef> for Uuid {
     }
 }
 
+/// Opaque 128-bit identifier used by pervasive registries.
+#[repr(transparent)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Marshaler)]
+pub struct CrcId([u8; 16]);
+
+impl CrcId {
+    #[must_use]
+    pub const fn new(value: [u8; 16]) -> Self {
+        Self(value)
+    }
+
+    #[must_use]
+    pub const fn value(self) -> [u8; 16] {
+        self.0
+    }
+}
+
+impl From<[u8; 16]> for CrcId {
+    fn from(value: [u8; 16]) -> Self {
+        Self::new(value)
+    }
+}
+
+impl From<CrcId> for [u8; 16] {
+    fn from(value: CrcId) -> Self {
+        value.value()
+    }
+}
+
 /// Client endpoint reference carried by server-context messages.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Marshaler)]
 pub struct ClientRef {

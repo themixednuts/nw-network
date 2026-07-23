@@ -3,7 +3,7 @@ use uuid::Uuid;
 use crate::{
     Fragment, az_rtti,
     hub::{DynFragment, FragmentBase},
-    serialize::{Marshaler, MarshalerError, ReadBuffer, WriteBuffer},
+    serialize::{Marshal, MarshalerError, ReadBuffer, Unmarshal, WriteBuffer},
     type_registry,
 };
 
