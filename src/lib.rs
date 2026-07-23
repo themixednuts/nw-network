@@ -49,11 +49,9 @@ pub use hub::{
     StateRecordHeader, StateRecordWriter, SyncedTimestamp, Timestamp, TypeIndex,
 };
 pub use messages::{
-    AuthToken, CheckMovementStatusMsg, ClientVersionTokenMap, ConnTicket, CrashMoveActorMsg,
-    CrashMoveActorToHubMsg, ForceMigrateActorMsg, ForcePersistMsg, ForceRespawnMsg,
-    ImpersonatedValues, LoginToken, MigrationTestMsg, MoveActorMsg, MoveCoordinatorInitMsg,
-    ProcessDeferredMovementRequestsMsg, RegistrationRequestV3Msg, ScriptGarbageCollectMsg,
-    StackConfigChangedMsg, TypeIndexCrc,
+    AddPortrayalToClientsMsg, AuthToken, CheckMovementStatusMsg, ClientVersionTokenMap, ConnTicket,
+    ImpersonatedValues, LoginToken, RegistrationRequestV3Msg, RemovePortrayalFromClientsMsg,
+    TypeIndexCrc,
 };
 pub use network_schema::{
     NetworkFieldConfidence, NetworkFieldDescriptor, NetworkRegistryEntry,

@@ -1,17 +1,7 @@
-//! Actor movement message payloads.
+//! Source-backed actor movement payloads not yet replaced by generated types.
 
-use crate::hub::{
-    ActorId, ActorRef, CrashTarget, Duration, HubId, MovementInteractionId, Timestamp,
-};
+use crate::hub::{ActorId, ActorRef, MovementInteractionId, Timestamp};
 use crate::{Marshaler, az_rtti, type_registry};
-
-/// Requests migration of an actor using the coordinator's selected target hub.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Marshaler)]
-#[az_rtti("5570CFB7-0C5C-475E-BB19-D8FBC3FD8D32")]
-#[type_registry(710)]
-pub struct MoveActorMsg {
-    pub actor_id: ActorId,
-}
 
 /// Queries the state of an in-flight actor migration.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Marshaler)]
@@ -24,54 +14,23 @@ pub struct CheckMovementStatusMsg {
     pub movement_interaction_id: MovementInteractionId,
 }
 
-/// Requests an actor migration while selecting which endpoint should terminate.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Marshaler)]
-#[az_rtti("059B0DE2-4789-4DC1-945C-3728873D68F2")]
-#[type_registry(5044)]
-pub struct CrashMoveActorMsg {
-    pub actor_id: ActorId,
-    pub target: CrashTarget,
-}
-
-/// Requests migration to a specific hub while selecting which endpoint should terminate.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Marshaler)]
-#[az_rtti("6F298C98-A99E-4210-AD2A-E48D3CD775EE")]
-#[type_registry(5045)]
-pub struct CrashMoveActorToHubMsg {
-    pub actor_id: ActorId,
-    pub hub_id: HubId,
-    pub target: CrashTarget,
-}
-
-/// Initializes a movement coordinator with its migration timeout.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Marshaler)]
-#[az_rtti("E13CE79F-F318-42D2-BADD-991AAE4F3185")]
-#[type_registry(755)]
-pub struct MoveCoordinatorInitMsg {
-    pub movement_timeout: Duration,
-}
-
-/// Requests a pass over movement requests that were deferred earlier.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Marshaler)]
-#[az_rtti("4C220B64-C728-4D31-9C1E-6244E8089215")]
-#[type_registry(723)]
-pub struct ProcessDeferredMovementRequestsMsg;
-
 #[cfg(test)]
 mod tests {
     use uuid::uuid;
 
     use crate::generated_messages::{
         AbortMovementMsg, CancelMovementMsg, CommitMovementMsg, CompleteDelayedMigrationsMsg,
-        DelayMigrationsMsg, MoveActorToHubMsg, MovementTimeoutMsg, StartMovementCommunicationMsg,
+        CrashMoveActorMsg, CrashMoveActorToHubMsg, DelayMigrationsMsg, MoveActorMsg,
+        MoveActorToHubMsg, MoveCoordinatorInitMsg, MovementTimeoutMsg,
+        ProcessDeferredMovementRequestsMsg, StartMovementCommunicationMsg,
         TimeoutMigrationsAtCommitMsg, TimeoutMigrationsMsg,
     };
-    use crate::hub::SyncedTimestamp;
-    use crate::serialize::{CARRIER_ENDIAN, WriteBuffer};
+    use crate::hub::{Duration, HubId, SyncedTimestamp};
+    use crate::serialize::{CARRIER_ENDIAN, Marshal, WriteBuffer};
 
     use super::*;
 
-    fn marshal_bytes(value: &impl Marshaler) -> Vec<u8> {
+    fn marshal_bytes(value: &impl Marshal) -> Vec<u8> {
         let mut wb = WriteBuffer::new(CARRIER_ENDIAN);
         value.marshal(&mut wb);
         wb.into_vec()
@@ -224,6 +183,6 @@ mod tests {
 
     #[test]
     fn deferred_movement_request_message_has_empty_payload() {
-        assert!(marshal_bytes(&ProcessDeferredMovementRequestsMsg).is_empty());
+        assert!(marshal_bytes(&ProcessDeferredMovementRequestsMsg {}).is_empty());
     }
 }

@@ -7,6 +7,7 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/themixednuts/nw-network"
 
 [dependencies]
+arrayvec = { version = "0.7.7", features = ["serde"] }
 bevy_app = "0.19"
 bevy_ecs = { version = "0.19", features = ["serialize"] }
 bevy_color = { version = "0.19", features = ["serialize"] }
@@ -21,7 +22,7 @@ uuid = { version = "1.23", features = ["serde", "v4", "v7"] }
 [build-dependencies]
 anyhow = "1"
 blake3 = "1"
-nw-resources = { git = "https://github.com/themixednuts/nw-tools.git", rev = "284699b559e0e5a66ec2031df0f23bf35f14c44f" }
-nw-serialize-codegen = { git = "https://github.com/themixednuts/nw-tools.git", rev = "284699b559e0e5a66ec2031df0f23bf35f14c44f" }
+nw-resources = { git = "https://github.com/themixednuts/nw-tools.git", rev = "d50387f79d5d36abf6b7c13f573a8b113aa5fa74" }
+nw-serialize-codegen = { git = "https://github.com/themixednuts/nw-tools.git", rev = "d50387f79d5d36abf6b7c13f573a8b113aa5fa74" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

@@ -221,13 +221,15 @@
           "index": 1,
           "name": "RemoteMoveCoordinator",
           "nativeType": "Amazon::Hub::ActorRef",
-          "rustType": "::nw_network::ActorRef"
+          "rustType": "::nw_network::ActorRef",
+          "wireShape": "actor-ref"
         },
         {
           "index": 2,
           "name": "MovementInteractionId",
           "nativeType": "MovementInteractionId",
-          "rustType": "::nw_network::MovementInteractionId"
+          "rustType": "::nw_network::MovementInteractionId",
+          "wireShape": "composite<u32,u32,u64,u64>"
         }
       ]
     },
@@ -249,13 +251,15 @@
           "index": 1,
           "name": "RemoteMoveCoordinator",
           "nativeType": "Amazon::Hub::ActorRef",
-          "rustType": "::nw_network::ActorRef"
+          "rustType": "::nw_network::ActorRef",
+          "wireShape": "actor-ref"
         },
         {
           "index": 2,
           "name": "MovementInteractionId",
           "nativeType": "MovementInteractionId",
-          "rustType": "::nw_network::MovementInteractionId"
+          "rustType": "::nw_network::MovementInteractionId",
+          "wireShape": "composite<u32,u32,u64,u64>"
         }
       ]
     },
@@ -277,7 +281,8 @@
           "index": 1,
           "name": "MovementInteractionId",
           "nativeType": "MovementInteractionId",
-          "rustType": "::nw_network::MovementInteractionId"
+          "rustType": "::nw_network::MovementInteractionId",
+          "wireShape": "composite<u32,u32,u64,u64>"
         }
       ]
     },
@@ -299,7 +304,8 @@
           "index": 1,
           "name": "MovementInteractionId",
           "nativeType": "MovementInteractionId",
-          "rustType": "::nw_network::MovementInteractionId"
+          "rustType": "::nw_network::MovementInteractionId",
+          "wireShape": "composite<u32,u32,u64,u64>"
         }
       ]
     },
@@ -328,13 +334,15 @@
           "index": 2,
           "name": "OriginatingMoveCoordinator",
           "nativeType": "Amazon::Hub::ActorRef",
-          "rustType": "::nw_network::ActorRef"
+          "rustType": "::nw_network::ActorRef",
+          "wireShape": "actor-ref"
         },
         {
           "index": 3,
           "name": "MovementInteractionId",
           "nativeType": "MovementInteractionId",
-          "rustType": "::nw_network::MovementInteractionId"
+          "rustType": "::nw_network::MovementInteractionId",
+          "wireShape": "composite<u32,u32,u64,u64>"
         }
       ]
     },
@@ -489,25 +497,29 @@
           "index": 1,
           "name": "Client",
           "nativeType": "MB::ClientRef",
-          "rustType": "::nw_network::ClientRef"
+          "rustType": "::nw_network::ClientRef",
+          "wireShape": "actor-ref"
         },
         {
           "index": 2,
           "name": "GhostClient",
           "nativeType": "Amazon::Hub::ActorRef",
-          "rustType": "::nw_network::ActorRef"
+          "rustType": "::nw_network::ActorRef",
+          "wireShape": "actor-ref"
         },
         {
           "index": 3,
           "name": "InterestRef",
           "nativeType": "MB::RemoteTypelessServerFacetRef",
-          "rustType": "::nw_network::RemoteTypelessServerFacetRef"
+          "rustType": "::nw_network::RemoteTypelessServerFacetRef",
+          "wireShape": "composite<fixed-bytes-16,u64,u64>"
         },
         {
           "index": 4,
           "name": "OwningActor",
           "nativeType": "Amazon::Hub::ActorRef",
-          "rustType": "::nw_network::ActorRef"
+          "rustType": "::nw_network::ActorRef",
+          "wireShape": "actor-ref"
         }
       ]
     },
@@ -529,25 +541,29 @@
           "index": 1,
           "name": "Client",
           "nativeType": "MB::ClientRef",
-          "rustType": "::nw_network::ClientRef"
+          "rustType": "::nw_network::ClientRef",
+          "wireShape": "actor-ref"
         },
         {
           "index": 2,
           "name": "GhostClient",
           "nativeType": "Amazon::Hub::ActorRef",
-          "rustType": "::nw_network::ActorRef"
+          "rustType": "::nw_network::ActorRef",
+          "wireShape": "actor-ref"
         },
         {
           "index": 3,
           "name": "InterestRef",
           "nativeType": "MB::RemoteTypelessServerFacetRef",
-          "rustType": "::nw_network::RemoteTypelessServerFacetRef"
+          "rustType": "::nw_network::RemoteTypelessServerFacetRef",
+          "wireShape": "composite<fixed-bytes-16,u64,u64>"
         },
         {
           "index": 4,
           "name": "OwningActor",
           "nativeType": "Amazon::Hub::ActorRef",
-          "rustType": "::nw_network::ActorRef"
+          "rustType": "::nw_network::ActorRef",
+          "wireShape": "actor-ref"
         }
       ]
     },

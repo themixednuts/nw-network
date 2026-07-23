@@ -10,8 +10,8 @@ use nw_network::generated::states::{
 };
 use nw_network::network_schema::identity::RaidDataComponentReplicatedState;
 use nw_network::{
-    NetworkFieldConfidence, NetworkTypeCapability, NetworkTypeIdentity, field_for_type_index,
-    fields_for_type_index,
+    NetworkFieldConfidence, NetworkTypeCapability, NetworkTypeIdentity, NetworkWireShape,
+    field_for_type_index, fields_for_type_index,
     generated::messages::{RegisterFragmentAccessMsg, UnregisterFragmentAccessMsg},
     hub::FragmentKey,
     is_replicated_state_type_index, name_for_type_index, non_replicated_state_type_indices,
@@ -45,15 +45,15 @@ fn generated_schema_resolves_known_state_and_message_types() {
         field.index == 0
             && field.name == "raidId"
             && field.group == Some(0)
-            && field.wire_shape.is_none()
+            && field.wire_shape == Some(NetworkWireShape::U64)
             && field.confidence == NetworkFieldConfidence::High
     }));
     let raid_id = field_for_type_index(28, 0).expect("raidId field descriptor");
     assert_eq!(raid_id.name, "raidId");
-    assert!(!raid_id.has_wire_shape());
-    assert_eq!(raid_state.missing_field_wire_shape_count(), 1);
-    assert!(!raid_state.has_complete_field_wire_shapes());
-    assert_eq!(type_indices_missing_field_wire_shapes([28]), vec![28]);
+    assert!(raid_id.has_wire_shape());
+    assert_eq!(raid_state.missing_field_wire_shape_count(), 0);
+    assert!(raid_state.has_complete_field_wire_shapes());
+    assert!(type_indices_missing_field_wire_shapes([28]).is_empty());
 
     assert_eq!(
         name_for_type_index(164),
@@ -152,15 +152,15 @@ fn state_fragment_type_coverage_distinguishes_schema_and_decoder_gaps() {
     assert_eq!(coverage.non_replicated_state_type_indices, vec![67, 164]);
     assert_eq!(
         coverage.unregistered_replicated_state_type_indices,
-        vec![28, 1647, 2947, 3451]
+        vec![2947, 3451]
     );
     assert_eq!(
         coverage.registered_replicated_state_type_indices,
-        vec![11, 333, 670, 2443, 2768, 4276]
+        vec![11, 28, 333, 670, 1647, 2443, 2768, 4276]
     );
     assert_eq!(
         coverage.field_shape_incomplete_replicated_state_type_indices,
-        vec![11, 28, 333, 1647, 2768, 2947, 3451, 4276]
+        vec![11, 333, 1647, 2768, 2947, 3451, 4276]
     );
     assert_eq!(
         coverage.generation_ready_unregistered_replicated_state_type_indices,
@@ -174,10 +174,10 @@ fn state_fragment_type_coverage_distinguishes_schema_and_decoder_gaps() {
     assert!(registered_state.has_complete_field_shapes());
     assert!(registered_state.is_fully_supported());
 
-    let incomplete_state = validate_state_fragment_type_indices([28]);
-    assert!(!incomplete_state.is_fully_registered());
-    assert!(!incomplete_state.has_complete_field_shapes());
-    assert!(!incomplete_state.is_fully_supported());
+    let newly_generated_state = validate_state_fragment_type_indices([28]);
+    assert!(newly_generated_state.is_fully_registered());
+    assert!(newly_generated_state.has_complete_field_shapes());
+    assert!(newly_generated_state.is_fully_supported());
 }
 
 #[test]
@@ -192,10 +192,10 @@ fn replicated_state_port_statuses_compare_schema_and_registered_ports() {
         raid_state.name,
         Some("Javelin::RaidDataComponentReplicatedState")
     );
-    assert!(!raid_state.is_registered);
+    assert!(raid_state.is_registered);
     assert_eq!(raid_state.field_count, 5);
-    assert_eq!(raid_state.missing_field_wire_shape_count, 1);
-    assert!(!raid_state.has_complete_field_shapes());
+    assert_eq!(raid_state.missing_field_wire_shape_count, 0);
+    assert!(raid_state.has_complete_field_shapes());
     assert!(!raid_state.can_generate_state_fields());
 
     let alc_status_state = statuses
@@ -204,7 +204,7 @@ fn replicated_state_port_statuses_compare_schema_and_registered_ports() {
         .expect("alc status state status");
     assert!(alc_status_state.is_registered);
     assert_eq!(alc_status_state.field_count, 64);
-    assert_eq!(alc_status_state.missing_field_wire_shape_count, 7);
+    assert_eq!(alc_status_state.missing_field_wire_shape_count, 1);
     assert!(!alc_status_state.has_complete_field_shapes());
     assert!(!alc_status_state.can_generate_state_fields());
 }

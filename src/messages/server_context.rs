@@ -1,52 +1,43 @@
-//! Server-context control message payloads.
+//! Source-backed server-context payloads not yet replaced by generated types.
 
-use crate::{Marshaler, az_rtti, type_registry};
+use crate::{
+    ActorRef, ClientRef, GdeId, Marshaler, RemoteTypelessServerFacetRef, az_rtti, type_registry,
+};
 
-/// Requests the migration test path.
+/// Adds a client's portrayal references to a remote server context.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Marshaler)]
-#[az_rtti("11F92E5C-122F-4FAF-A2A4-15BD4E2ED629")]
-#[type_registry(2170)]
-pub struct MigrationTestMsg;
+#[az_rtti("604EE6CA-3B94-4209-9845-0F94F5342B92")]
+#[type_registry(2150)]
+pub struct AddPortrayalToClientsMsg {
+    pub gde_id: GdeId,
+    pub client: ClientRef,
+    pub ghost_client: ActorRef,
+    pub interest_ref: RemoteTypelessServerFacetRef,
+    pub owning_actor: ActorRef,
+}
 
-/// Requests a forced actor migration.
+/// Removes a client's portrayal references from a remote server context.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Marshaler)]
-#[az_rtti("FAF8BF74-2D81-42EE-932C-FE6F1D26A04C")]
-#[type_registry(67)]
-pub struct ForceMigrateActorMsg;
-
-/// Requests a forced respawn.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Marshaler)]
-#[az_rtti("E0C6019C-AAE0-4C31-AAF1-C7A674C89751")]
-#[type_registry(1270)]
-pub struct ForceRespawnMsg;
-
-/// Requests an immediate persistence pass.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Marshaler)]
-#[az_rtti("E79B0589-3011-4358-BEF5-018FF608DD7B")]
-#[type_registry(2173)]
-pub struct ForcePersistMsg;
-
-/// Requests script garbage collection.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Marshaler)]
-#[az_rtti("81B1655E-57B3-4636-AB32-67315A131325")]
-#[type_registry(1487)]
-pub struct ScriptGarbageCollectMsg;
-
-/// Notifies clients that stack configuration changed.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Marshaler)]
-#[az_rtti("20D2224E-FAC8-4F92-8C80-A30889D1C269")]
-#[type_registry(5536)]
-pub struct StackConfigChangedMsg;
+#[az_rtti("0EF3B71F-BA81-48E1-8CE8-E3E511218688")]
+#[type_registry(2168)]
+pub struct RemovePortrayalFromClientsMsg {
+    pub gde_id: GdeId,
+    pub client: ClientRef,
+    pub ghost_client: ActorRef,
+    pub interest_ref: RemoteTypelessServerFacetRef,
+    pub owning_actor: ActorRef,
+}
 
 #[cfg(test)]
 mod tests {
     use uuid::uuid;
 
     use crate::generated_messages::{
-        AddPortrayalToClientsMsg, ForceMigrateAndCrashMsg, PulseMsg, RemovePortrayalFromClientsMsg,
-        RequestReportDirtyPersistedStatesMsg, SetBurningMigrationTestMsg,
+        ForceMigrateActorMsg, ForceMigrateAndCrashMsg, ForcePersistMsg, ForceRespawnMsg,
+        MigrationTestMsg, PulseMsg, RequestReportDirtyPersistedStatesMsg, ScriptGarbageCollectMsg,
+        SetBurningMigrationTestMsg, StackConfigChangedMsg,
     };
-    use crate::serialize::{CARRIER_ENDIAN, WriteBuffer};
+    use crate::serialize::{CARRIER_ENDIAN, Marshal, WriteBuffer};
     use crate::{
         ActorRef, ClientRef, GdeId, RemoteServerContextRef, RemoteServerGdeRef,
         RemoteTypelessServerFacetRef, TimePoint,
@@ -54,7 +45,7 @@ mod tests {
 
     use super::*;
 
-    fn marshal_bytes(value: &impl Marshaler) -> Vec<u8> {
+    fn marshal_bytes(value: &impl Marshal) -> Vec<u8> {
         let mut wb = WriteBuffer::new(CARRIER_ENDIAN);
         value.marshal(&mut wb);
         wb.into_vec()
@@ -62,12 +53,12 @@ mod tests {
 
     #[test]
     fn fieldless_server_context_messages_have_empty_payloads() {
-        assert!(marshal_bytes(&MigrationTestMsg).is_empty());
-        assert!(marshal_bytes(&ForceMigrateActorMsg).is_empty());
-        assert!(marshal_bytes(&ForceRespawnMsg).is_empty());
-        assert!(marshal_bytes(&ForcePersistMsg).is_empty());
-        assert!(marshal_bytes(&ScriptGarbageCollectMsg).is_empty());
-        assert!(marshal_bytes(&StackConfigChangedMsg).is_empty());
+        assert!(marshal_bytes(&MigrationTestMsg {}).is_empty());
+        assert!(marshal_bytes(&ForceMigrateActorMsg {}).is_empty());
+        assert!(marshal_bytes(&ForceRespawnMsg {}).is_empty());
+        assert!(marshal_bytes(&ForcePersistMsg {}).is_empty());
+        assert!(marshal_bytes(&ScriptGarbageCollectMsg {}).is_empty());
+        assert!(marshal_bytes(&StackConfigChangedMsg {}).is_empty());
     }
 
     #[test]
@@ -101,7 +92,7 @@ mod tests {
     }
 
     #[test]
-    fn generated_portrayal_messages_preserve_reference_field_order() {
+    fn source_backed_portrayal_messages_preserve_reference_field_order() {
         let gde_id = GdeId::new(0x0102_0304_0506_0708);
         let client_ref = ClientRef::new(ActorRef::new(
             1,

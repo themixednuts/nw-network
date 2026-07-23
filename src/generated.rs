@@ -10,15 +10,14 @@ pub mod states {
 }
 
 pub mod messages {
+    #![allow(clippy::type_complexity)]
+
     include!(concat!(
         env!("NW_NETWORK_GENERATED_DIR"),
         "/generated_messages.rs"
     ));
 
-    pub use crate::messages::actor_mover::{
-        CheckMovementStatusMsg, CrashMoveActorMsg, CrashMoveActorToHubMsg, MoveActorMsg,
-        MoveCoordinatorInitMsg,
-    };
+    pub use crate::messages::actor_mover::CheckMovementStatusMsg;
 }
 
 mod conversions {

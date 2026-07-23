@@ -132,6 +132,9 @@ name = "arrayvec"
 version = "0.7.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f02882884d3e1bc524fb12c79f107f6ad0e1cfd498c536ffb494301740995dfe"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "assert_type_match"
@@ -1704,7 +1707,7 @@ dependencies = [
 [[package]]
 name = "nw-asset"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git?rev=284699b559e0e5a66ec2031df0f23bf35f14c44f#284699b559e0e5a66ec2031df0f23bf35f14c44f"
+source = "git+https://github.com/themixednuts/nw-tools.git?rev=d50387f79d5d36abf6b7c13f573a8b113aa5fa74#d50387f79d5d36abf6b7c13f573a8b113aa5fa74"
 dependencies = [
  "nw-filesystem",
  "nw-jobs",
@@ -1716,7 +1719,7 @@ dependencies = [
 [[package]]
 name = "nw-filesystem"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git?rev=284699b559e0e5a66ec2031df0f23bf35f14c44f#284699b559e0e5a66ec2031df0f23bf35f14c44f"
+source = "git+https://github.com/themixednuts/nw-tools.git?rev=d50387f79d5d36abf6b7c13f573a8b113aa5fa74#d50387f79d5d36abf6b7c13f573a8b113aa5fa74"
 dependencies = [
  "thiserror",
 ]
@@ -1756,7 +1759,7 @@ dependencies = [
 [[package]]
 name = "nw-jobs"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git?rev=284699b559e0e5a66ec2031df0f23bf35f14c44f#284699b559e0e5a66ec2031df0f23bf35f14c44f"
+source = "git+https://github.com/themixednuts/nw-tools.git?rev=d50387f79d5d36abf6b7c13f573a8b113aa5fa74#d50387f79d5d36abf6b7c13f573a8b113aa5fa74"
 dependencies = [
  "crossbeam-channel",
  "rayon",
@@ -1804,6 +1807,7 @@ name = "nw-network-types"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "arrayvec",
  "bevy_app",
  "bevy_color",
  "bevy_ecs",
@@ -1823,7 +1827,7 @@ dependencies = [
 [[package]]
 name = "nw-objectstream"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git?rev=284699b559e0e5a66ec2031df0f23bf35f14c44f#284699b559e0e5a66ec2031df0f23bf35f14c44f"
+source = "git+https://github.com/themixednuts/nw-tools.git?rev=d50387f79d5d36abf6b7c13f573a8b113aa5fa74#d50387f79d5d36abf6b7c13f573a8b113aa5fa74"
 dependencies = [
  "arcstr",
  "arrayvec",
@@ -1841,7 +1845,7 @@ dependencies = [
 [[package]]
 name = "nw-pak"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git?rev=284699b559e0e5a66ec2031df0f23bf35f14c44f#284699b559e0e5a66ec2031df0f23bf35f14c44f"
+source = "git+https://github.com/themixednuts/nw-tools.git?rev=d50387f79d5d36abf6b7c13f573a8b113aa5fa74#d50387f79d5d36abf6b7c13f573a8b113aa5fa74"
 dependencies = [
  "crc32fast",
  "flate2",
@@ -1857,12 +1861,12 @@ dependencies = [
 [[package]]
 name = "nw-resources"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git?rev=284699b559e0e5a66ec2031df0f23bf35f14c44f#284699b559e0e5a66ec2031df0f23bf35f14c44f"
+source = "git+https://github.com/themixednuts/nw-tools.git?rev=d50387f79d5d36abf6b7c13f573a8b113aa5fa74#d50387f79d5d36abf6b7c13f573a8b113aa5fa74"
 
 [[package]]
 name = "nw-serialize-codegen"
 version = "0.1.0"
-source = "git+https://github.com/themixednuts/nw-tools.git?rev=284699b559e0e5a66ec2031df0f23bf35f14c44f#284699b559e0e5a66ec2031df0f23bf35f14c44f"
+source = "git+https://github.com/themixednuts/nw-tools.git?rev=d50387f79d5d36abf6b7c13f573a8b113aa5fa74#d50387f79d5d36abf6b7c13f573a8b113aa5fa74"
 dependencies = [
  "anyhow",
  "blake3",
