@@ -49,9 +49,8 @@ pub use hub::{
     StateRecordHeader, StateRecordWriter, SyncedTimestamp, Timestamp, TypeIndex,
 };
 pub use messages::{
-    AddPortrayalToClientsMsg, AuthToken, CheckMovementStatusMsg, ClientVersionTokenMap, ConnTicket,
-    ImpersonatedValues, LoginToken, RegistrationRequestV3Msg, RemovePortrayalFromClientsMsg,
-    TypeIndexCrc,
+    AuthToken, CheckMovementStatusMsg, ClientVersionTokenMap, ConnTicket, ImpersonatedValues,
+    LoginToken, RegistrationRequestV3Msg, TypeIndexCrc,
 };
 pub use network_schema::{
     NetworkFieldConfidence, NetworkFieldDescriptor, NetworkRegistryEntry,

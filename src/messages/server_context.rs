@@ -1,50 +1,20 @@
-//! Source-backed server-context payloads not yet replaced by generated types.
-
-use crate::{
-    ActorRef, ClientRef, GdeId, Marshaler, RemoteTypelessServerFacetRef, az_rtti, type_registry,
-};
-
-/// Adds a client's portrayal references to a remote server context.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Marshaler)]
-#[az_rtti("604EE6CA-3B94-4209-9845-0F94F5342B92")]
-#[type_registry(2150)]
-pub struct AddPortrayalToClientsMsg {
-    pub gde_id: GdeId,
-    pub client: ClientRef,
-    pub ghost_client: ActorRef,
-    pub interest_ref: RemoteTypelessServerFacetRef,
-    pub owning_actor: ActorRef,
-}
-
-/// Removes a client's portrayal references from a remote server context.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Marshaler)]
-#[az_rtti("0EF3B71F-BA81-48E1-8CE8-E3E511218688")]
-#[type_registry(2168)]
-pub struct RemovePortrayalFromClientsMsg {
-    pub gde_id: GdeId,
-    pub client: ClientRef,
-    pub ghost_client: ActorRef,
-    pub interest_ref: RemoteTypelessServerFacetRef,
-    pub owning_actor: ActorRef,
-}
+//! Server-context generated-message wire validation.
 
 #[cfg(test)]
 mod tests {
     use uuid::uuid;
 
     use crate::generated_messages::{
-        ForceMigrateActorMsg, ForceMigrateAndCrashMsg, ForcePersistMsg, ForceRespawnMsg,
-        MigrationTestMsg, PulseMsg, RequestReportDirtyPersistedStatesMsg, ScriptGarbageCollectMsg,
-        SetBurningMigrationTestMsg, StackConfigChangedMsg,
+        AddPortrayalToClientsMsg, ForceMigrateActorMsg, ForceMigrateAndCrashMsg, ForcePersistMsg,
+        ForceRespawnMsg, MigrationTestMsg, PulseMsg, RemovePortrayalFromClientsMsg,
+        RequestReportDirtyPersistedStatesMsg, ScriptGarbageCollectMsg, SetBurningMigrationTestMsg,
+        StackConfigChangedMsg,
     };
     use crate::serialize::{CARRIER_ENDIAN, Marshal, WriteBuffer};
     use crate::{
         ActorRef, ClientRef, GdeId, RemoteServerContextRef, RemoteServerGdeRef,
         RemoteTypelessServerFacetRef, TimePoint,
     };
-
-    use super::*;
-
     fn marshal_bytes(value: &impl Marshal) -> Vec<u8> {
         let mut wb = WriteBuffer::new(CARRIER_ENDIAN);
         value.marshal(&mut wb);
@@ -92,7 +62,7 @@ mod tests {
     }
 
     #[test]
-    fn source_backed_portrayal_messages_preserve_reference_field_order() {
+    fn generated_portrayal_messages_preserve_reference_field_order() {
         let gde_id = GdeId::new(0x0102_0304_0506_0708);
         let client_ref = ClientRef::new(ActorRef::new(
             1,
