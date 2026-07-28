@@ -5,9 +5,9 @@ use nw_network::generated::states::{
     EventTimelineComponentReplicatedState as GeneratedEventTimelineComponentReplicatedState,
     IncapacitatedReplicatedState as GeneratedIncapacitatedReplicatedState,
     LookTargetingComponentReplicatedState as GeneratedLookTargetingComponentReplicatedState,
-    PlayerHousingReplicatedState as GeneratedPlayerHousingReplicatedState,
 };
 use nw_network::network_schema::identity::RaidDataComponentReplicatedState;
+use nw_network::states::PlayerHousingReplicatedState;
 use nw_network::{
     NetworkFieldConfidence, NetworkTypeCapability, NetworkTypeIdentity, NetworkWireShape,
     field_for_type_index, fields_for_type_index,
@@ -230,11 +230,6 @@ fn generated_replicated_states_are_registered_unless_denied() {
             <GeneratedLookTargetingComponentReplicatedState as nw_network::AzRtti>::TYPE_ID,
             LOOK_TARGETING_TYPE_ID,
         ),
-        (
-            <GeneratedPlayerHousingReplicatedState as nw_network::TypeRegistryEntry>::TYPE_INDEX,
-            <GeneratedPlayerHousingReplicatedState as nw_network::AzRtti>::TYPE_ID,
-            PLAYER_HOUSING_TYPE_ID,
-        ),
     ];
 
     for (type_index, type_id, expected_type_id) in expected {
@@ -244,6 +239,22 @@ fn generated_replicated_states_are_registered_unless_denied() {
         assert_eq!((registration.type_index)(), type_index);
         assert_eq!((registration.uuid)(), expected_type_id);
     }
+}
+
+#[test]
+fn folded_player_housing_state_owns_its_registration() {
+    assert_eq!(
+        <PlayerHousingReplicatedState as nw_network::TypeRegistryEntry>::TYPE_INDEX,
+        2768
+    );
+    assert_eq!(
+        <PlayerHousingReplicatedState as nw_network::AzRtti>::TYPE_ID,
+        PLAYER_HOUSING_TYPE_ID
+    );
+
+    let registration = nw_network::hub::fragment_registration_by_type_index(2768)
+        .expect("player housing state registration");
+    assert_eq!((registration.uuid)(), PLAYER_HOUSING_TYPE_ID);
 }
 
 #[test]

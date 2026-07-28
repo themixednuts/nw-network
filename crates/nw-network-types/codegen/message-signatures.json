@@ -55,6 +55,19 @@
       ]
     },
     {
+      "typeId": "B40AE287-A16F-48C6-B43F-246CD34CE105",
+      "typeIndex": 226,
+      "name": "ConfigOverridesDebugResponseTrait::ReceiveConfigOverridesKeyValuePairsMsg",
+      "rustName": "ReceiveConfigOverridesKeyValuePairsMsg",
+      "source": "message-signature-notes",
+      "fields": [
+        {
+          "index": 0,
+          "name": "sections"
+        }
+      ]
+    },
+    {
       "typeId": "038CD847-0653-4243-9A26-936E3BD7F312",
       "typeIndex": 335,
       "name": "REPClient::TimeSynchMsg",

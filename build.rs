@@ -8,8 +8,8 @@ use std::{
 use anyhow::{Context, Result, bail};
 use nw_resources::EmbeddedResource;
 use nw_serialize_codegen::{
-    CodegenContext, NETWORK_RUST_EMITTER_VERSION, NetworkFieldOverrideFile,
-    NetworkMessageSignature, NetworkReplicatedStateEmitOptions, NetworkRustEmitter, NetworkSchema,
+    CodegenContext, NETWORK_RUST_EMITTER_VERSION, NetworkMessageSignature,
+    NetworkReplicatedStateEmitOptions, NetworkRustEmitter, NetworkSchema,
     NetworkSerializeRootPlanner, SerializeCodegenItem, SerializeCodegenItemKind,
     SerializeCodegenRootMode, SerializeCodegenRootSelection, SerializeCodegenUnit,
     SerializeContextCompileInputs, SerializeContextCompiler, SerializeContextDocument,
@@ -40,7 +40,6 @@ fn main() -> Result<()> {
         PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").context("CARGO_MANIFEST_DIR")?);
     let build_script = manifest_dir.join("build.rs");
     let generated_state_denylist_file = manifest_dir.join("codegen/generated-state-denylist.json");
-    let network_field_overrides_file = manifest_dir.join("codegen/network-field-overrides.json");
     let generated_type_selection_file =
         manifest_dir.join("crates/nw-network-types/codegen/selection.json");
     let network_schema_file =
@@ -50,7 +49,6 @@ fn main() -> Result<()> {
 
     rerun_if_changed(&build_script);
     rerun_if_changed(&generated_state_denylist_file);
-    rerun_if_changed(&network_field_overrides_file);
     rerun_if_changed(&generated_type_selection_file);
     rerun_if_changed(&network_schema_file);
     rerun_if_changed(&message_signatures_file);
@@ -58,7 +56,6 @@ fn main() -> Result<()> {
     let input_hash = input_hash(
         &build_script,
         &generated_state_denylist_file,
-        &network_field_overrides_file,
         &generated_type_selection_file,
         &network_schema_file,
         &message_signatures_file,
@@ -105,24 +102,6 @@ fn main() -> Result<()> {
             signature_report.ambiguous_message_count,
             signature_report.field_index_mismatch_count,
             signature_report.field_name_conflict_count
-        );
-    }
-    let network_field_overrides = load_network_field_overrides(&network_field_overrides_file)?;
-    let override_report = network_schema.merge_field_overrides(
-        &network_field_overrides,
-        Some(network_field_overrides_file.display().to_string()),
-    );
-    if override_report.unmatched_type_count != 0
-        || override_report.ambiguous_type_count != 0
-        || override_report.unmatched_field_count != 0
-        || override_report.ambiguous_field_count != 0
-    {
-        bail!(
-            "network field overrides did not resolve cleanly: {} unmatched type(s), {} ambiguous type(s), {} unmatched field(s), {} ambiguous field(s)",
-            override_report.unmatched_type_count,
-            override_report.ambiguous_type_count,
-            override_report.unmatched_field_count,
-            override_report.ambiguous_field_count
         );
     }
     let generated_types =
@@ -217,11 +196,6 @@ impl GeneratedStateDenylistFile {
     }
 }
 
-fn load_network_field_overrides(path: &Path) -> Result<NetworkFieldOverrideFile> {
-    let bytes = fs::read(path).with_context(|| format!("read {}", path.display()))?;
-    serde_json::from_slice(&bytes).with_context(|| format!("parse {}", path.display()))
-}
-
 fn load_message_signatures(path: &Path) -> Result<Vec<NetworkMessageSignature>> {
     let bytes = fs::read(path).with_context(|| format!("read {}", path.display()))?;
     let root = serde_json::from_slice::<Value>(&bytes)
@@ -294,7 +268,6 @@ fn stable_generated_root(out_dir: &Path, name: &str) -> Result<PathBuf> {
 fn input_hash(
     build_script: &Path,
     generated_state_denylist_file: &Path,
-    network_field_overrides_file: &Path,
     generated_type_selection_file: &Path,
     network_schema_file: &Path,
     message_signatures_file: &Path,
@@ -306,11 +279,6 @@ fn input_hash(
     hash_file(
         "codegen/generated-state-denylist.json",
         generated_state_denylist_file,
-        &mut hash,
-    )?;
-    hash_file(
-        "codegen/network-field-overrides.json",
-        network_field_overrides_file,
         &mut hash,
     )?;
     hash_file(

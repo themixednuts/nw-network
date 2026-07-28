@@ -20,4 +20,4 @@ pub use player_home::{
     HomePointPersistentRef, HomePointReplicatedState, PlayerHomeComponentReplicatedState,
     PlayerHomeSnapshot,
 };
-pub use player_housing::ReplicatedOwnedHouseData;
+pub use player_housing::{PlayerHousingReplicatedState, ReplicatedOwnedHouseData};

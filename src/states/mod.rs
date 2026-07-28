@@ -71,7 +71,7 @@ pub use housing::{
     CommittedResourceValue, HomePointPersistentRef, HomePointReplicatedState,
     HouseDataReplicatedState, HousingItemValue, MAX_BUILDABLE_GRID_SIDE_CHANGES,
     PlacementObstructionComponentReplicatedState, PlayerHomeComponentReplicatedState,
-    PlayerHomeSnapshot, ReplicatedOwnedHouseData,
+    PlayerHomeSnapshot, PlayerHousingReplicatedState, ReplicatedOwnedHouseData,
 };
 pub use interaction::{
     DelayedEventComponentReplicatedState, DetectionVolumeEventReplicatedState,
