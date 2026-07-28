@@ -10,11 +10,11 @@ use nw_resources::EmbeddedResource;
 use nw_serialize_codegen::{
     CodegenContext, NETWORK_RUST_EMITTER_VERSION, NetworkFieldOverrideFile,
     NetworkMessageSignature, NetworkReplicatedStateEmitOptions, NetworkRustEmitter, NetworkSchema,
-    NetworkSerializeRootPlanner, SerializeCodegenItemKind, SerializeCodegenRootMode,
-    SerializeCodegenRootSelection, SerializeCodegenUnit, SerializeContextCompileInputs,
-    SerializeContextCompiler, SerializeContextDocument, complete_known_missing_reflected_bodies,
-    module_descriptor_capture, module_descriptors_root, module_name_from_resource_name,
-    resolve_codegen_root_type_ids, rust_type_ident,
+    NetworkSerializeRootPlanner, SerializeCodegenItem, SerializeCodegenItemKind,
+    SerializeCodegenRootMode, SerializeCodegenRootSelection, SerializeCodegenUnit,
+    SerializeContextCompileInputs, SerializeContextCompiler, SerializeContextDocument,
+    complete_known_missing_reflected_bodies, module_descriptor_capture, module_descriptors_root,
+    module_name_from_resource_name, resolve_codegen_root_type_ids, rust_type_ident,
 };
 use serde::Deserialize;
 use serde_json::Value;
@@ -154,15 +154,22 @@ fn main() -> Result<()> {
         NetworkRustEmitter::emit_messages(&network_schema).context("emit generated messages")?;
     let required_source_struct_types =
         required_source_struct_type_names(output.source.as_str(), message_output.source.as_str());
-    let conversion_items = generated_types.items.iter().filter(|item| {
-        let rust_name = rust_type_ident(source_name_leaf(&item.source_name));
-        match item.kind {
-            SerializeCodegenItemKind::Enum => true,
-            SerializeCodegenItemKind::Struct => {
-                required_source_struct_types.contains(&rust_name)
-                    && !MANUAL_SOURCE_MARSHALERS.contains(&item.source_name.as_str())
-                    && !MANUAL_SOURCE_MARSHALERS.contains(&source_name_leaf(&item.source_name))
-            }
+    let generated_type_index = generated_types.index();
+    let mut required_conversion_type_ids = BTreeSet::new();
+    for item in generated_types.items.iter().filter(|item| {
+        item.kind == SerializeCodegenItemKind::Struct
+            && required_source_struct_types
+                .contains(&rust_type_ident(source_name_leaf(&item.source_name)))
+            && !has_manual_source_marshaler(item)
+    }) {
+        generated_type_index
+            .extend_transitive_dependency_type_ids(item, &mut required_conversion_type_ids);
+    }
+    let conversion_items = generated_types.items.iter().filter(|item| match item.kind {
+        SerializeCodegenItemKind::Enum => true,
+        SerializeCodegenItemKind::Struct => {
+            required_conversion_type_ids.contains(&item.source_type_id)
+                && !has_manual_source_marshaler(item)
         }
     });
     let conversion_output = NetworkRustEmitter::emit_marshaler_conversions(conversion_items)
@@ -403,6 +410,11 @@ fn required_source_struct_type_names(state_source: &str, message_source: &str) -
     ));
     names.extend(source_type_names(message_source));
     names
+}
+
+fn has_manual_source_marshaler(item: &SerializeCodegenItem) -> bool {
+    MANUAL_SOURCE_MARSHALERS.contains(&item.source_name.as_str())
+        || MANUAL_SOURCE_MARSHALERS.contains(&source_name_leaf(&item.source_name))
 }
 
 fn compact_rust_source(source: &str) -> String {

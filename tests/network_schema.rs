@@ -6,7 +6,6 @@ use nw_network::generated::states::{
     IncapacitatedReplicatedState as GeneratedIncapacitatedReplicatedState,
     LookTargetingComponentReplicatedState as GeneratedLookTargetingComponentReplicatedState,
     PlayerHousingReplicatedState as GeneratedPlayerHousingReplicatedState,
-    TurretReplicatedState as GeneratedTurretReplicatedState,
 };
 use nw_network::network_schema::identity::RaidDataComponentReplicatedState;
 use nw_network::{
@@ -28,7 +27,6 @@ const INCAPACITATED_TYPE_ID: Uuid = Uuid::from_u128(0x490db5f1_4e39_483a_9897_78
 const EVENT_TIMELINE_TYPE_ID: Uuid = Uuid::from_u128(0x9e6ee43b_15f1_497b_9461_1f97e488aa10);
 const LOOK_TARGETING_TYPE_ID: Uuid = Uuid::from_u128(0xeae9bc99_4d02_4ba5_acfa_85eb452119f2);
 const PLAYER_HOUSING_TYPE_ID: Uuid = Uuid::from_u128(0x4f70c3bb_8f7d_48c2_a0b6_95431f88f356);
-const TURRET_TYPE_ID: Uuid = Uuid::from_u128(0xa9f8d205_2922_41e1_b8c2_0dfaf1cc8475);
 
 #[test]
 fn generated_schema_resolves_known_state_and_message_types() {
@@ -152,15 +150,15 @@ fn state_fragment_type_coverage_distinguishes_schema_and_decoder_gaps() {
     assert_eq!(coverage.non_replicated_state_type_indices, vec![67, 164]);
     assert_eq!(
         coverage.unregistered_replicated_state_type_indices,
-        vec![2947, 3451]
+        vec![2947, 3451, 4276]
     );
     assert_eq!(
         coverage.registered_replicated_state_type_indices,
-        vec![11, 28, 333, 670, 1647, 2443, 2768, 4276]
+        vec![11, 28, 333, 670, 1647, 2443, 2768]
     );
     assert_eq!(
         coverage.field_shape_incomplete_replicated_state_type_indices,
-        vec![11, 333, 1647, 2768, 2947, 3451, 4276]
+        vec![333, 1647, 2768, 2947, 3451, 4276]
     );
     assert_eq!(
         coverage.generation_ready_unregistered_replicated_state_type_indices,
@@ -204,8 +202,8 @@ fn replicated_state_port_statuses_compare_schema_and_registered_ports() {
         .expect("alc status state status");
     assert!(alc_status_state.is_registered);
     assert_eq!(alc_status_state.field_count, 64);
-    assert_eq!(alc_status_state.missing_field_wire_shape_count, 1);
-    assert!(!alc_status_state.has_complete_field_shapes());
+    assert_eq!(alc_status_state.missing_field_wire_shape_count, 0);
+    assert!(alc_status_state.has_complete_field_shapes());
     assert!(!alc_status_state.can_generate_state_fields());
 }
 
@@ -236,11 +234,6 @@ fn generated_replicated_states_are_registered_unless_denied() {
             <GeneratedPlayerHousingReplicatedState as nw_network::TypeRegistryEntry>::TYPE_INDEX,
             <GeneratedPlayerHousingReplicatedState as nw_network::AzRtti>::TYPE_ID,
             PLAYER_HOUSING_TYPE_ID,
-        ),
-        (
-            <GeneratedTurretReplicatedState as nw_network::TypeRegistryEntry>::TYPE_INDEX,
-            <GeneratedTurretReplicatedState as nw_network::AzRtti>::TYPE_ID,
-            TURRET_TYPE_ID,
         ),
     ];
 
