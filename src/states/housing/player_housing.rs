@@ -34,7 +34,7 @@ pub struct PlayerHousingReplicatedState {
     #[replicated_state(name = "hasPurchasedHouse")]
     pub has_purchased_house: ReplicatedFieldHandler<bool>,
     #[replicated_state(name = "ownedHouses")]
-    pub owned_houses: ReplicatedFieldHandler<ReplicatedContainer<Vec<ReplicatedOwnedHouseData>>>,
+    pub owned_houses: ReplicatedContainer<Vec<ReplicatedOwnedHouseData>>,
     #[replicated_state(name = "lastHouseRequestResponse")]
     pub last_house_request_response: ReplicatedFieldHandler<u8>,
     #[replicated_state(name = "m_isWithinAPlot")]
@@ -49,4 +49,16 @@ pub struct PlayerHousingReplicatedState {
     pub phased_house_owner_character_id: ReplicatedFieldHandler<String>,
     #[replicated_state(name = "m_debugDataString")]
     pub debug_data_string: ReplicatedFieldHandler<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn owned_houses_uses_the_native_container_handler() {
+        fn assert_type(_: &ReplicatedContainer<Vec<ReplicatedOwnedHouseData>>) {}
+
+        assert_type(&PlayerHousingReplicatedState::default().owned_houses);
+    }
 }
