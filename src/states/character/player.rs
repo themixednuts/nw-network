@@ -345,7 +345,7 @@ mod tests {
     use super::*;
     use crate::Marshal;
     use crate::hub::ClientActorHash;
-    use crate::serialize::{CARRIER_ENDIAN, WriteBuffer};
+    use crate::serialize::{CARRIER_ENDIAN, Marshal, WriteBuffer};
 
     #[test]
     fn free_player_countdown_uses_wire_order_and_defaults() {

@@ -1,35 +1,20 @@
-//! Source-backed actor movement payloads not yet replaced by generated types.
-
-use crate::hub::{ActorId, ActorRef, MovementInteractionId, Timestamp};
-use crate::{Marshaler, az_rtti, type_registry};
-
-/// Queries the state of an in-flight actor migration.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Marshaler)]
-#[az_rtti("44BA8334-C3AA-476E-855C-27364BF8A964")]
-#[type_registry(747)]
-pub struct CheckMovementStatusMsg {
-    pub actor_id: ActorId,
-    pub movement_interaction_timeout: Timestamp,
-    pub originating_move_coordinator: ActorRef,
-    pub movement_interaction_id: MovementInteractionId,
-}
+//! Actor-movement generated-message wire validation.
 
 #[cfg(test)]
 mod tests {
     use uuid::uuid;
 
     use crate::generated_messages::{
-        AbortMovementMsg, CancelMovementMsg, CommitMovementMsg, CompleteDelayedMigrationsMsg,
-        CrashMoveActorMsg, CrashMoveActorToHubMsg, DelayMigrationsMsg, MoveActorMsg,
-        MoveActorToHubMsg, MoveCoordinatorInitMsg, MovementTimeoutMsg,
+        AbortMovementMsg, CancelMovementMsg, CheckMovementStatusMsg, CommitMovementMsg,
+        CompleteDelayedMigrationsMsg, CrashMoveActorMsg, CrashMoveActorToHubMsg, DelayMigrationsMsg,
+        MoveActorMsg, MoveActorToHubMsg, MoveCoordinatorInitMsg, MovementTimeoutMsg,
         ProcessDeferredMovementRequestsMsg, StartMovementCommunicationMsg,
         TimeoutMigrationsAtCommitMsg, TimeoutMigrationsMsg,
     };
-    use crate::hub::{Duration, HubId, SyncedTimestamp};
+    use crate::hub::{
+        ActorId, ActorRef, Duration, HubId, MovementInteractionId, SyncedTimestamp, Timestamp,
+    };
     use crate::serialize::{CARRIER_ENDIAN, Marshal, WriteBuffer};
-
-    use super::*;
-
     fn marshal_bytes(value: &impl Marshal) -> Vec<u8> {
         let mut wb = WriteBuffer::new(CARRIER_ENDIAN);
         value.marshal(&mut wb);
@@ -131,19 +116,13 @@ mod tests {
             routed_movement
         );
 
-        let timeout = Timestamp::new(0x1020_3040_5060_7080);
-        let mut status = marshal_bytes(&actor_id);
-        status.extend(marshal_bytes(&timeout));
-        status.extend(marshal_bytes(&coordinator));
-        status.extend(marshal_bytes(&movement_interaction_id));
         assert_eq!(
             marshal_bytes(&CheckMovementStatusMsg {
                 actor_id,
-                movement_interaction_timeout: timeout,
-                originating_move_coordinator: coordinator,
+                remote_move_coordinator: coordinator,
                 movement_interaction_id,
             }),
-            status
+            routed_movement
         );
     }
 

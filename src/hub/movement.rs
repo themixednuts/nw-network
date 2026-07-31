@@ -51,7 +51,7 @@ mod tests {
 
     use crate::Marshal;
     use crate::hub::ActorId;
-    use crate::serialize::{CARRIER_ENDIAN, ReadBuffer, WriteBuffer};
+    use crate::serialize::{CARRIER_ENDIAN, Marshal, ReadBuffer, WriteBuffer};
 
     use super::*;
 

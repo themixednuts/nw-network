@@ -338,20 +338,13 @@
         },
         {
           "index": 1,
-          "name": "MovementInteractionTimeout",
-          "nativeType": "Amazon::Pervasives::Timestamp",
-          "rustType": "::nw_network::Timestamp",
-          "wireShape": "u64"
-        },
-        {
-          "index": 2,
-          "name": "OriginatingMoveCoordinator",
+          "name": "RemoteMoveCoordinator",
           "nativeType": "Amazon::Hub::ActorRef",
           "rustType": "::nw_network::ActorRef",
           "wireShape": "actor-ref"
         },
         {
-          "index": 3,
+          "index": 2,
           "name": "MovementInteractionId",
           "nativeType": "MovementInteractionId",
           "rustType": "::nw_network::MovementInteractionId",
@@ -501,31 +494,31 @@
       "fields": [
         {
           "index": 0,
+          "name": "InterestRef",
+          "nativeType": "MB::RemoteTypelessServerFacetRef",
+          "rustType": "::nw_network::RemoteTypelessServerFacetRef",
+          "wireShape": "composite<fixed-bytes-16,u64,u64>"
+        },
+        {
+          "index": 1,
           "name": "GdeId",
           "nativeType": "MB::GDEID",
           "rustType": "::nw_network::GdeId",
           "wireShape": "u64"
         },
         {
-          "index": 1,
+          "index": 2,
           "name": "Client",
-          "nativeType": "MB::ClientRef",
+          "nativeType": "Amazon::Hub::ActorRef",
           "rustType": "::nw_network::ClientRef",
           "wireShape": "actor-ref"
         },
         {
-          "index": 2,
+          "index": 3,
           "name": "GhostClient",
           "nativeType": "Amazon::Hub::ActorRef",
           "rustType": "::nw_network::ActorRef",
           "wireShape": "actor-ref"
-        },
-        {
-          "index": 3,
-          "name": "InterestRef",
-          "nativeType": "MB::RemoteTypelessServerFacetRef",
-          "rustType": "::nw_network::RemoteTypelessServerFacetRef",
-          "wireShape": "composite<fixed-bytes-16,u64,u64>"
         },
         {
           "index": 4,
@@ -545,31 +538,31 @@
       "fields": [
         {
           "index": 0,
+          "name": "InterestRef",
+          "nativeType": "MB::RemoteTypelessServerFacetRef",
+          "rustType": "::nw_network::RemoteTypelessServerFacetRef",
+          "wireShape": "composite<fixed-bytes-16,u64,u64>"
+        },
+        {
+          "index": 1,
           "name": "GdeId",
           "nativeType": "MB::GDEID",
           "rustType": "::nw_network::GdeId",
           "wireShape": "u64"
         },
         {
-          "index": 1,
+          "index": 2,
           "name": "Client",
-          "nativeType": "MB::ClientRef",
+          "nativeType": "Amazon::Hub::ActorRef",
           "rustType": "::nw_network::ClientRef",
           "wireShape": "actor-ref"
         },
         {
-          "index": 2,
+          "index": 3,
           "name": "GhostClient",
           "nativeType": "Amazon::Hub::ActorRef",
           "rustType": "::nw_network::ActorRef",
           "wireShape": "actor-ref"
-        },
-        {
-          "index": 3,
-          "name": "InterestRef",
-          "nativeType": "MB::RemoteTypelessServerFacetRef",
-          "rustType": "::nw_network::RemoteTypelessServerFacetRef",
-          "wireShape": "composite<fixed-bytes-16,u64,u64>"
         },
         {
           "index": 4,

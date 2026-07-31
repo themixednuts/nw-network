@@ -111,6 +111,7 @@ fn main() -> Result<()> {
         &generated_types,
         Some(generated_type_selection_file.display().to_string()),
     );
+    network_schema.restrict_serialize_source_availability(&generated_types);
     let generated_state_denylist =
         GeneratedStateDenylistFile::from_path(&generated_state_denylist_file)?;
     let replicated_state_type_indices = replicated_state_type_indices(&network_schema);

@@ -122,7 +122,7 @@ impl MemBio {
     }
 
     /// Check pending bytes in BIO
-    pub(crate) fn pending(&self) -> i32 {
+    pub(crate) fn pending(&self) -> std::ffi::c_long {
         unsafe { openssl_sys::BIO_ctrl(self.0, BIO_CTRL_PENDING, 0, ptr::null_mut()) }
     }
 }
@@ -904,7 +904,7 @@ impl<State> SecureConnection<State> {
     }
 
     /// Get number of pending bytes in read BIO
-    fn bio_pending(&self) -> i32 {
+    fn bio_pending(&self) -> std::ffi::c_long {
         self.inner().read_bio.pending()
     }
 

@@ -115,6 +115,7 @@ fn main() -> Result<()> {
         &completed.emitted,
         Some(selection_file.display().to_string()),
     );
+    network_schema.restrict_serialize_source_availability(&completed.emitted);
     let network_output = NetworkRustEmitter::emit_descriptors(&network_schema)
         .context("emit network schema descriptor Rust")?;
     let network_registry_source = network_registry_source(&network_schema);
