@@ -16,8 +16,6 @@ pub mod messages {
         env!("NW_NETWORK_GENERATED_DIR"),
         "/generated_messages.rs"
     ));
-
-    pub use crate::messages::actor_mover::CheckMovementStatusMsg;
 }
 
 mod conversions {

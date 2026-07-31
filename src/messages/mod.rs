@@ -5,7 +5,7 @@ pub mod registration;
 #[cfg(test)]
 mod server_context;
 
-pub use actor_mover::CheckMovementStatusMsg;
+pub use crate::generated_messages::CheckMovementStatusMsg;
 pub use registration::{
     AuthToken, ClientVersionTokenMap, ConnTicket, EntityId, ImpersonatedValues, LoginToken,
     RegistrationRequestV3Msg, TypeIndexCrc,

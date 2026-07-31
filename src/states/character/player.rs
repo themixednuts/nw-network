@@ -343,7 +343,6 @@ impl PlayerComponentReplicatedState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Marshal;
     use crate::hub::ClientActorHash;
     use crate::serialize::{CARRIER_ENDIAN, Marshal, WriteBuffer};
 

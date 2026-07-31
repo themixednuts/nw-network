@@ -6,9 +6,9 @@ mod tests {
 
     use crate::generated_messages::{
         AbortMovementMsg, CancelMovementMsg, CheckMovementStatusMsg, CommitMovementMsg,
-        CompleteDelayedMigrationsMsg, CrashMoveActorMsg, CrashMoveActorToHubMsg, DelayMigrationsMsg,
-        MoveActorMsg, MoveActorToHubMsg, MoveCoordinatorInitMsg, MovementTimeoutMsg,
-        ProcessDeferredMovementRequestsMsg, StartMovementCommunicationMsg,
+        CompleteDelayedMigrationsMsg, CrashMoveActorMsg, CrashMoveActorToHubMsg,
+        DelayMigrationsMsg, MoveActorMsg, MoveActorToHubMsg, MoveCoordinatorInitMsg,
+        MovementTimeoutMsg, ProcessDeferredMovementRequestsMsg, StartMovementCommunicationMsg,
         TimeoutMigrationsAtCommitMsg, TimeoutMigrationsMsg,
     };
     use crate::hub::{

@@ -49,7 +49,6 @@ mod tests {
 
     use uuid::uuid;
 
-    use crate::Marshal;
     use crate::hub::ActorId;
     use crate::serialize::{CARRIER_ENDIAN, Marshal, ReadBuffer, WriteBuffer};
 
