@@ -683,6 +683,81 @@
           "wireShape": "bool"
         }
       ]
+    },
+    {
+      "typeId": "3F5EB97D-B15D-4526-B160-2107215BF761",
+      "typeIndex": 6345,
+      "name": "Javelin::DebugConsoleClientMessages::OnUpdateDebugConsoleDMInfoMsg",
+      "rustName": "OnUpdateDebugConsoleDMInfoMsg",
+      "source": "native-unmarshal-and-marshal-listing",
+      "fields": [
+        {
+          "index": 0,
+          "name": "Entries",
+          "wireShape": "vec<bit-mask-composite<u8,required<fixed-bytes-16>,masked<0x01,u32>,masked<0x02,fixed-bytes-16>,masked<0x04,composite<entity-ref,u8>>>>"
+        }
+      ]
+    },
+    {
+      "typeId": "AADFF090-E7A9-46F4-86EB-CBAC0884480E",
+      "typeIndex": 7010,
+      "name": "Javelin::ClientMessages::GraphBasedSpawnNodeComponentClientFacet_SyncDebugData",
+      "rustName": "GraphBasedSpawnNodeComponentClientFacetSyncDebugDataMsg",
+      "source": "native-unmarshal-and-marshal-listing",
+      "fields": [
+        {
+          "index": 0,
+          "name": "Header",
+          "nativeType": "Javelin::ClientMessages::ActorRequestId",
+          "rustType": "::nw_network::ActorRequestId",
+          "wireShape": "composite<u64,u64>"
+        },
+        {
+          "index": 1,
+          "name": "DebugEntries",
+          "wireShape": "vec<composite<fixed-bytes-16,u64,bool>>"
+        },
+        {
+          "index": 2,
+          "name": "ActionListEntityRefs",
+          "wireShape": "vec<composite<fixed-bytes-16,u64,u64>>"
+        },
+        {
+          "index": 3,
+          "name": "SpawnNodeEntityRefs",
+          "wireShape": "vec<composite<fixed-bytes-16,u64>>"
+        },
+        {
+          "index": 4,
+          "name": "DebugDataEnabled",
+          "nativeType": "bool",
+          "rustType": "bool",
+          "wireShape": "bool"
+        }
+      ]
+    },
+    {
+      "typeId": "971DDBB2-67DB-4BEB-9632-85851D0EE00E",
+      "typeIndex": 5181,
+      "name": "Javelin::ClientMessages::PlayerComponentServerFacet_OnAckLevelInfoChanged",
+      "rustName": "PlayerComponentServerFacetOnAckLevelInfoChangedMsg",
+      "source": "native-unmarshal-and-marshal-listing",
+      "fields": [
+        {
+          "index": 0,
+          "name": "Header",
+          "nativeType": "Javelin::ClientMessages::ActorRequestId",
+          "rustType": "::nw_network::ActorRequestId",
+          "wireShape": "composite<u64,u64>"
+        },
+        {
+          "index": 1,
+          "name": "ClientContextInstanceId",
+          "nativeType": "ClientContextIDValue",
+          "rustType": "::nw_network::ClientContextId",
+          "wireShape": "u8"
+        }
+      ]
     }
   ]
 }

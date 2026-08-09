@@ -102,6 +102,75 @@ pub struct TupleCodec<M>(PhantomData<fn() -> M>);
 #[derive(Debug, Clone, Copy, Default)]
 pub struct DefaultOmittedTupleCodec<M>(PhantomData<fn() -> M>);
 
+/// Encodes a tuple whose first member is a shared byte presence mask.
+///
+/// The remaining tuple members are described by [`RequiredBitMaskCodec`] or
+/// [`MaskedBitMaskCodec`]. The decoded mask is retained as tuple member zero so
+/// unknown native bits survive a decode/encode round trip.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct BitMaskTupleCodec<M>(PhantomData<fn() -> M>);
+
+/// A member that is always present after a shared presence mask.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct RequiredBitMaskCodec<M>(PhantomData<fn() -> M>);
+
+/// An optional member controlled by one bit of a shared presence mask.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct MaskedBitMaskCodec<M, const MASK: u8>(PhantomData<fn() -> M>);
+
+#[doc(hidden)]
+pub trait BitMaskMemberCodec<T> {
+    fn reconcile_mask(value: &T, mask: u8) -> u8;
+    fn marshal_masked(value: &T, mask: u8, wb: &mut WriteBuffer);
+    fn unmarshal_masked(mask: u8, rb: &mut ReadBuffer) -> Result<T, MarshalerError>;
+}
+
+impl<T, M: Codec<T>> BitMaskMemberCodec<T> for RequiredBitMaskCodec<M> {
+    fn reconcile_mask(_value: &T, mask: u8) -> u8 {
+        mask
+    }
+
+    fn marshal_masked(value: &T, _mask: u8, wb: &mut WriteBuffer) {
+        M::marshal(value, wb);
+    }
+
+    fn unmarshal_masked(_mask: u8, rb: &mut ReadBuffer) -> Result<T, MarshalerError> {
+        M::unmarshal(rb)
+    }
+}
+
+impl<T, M: Codec<T>, const MASK: u8> BitMaskMemberCodec<Option<T>> for MaskedBitMaskCodec<M, MASK> {
+    fn reconcile_mask(value: &Option<T>, mask: u8) -> u8 {
+        debug_assert!(MASK.is_power_of_two(), "presence masks select one bit");
+        if value.is_some() {
+            mask | MASK
+        } else {
+            mask & !MASK
+        }
+    }
+
+    fn marshal_masked(value: &Option<T>, mask: u8, wb: &mut WriteBuffer) {
+        debug_assert!(MASK.is_power_of_two(), "presence masks select one bit");
+        if mask & MASK != 0 {
+            M::marshal(
+                value
+                    .as_ref()
+                    .expect("reconciled presence bit requires an optional value"),
+                wb,
+            );
+        }
+    }
+
+    fn unmarshal_masked(mask: u8, rb: &mut ReadBuffer) -> Result<Option<T>, MarshalerError> {
+        debug_assert!(MASK.is_power_of_two(), "presence masks select one bit");
+        if mask & MASK != 0 {
+            M::unmarshal(rb).map(Some)
+        } else {
+            Ok(None)
+        }
+    }
+}
+
 macro_rules! impl_tuple_codec {
     ($(($($type:ident : $codec:ident : $index:tt),+)),+ $(,)?) => {
         $(
@@ -177,6 +246,42 @@ impl_default_omitted_tuple_codec!(
     (A: MA: 0: pa, B: MB: 1: pb, C: MC: 2: pc, D: MD: 3: pd, E: ME: 4: pe, F: MF: 5: pf, G: MG: 6: pg, H: MH: 7: ph, I: MI: 8: pi, J: MJ: 9: pj, K: MK: 10: pk, L: ML: 11: pl),
 );
 
+macro_rules! impl_bit_mask_tuple_codec {
+    ($(($($type:ident : $codec:ident : $index:tt),+)),+ $(,)?) => {
+        $(
+            impl<$($type, $codec: BitMaskMemberCodec<$type>),+>
+                Codec<(u8, $($type,)+)> for BitMaskTupleCodec<($($codec,)+)>
+            {
+                fn marshal(value: &(u8, $($type,)+), wb: &mut WriteBuffer) {
+                    let mut mask = value.0;
+                    $(mask = $codec::reconcile_mask(&value.$index, mask);)+
+                    mask.marshal(wb);
+                    $($codec::marshal_masked(&value.$index, mask, wb);)+
+                }
+
+                fn unmarshal(rb: &mut ReadBuffer) -> Result<(u8, $($type,)+), MarshalerError> {
+                    let mask = u8::unmarshal(rb)?;
+                    Ok((mask, $($codec::unmarshal_masked(mask, rb)?,)+))
+                }
+            }
+        )+
+    };
+}
+
+impl_bit_mask_tuple_codec!(
+    (A: MA: 1),
+    (A: MA: 1, B: MB: 2),
+    (A: MA: 1, B: MB: 2, C: MC: 3),
+    (A: MA: 1, B: MB: 2, C: MC: 3, D: MD: 4),
+    (A: MA: 1, B: MB: 2, C: MC: 3, D: MD: 4, E: ME: 5),
+    (A: MA: 1, B: MB: 2, C: MC: 3, D: MD: 4, E: ME: 5, F: MF: 6),
+    (A: MA: 1, B: MB: 2, C: MC: 3, D: MD: 4, E: ME: 5, F: MF: 6, G: MG: 7),
+    (A: MA: 1, B: MB: 2, C: MC: 3, D: MD: 4, E: ME: 5, F: MF: 6, G: MG: 7, H: MH: 8),
+    (A: MA: 1, B: MB: 2, C: MC: 3, D: MD: 4, E: ME: 5, F: MF: 6, G: MG: 7, H: MH: 8, I: MI: 9),
+    (A: MA: 1, B: MB: 2, C: MC: 3, D: MD: 4, E: ME: 5, F: MF: 6, G: MG: 7, H: MH: 8, I: MI: 9, J: MJ: 10),
+    (A: MA: 1, B: MB: 2, C: MC: 3, D: MD: 4, E: ME: 5, F: MF: 6, G: MG: 7, H: MH: 8, I: MI: 9, J: MJ: 10, K: MK: 11),
+);
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -239,5 +344,31 @@ mod tests {
             assert_eq!(Value::unmarshal(&mut rb).unwrap(), value);
             assert!(rb.remaining().is_empty());
         }
+    }
+
+    #[test]
+    fn shared_bit_mask_round_trips_required_and_optional_members() {
+        type Policy = BitMaskTupleCodec<(
+            RequiredBitMaskCodec<super::super::DefaultMarshaler<u16>>,
+            MaskedBitMaskCodec<super::super::DefaultMarshaler<u32>, 0x01>,
+            MaskedBitMaskCodec<
+                TupleCodec<(
+                    super::super::DefaultMarshaler<u8>,
+                    super::super::DefaultMarshaler<u64>,
+                )>,
+                0x04,
+            >,
+        )>;
+        let value = (0x80, 7u16, Some(0x0102_0304u32), None::<(u8, u64)>);
+        let mut wb = WriteBuffer::new(CARRIER_ENDIAN);
+        Policy::marshal(&value, &mut wb);
+        let bytes = wb.into_vec();
+        assert_eq!(bytes, [0x81, 0, 7, 1, 2, 3, 4]);
+
+        let mut rb = ReadBuffer::new(CARRIER_ENDIAN, &bytes);
+        let decoded: (u8, u16, Option<u32>, Option<(u8, u64)>) =
+            Policy::unmarshal(&mut rb).unwrap();
+        assert_eq!(decoded, (0x81, 7, Some(0x0102_0304), None));
+        assert!(rb.remaining().is_empty());
     }
 }

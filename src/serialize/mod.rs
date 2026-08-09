@@ -35,7 +35,8 @@ pub use buffer::{
 };
 pub use class_value::{ClassValue, NetworkClassRegistration};
 pub use composite_marshal::{
-    BooleanChoice, BooleanChoiceCodec, DefaultOmittedTupleCodec, OptionalCodec, TupleCodec,
+    BitMaskMemberCodec, BitMaskTupleCodec, BooleanChoice, BooleanChoiceCodec,
+    DefaultOmittedTupleCodec, MaskedBitMaskCodec, OptionalCodec, RequiredBitMaskCodec, TupleCodec,
 };
 pub use compression_marshal::{
     Float16Marshaler, IntegerQuantizationMarshalerU8, IntegerQuantizationMarshalerU16,
