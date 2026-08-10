@@ -118,6 +118,12 @@ fn main() -> Result<()> {
     network_schema.restrict_serialize_source_availability(&completed.emitted);
     let network_output = NetworkRustEmitter::emit_descriptors(&network_schema)
         .context("emit network schema descriptor Rust")?;
+    if network_output.report.blocked_message_count != 0 {
+        bail!(
+            "network schema has {} blocked message(s)",
+            network_output.report.blocked_message_count
+        );
+    }
     let network_registry_source = network_registry_source(&network_schema);
     let mut files = project.files;
     files.push(RustStandaloneProjectFile {
