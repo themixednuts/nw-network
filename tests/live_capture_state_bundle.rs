@@ -1,13 +1,70 @@
 use nw_network::{
+    DynFragment,
     hub::{FragmentTypeInfo, InterestId, ReplicatedStateBundleView, SequenceNumber},
     serialize::{CARRIER_ENDIAN, MarshalerError, ReadBuffer},
     states::{
-        ALCReplicatedState, InstancedSlayerScriptReplicatedState, InteractReplicatedState,
+        ALCReplicatedState, CooldownTimersComponentReplicatedState,
+        InstancedSlayerScriptReplicatedState, InteractReplicatedState,
         ProgressionComponentReplicatedState, TemporaryAffiliationReplicatedState,
         TradingPostComponentReplicatedState,
     },
     validate_state_fragment_type_indices,
 };
+
+const LIVE_COOLDOWN_TIMERS_FRAGMENT: &[u8] =
+    include_bytes!("fixtures/live/20260810T080953Z-pid4040_type2932_cooldown_timers_fragment.bin");
+
+#[test]
+fn live_cooldown_timers_fragment_matches_generated_state() {
+    let mut rb = ReadBuffer::new(CARRIER_ENDIAN, LIVE_COOLDOWN_TIMERS_FRAGMENT);
+    let mut state = CooldownTimersComponentReplicatedState::default();
+
+    assert!(state.unmarshal_contents(&mut rb).unwrap());
+    assert_eq!(rb.left(), 0);
+
+    let map_1 = state.cdmap_1.values();
+    let map_2 = state.cdmap_2.values();
+    let map_3 = state.cdmap_3.values();
+    assert_eq!(map_1.len(), 98);
+    assert_eq!(map_2.len(), 98);
+    assert_eq!(map_3.len(), 98);
+    assert!(
+        map_1
+            .values()
+            .all(|value| value.field_0 == 1 && value.field_1 == 1)
+    );
+    assert!(
+        map_2
+            .values()
+            .all(|value| value.field_0 == 1 && value.field_1 == 1)
+    );
+    assert!(
+        map_3
+            .values()
+            .all(|value| value.field_0 == 1 && value.field_1 == 1)
+    );
+    assert!(map_1.keys().eq(map_2.keys()));
+    assert!(map_1.keys().eq(map_3.keys()));
+
+    assert!(state.ccdmap.values().is_empty());
+    assert!(state.gencds.values().is_empty());
+    assert_eq!(
+        state
+            .next_daily_cooldown
+            .value()
+            .unwrap()
+            .nanoseconds_since_epoc,
+        1_786_352_400_169_487_000
+    );
+    assert_eq!(
+        state
+            .next_weekly_cooldown
+            .value()
+            .unwrap()
+            .nanoseconds_since_epoc,
+        1_786_438_800_169_631_600
+    );
+}
 
 #[derive(Debug, Clone, Copy)]
 struct ExpectedFragment {
