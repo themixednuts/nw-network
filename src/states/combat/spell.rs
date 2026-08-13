@@ -1,27 +1,3 @@
 //! Spell-cast state replication.
 
-use crate::{az_rtti, replicated_state, type_registry};
-
-use crate::serialize::{PackedPositionMarshaller, QuatCompNorm, ReplicatedFieldHandler};
-use crate::types::{RemoteServerGdeRef, TimePoint};
-use glam::Vec3;
-
-#[replicated_state]
-#[derive(Debug, Clone, Default)]
-#[az_rtti("601F05A6-4BAC-4300-B926-2840A5F2EF95")]
-#[type_registry(2912)]
-pub struct SpellComponentReplicatedState {
-    pub spell_data_id: ReplicatedFieldHandler<u32>,
-    pub start_position:
-        ReplicatedFieldHandler<Vec3, PackedPositionMarshaller<0xc2c8_0000, 0x44fa_0000>>,
-    pub start_rotation: ReplicatedFieldHandler<QuatCompNorm>,
-    pub child_position:
-        ReplicatedFieldHandler<Vec3, PackedPositionMarshaller<0xc2c8_0000, 0x44fa_0000>>,
-    pub child_rotation: ReplicatedFieldHandler<QuatCompNorm>,
-    pub previous_attachment: ReplicatedFieldHandler<RemoteServerGdeRef>,
-    pub attachment: ReplicatedFieldHandler<RemoteServerGdeRef>,
-    pub caster_id: ReplicatedFieldHandler<RemoteServerGdeRef>,
-    pub spawn_time: ReplicatedFieldHandler<TimePoint>,
-    pub spawn_count: ReplicatedFieldHandler<u32>,
-    pub aoe_radius_scaling: ReplicatedFieldHandler<f32>,
-}
+pub use crate::generated::states::SpellComponentReplicatedState;

@@ -1,8 +1,5 @@
 //! Character attribute and attribute-bonus replication.
 
-use crate::{az_rtti, replicated_state, type_registry};
-
-use crate::serialize::{IndexMap, ReplicatedContainer, ReplicatedFieldHandler};
 use crate::{CharacterAttributeType, Marshaler};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Marshaler)]
@@ -40,32 +37,4 @@ pub struct PersistentAttributeData {
     pub pre_reload_attributes: CharacterAttributes,
     pub unspent_attribute_points: u32,
 }
-
-#[replicated_state]
-#[derive(Debug, Clone, Default)]
-#[az_rtti("464EBD37-105F-4790-8C59-C46EBB4C57A6")]
-#[type_registry(129)]
-pub struct AttributeComponentReplicatedState {
-    pub attributes: ReplicatedFieldHandler<CharacterAttributes>,
-    pub attribute_bonuses: ReplicatedContainer<IndexMap<CharacterAttributeType, u32>>,
-    pub placing_bonuses: ReplicatedContainer<Vec<u32>, 5>,
-    pub persistent_attribute_data: ReplicatedFieldHandler<PersistentAttributeData>,
-}
-
-impl AttributeComponentReplicatedState {
-    pub fn apply_snapshot(&mut self, snapshot: AttributeSnapshot) {
-        self.attributes.set_value(snapshot.attributes);
-        self.attribute_bonuses = ReplicatedContainer::new(
-            snapshot.attribute_bonuses_sequence,
-            snapshot
-                .attribute_bonuses
-                .into_iter()
-                .map(|entry| (entry.attribute, entry.bonus))
-                .collect(),
-        );
-        self.placing_bonuses =
-            ReplicatedContainer::new(snapshot.placing_bonuses_sequence, snapshot.placing_bonuses);
-        self.persistent_attribute_data
-            .set_value(snapshot.persistent_attribute_data);
-    }
-}
+pub use crate::generated::states::AttributeComponentReplicatedState;

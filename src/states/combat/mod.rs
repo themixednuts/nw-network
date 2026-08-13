@@ -1,7 +1,6 @@
 //! Combat, resource, ability, projectile, and status-effect replicated states.
 
 pub mod ability;
-pub mod ability_instance_tracking;
 pub mod attribute;
 pub mod boss_phase;
 pub mod combat_status;
@@ -16,13 +15,13 @@ pub mod status_effect;
 pub mod vitals;
 
 pub use crate::generated::states::{
+    AbilityInstanceTrackingComponentReplicatedState, ArenaReplicatedState,
     ChargeComponentReplicatedState, ManaComponentReplicatedState, StaminaComponentReplicatedState,
 };
 pub use ability::{
     AbilityComponentReplicatedState, AbilitySnapshot, AbilityU32Pair, PersistentAbilityData,
     PersistentAbilityEntry,
 };
-pub use ability_instance_tracking::AbilityInstanceTrackingComponentReplicatedState;
 pub use attribute::{
     AttributeBonus, AttributeComponentReplicatedState, AttributeSnapshot, CharacterAttributeValue,
     CharacterAttributes, PersistentAttributeData,

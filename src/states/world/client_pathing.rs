@@ -1,14 +1,10 @@
 //! Client pathing corridor replication.
 use crate::serialize::marshaler::{Marshal, Unmarshal};
 
-use crate::{az_rtti, replicated_state, type_registry};
-
 use arrayvec::ArrayVec;
 use bevy_math::Vec3;
 
-use crate::serialize::{
-    HalfF32, MarshalerError, ReadBuffer, ReplicatedFieldHandler, VlqU32Marshaler, WriteBuffer,
-};
+use crate::serialize::{HalfF32, MarshalerError, ReadBuffer, VlqU32Marshaler, WriteBuffer};
 
 pub const MAX_CLIENT_PATHING_CORRIDOR_PATHS: usize = 6;
 pub const MAX_CLIENT_PATHING_CORRIDOR_POINTS: usize = 49;
@@ -79,15 +75,7 @@ impl Unmarshal for ClientPathingCorridorPaths {
         })
     }
 }
-
-#[replicated_state]
-#[derive(Debug, Clone, Default)]
-#[az_rtti("A32A95F6-9EF4-4139-8FC3-98C712910DAD")]
-#[type_registry(5915)]
-pub struct ClientPathingComponentReplicatedState {
-    pub corridor_paths: ReplicatedFieldHandler<ClientPathingCorridorPaths>,
-}
-
+pub use crate::generated::states::ClientPathingComponentReplicatedState;
 fn marshal_corridor_path(path: &ClientPathingCorridorPath, wb: &mut WriteBuffer) {
     path.start.marshal(wb);
     path.width.marshal(wb);

@@ -1,12 +1,10 @@
 //! Player home-point replication.
 
-use crate::{az_rtti, replicated_state, type_registry};
-
 use glam::Vec3;
 use uuid::Uuid;
 
 use crate::Marshaler;
-use crate::serialize::{ReplicatedContainer, ReplicatedFieldHandler};
+use crate::serialize::ReplicatedContainer;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Marshaler)]
 pub struct HomePointPersistentRef {
@@ -35,30 +33,4 @@ pub struct PlayerHomeSnapshot {
     pub home_point_list: ReplicatedContainer<Vec<HomePointReplicatedState>>,
     pub home_point_id: Option<String>,
 }
-
-#[replicated_state]
-#[derive(Debug, Clone, Default)]
-#[az_rtti("305FCFBB-3FD0-49BB-841B-14EF372C6469")]
-#[type_registry(3652)]
-pub struct PlayerHomeComponentReplicatedState {
-    pub home_point_list: ReplicatedFieldHandler<ReplicatedContainer<Vec<HomePointReplicatedState>>>,
-    pub home_point_id: ReplicatedFieldHandler<String>,
-}
-
-impl PlayerHomeComponentReplicatedState {
-    #[must_use]
-    pub fn empty_home_points(sequence: u64) -> Self {
-        let mut state = Self::default();
-        state
-            .home_point_list
-            .set_value(ReplicatedContainer::new(sequence, Vec::new()));
-        state
-    }
-
-    pub fn apply_snapshot(&mut self, snapshot: PlayerHomeSnapshot) {
-        self.home_point_list.set_value(snapshot.home_point_list);
-        if let Some(home_point_id) = snapshot.home_point_id {
-            self.home_point_id.set_value(home_point_id);
-        }
-    }
-}
+pub use crate::generated::states::PlayerHomeComponentReplicatedState;

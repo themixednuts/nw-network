@@ -1,9 +1,6 @@
 //! Loot roll, diversion, and per-entity loot-limit replication.
 
-use crate::{az_rtti, replicated_state, type_registry};
-
 use crate::Marshaler;
-use crate::serialize::{IndexMap, ReplicatedContainer, ReplicatedFieldHandler};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Marshaler)]
 pub struct LootTrackerKey(pub [u8; 16]);
@@ -54,36 +51,4 @@ pub struct LootTrackerSnapshot {
     pub loot_divert_map_sequence: u64,
     pub loot_diverts: Vec<LootDivertEntry>,
 }
-
-#[replicated_state]
-#[derive(Debug, Clone, Default)]
-#[az_rtti("756DEAE5-A1F0-4863-BE20-B44D871C46A1")]
-#[type_registry(982)]
-pub struct LootTrackerComponentReplicatedState {
-    pub loot_data_map: ReplicatedContainer<IndexMap<LootTrackerKey, LootRollData>>,
-    pub loot_collectibles: ReplicatedContainer<Vec<u64>>,
-    pub failed_roll_bonus_percent: ReplicatedFieldHandler<f32>,
-    pub slayer_script_data_map: ReplicatedContainer<IndexMap<LootTrackerKey, SlayerScriptLootData>>,
-    pub loot_divert_map: ReplicatedContainer<IndexMap<u32, LootDivertMapValue>>,
-    pub loot_limit_data_map: ReplicatedContainer<IndexMap<u32, LootLimitStateData>>,
-}
-
-impl LootTrackerComponentReplicatedState {
-    pub fn apply_snapshot(&mut self, snapshot: LootTrackerSnapshot) {
-        if snapshot.loot_data_map_sequence > 0 {
-            self.loot_data_map =
-                ReplicatedContainer::new(snapshot.loot_data_map_sequence, IndexMap::new());
-        }
-
-        if snapshot.loot_divert_map_sequence > 0 || !snapshot.loot_diverts.is_empty() {
-            self.loot_divert_map = ReplicatedContainer::new(
-                snapshot.loot_divert_map_sequence,
-                snapshot
-                    .loot_diverts
-                    .into_iter()
-                    .map(|entry| (entry.key, entry.data))
-                    .collect(),
-            );
-        }
-    }
-}
+pub use crate::generated::states::LootTrackerComponentReplicatedState;

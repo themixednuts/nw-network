@@ -19,7 +19,8 @@ use nw_serialize_codegen::{
 use serde::Deserialize;
 use serde_json::Value;
 
-const CODEGEN_VERSION: &str = "nw-network-generated-payloads-v3";
+const CODEGEN_VERSION: &str = "nw-network-generated-payloads-v4";
+const ENABLE_TRANSMOG_PROFILE: &str = "javelin.enable-transmog";
 
 const MANUAL_SOURCE_MARSHALERS: &[&str] = &[
     "AfflictionData",
@@ -38,6 +39,7 @@ const MANUAL_SOURCE_MARSHALERS: &[&str] = &[
 fn main() -> Result<()> {
     let manifest_dir =
         PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").context("CARGO_MANIFEST_DIR")?);
+    let manifest_file = manifest_dir.join("Cargo.toml");
     let build_script = manifest_dir.join("build.rs");
     let generated_state_denylist_file = manifest_dir.join("codegen/generated-state-denylist.json");
     let generated_type_selection_file =
@@ -47,6 +49,7 @@ fn main() -> Result<()> {
     let message_signatures_file =
         manifest_dir.join("crates/nw-network-types/codegen/message-signatures.json");
 
+    rerun_if_changed(&manifest_file);
     rerun_if_changed(&build_script);
     rerun_if_changed(&generated_state_denylist_file);
     rerun_if_changed(&generated_type_selection_file);
@@ -54,6 +57,7 @@ fn main() -> Result<()> {
     rerun_if_changed(&message_signatures_file);
 
     let input_hash = input_hash(
+        &manifest_file,
         &build_script,
         &generated_state_denylist_file,
         &generated_type_selection_file,
@@ -86,6 +90,11 @@ fn main() -> Result<()> {
     }
 
     let mut network_schema = load_network_schema(&network_schema_file)?;
+    let transmog_condition_count =
+        network_schema.apply_external_boolean_profile(ENABLE_TRANSMOG_PROFILE, true);
+    if transmog_condition_count == 0 {
+        bail!("network schema contains no `{ENABLE_TRANSMOG_PROFILE}` conditional wire evidence");
+    }
     let message_signatures = load_message_signatures(&message_signatures_file)?;
     let signature_report = network_schema.merge_message_signatures(
         &message_signatures,
@@ -267,6 +276,7 @@ fn stable_generated_root(out_dir: &Path, name: &str) -> Result<PathBuf> {
 }
 
 fn input_hash(
+    manifest_file: &Path,
     build_script: &Path,
     generated_state_denylist_file: &Path,
     generated_type_selection_file: &Path,
@@ -276,6 +286,7 @@ fn input_hash(
     let mut hash = blake3::Hasher::new();
     hash.update(CODEGEN_VERSION.as_bytes());
     hash.update(NETWORK_RUST_EMITTER_VERSION.as_bytes());
+    hash_file("Cargo.toml", manifest_file, &mut hash)?;
     hash_file("build.rs", build_script, &mut hash)?;
     hash_file(
         "codegen/generated-state-denylist.json",

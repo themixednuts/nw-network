@@ -1,10 +1,8 @@
 //! Crafting recipe cooldown and gear-score bonus replication.
 use crate::serialize::marshaler::{Marshal, Unmarshal};
 
-use crate::{az_rtti, replicated_state, type_registry};
-
-use crate::serialize::{IndexMap, MarshalerError, ReadBuffer, ReplicatedContainer, WriteBuffer};
-use crate::types::{Crc32, RecipeCooldownData, WallClockTimePoint};
+use crate::serialize::{MarshalerError, ReadBuffer, WriteBuffer};
+use crate::types::{RecipeCooldownData, WallClockTimePoint};
 
 pub const MAX_CRAFTING_RECIPE_COOLDOWNS: usize = 0x1d;
 pub const MAX_CRAFTING_GS_BONUSES: usize = 7;
@@ -27,13 +25,4 @@ impl Unmarshal for RecipeCooldownData {
         })
     }
 }
-
-#[replicated_state]
-#[derive(Debug, Clone, Default)]
-#[az_rtti("FD24C20B-FB95-49F8-9BB0-DEC472F0B6EA")]
-#[type_registry(205)]
-pub struct CraftingComponentReplicatedState {
-    pub cooldowns:
-        ReplicatedContainer<IndexMap<Crc32, RecipeCooldownData>, MAX_CRAFTING_RECIPE_COOLDOWNS>,
-    pub craft_gs_bonuses: ReplicatedContainer<IndexMap<u8, u16>, MAX_CRAFTING_GS_BONUSES>,
-}
+pub use crate::generated::states::CraftingComponentReplicatedState;

@@ -1,12 +1,7 @@
 //! Buildable-grid side activity replication.
 use crate::serialize::marshaler::{Marshal, Unmarshal};
 
-use crate::{az_rtti, replicated_state, type_registry};
-
-use crate::serialize::{
-    Codec, ConversionMarshaler, IndexMap, MarshalerError, ReadBuffer, ReplicatedContainer, VlqU64,
-    WriteBuffer,
-};
+use crate::serialize::{Codec, ConversionMarshaler, MarshalerError, ReadBuffer, WriteBuffer};
 use crate::types::GridSides;
 
 pub const MAX_BUILDABLE_GRID_SIDE_CHANGES: usize = 0x3fff;
@@ -38,18 +33,7 @@ impl Unmarshal for BuildableGridSideActive {
         })
     }
 }
-
-#[replicated_state]
-#[derive(Debug, Clone, Default)]
-#[az_rtti("FFABCADB-4B64-41C2-B159-A3A6980F44D0")]
-#[type_registry(2134)]
-pub struct BuildableGridComponentReplicatedState {
-    pub grid_sides_active: ReplicatedContainer<
-        IndexMap<VlqU64, BuildableGridSideActive>,
-        MAX_BUILDABLE_GRID_SIDE_CHANGES,
-    >,
-}
-
+pub use crate::generated::states::BuildableGridComponentReplicatedState;
 #[cfg(test)]
 mod tests {
     use super::*;

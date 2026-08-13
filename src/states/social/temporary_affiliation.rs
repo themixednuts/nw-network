@@ -1,12 +1,8 @@
 //! Temporary player affiliation replication.
 use crate::serialize::marshaler::{Marshal, Unmarshal};
 
-use crate::{az_rtti, replicated_state, type_registry};
-
 use crate::Marshaler;
-use crate::serialize::{
-    IndexMap, MarshalerError, ReadBuffer, ReplicatedContainer, VlqU64, WriteBuffer,
-};
+use crate::serialize::{MarshalerError, ReadBuffer, WriteBuffer};
 use crate::types::{TemporaryAffiliationRelationship, TemporaryAffiliationType};
 
 pub const MAX_TEMPORARY_AFFILIATION_CHANGES: usize = 0x3fff;
@@ -54,14 +50,4 @@ pub struct TemporaryAffiliation {
     pub affiliation_type: TemporaryAffiliationType,
     pub relationship: TemporaryAffiliationRelationship,
 }
-
-#[replicated_state]
-#[derive(Debug, Clone, Default)]
-#[az_rtti("E45CAB41-47AC-4AC0-8CCF-276816ACAB0A")]
-#[type_registry(3563)]
-pub struct TemporaryAffiliationReplicatedState {
-    pub affiliations: ReplicatedContainer<
-        IndexMap<VlqU64, TemporaryAffiliation>,
-        MAX_TEMPORARY_AFFILIATION_CHANGES,
-    >,
-}
+pub use crate::generated::states::TemporaryAffiliationReplicatedState;

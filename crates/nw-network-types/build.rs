@@ -25,18 +25,21 @@ const CODEGEN_VERSION: &str = "nw-network-v1.5";
 fn main() -> Result<()> {
     let manifest_dir =
         PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").context("CARGO_MANIFEST_DIR")?);
+    let manifest_file = manifest_dir.join("Cargo.toml");
     let build_script = manifest_dir.join("build.rs");
     let selection_file = manifest_dir.join("codegen/selection.json");
     let network_schema_file = manifest_dir.join("codegen/network-schema.json");
     let message_signatures_file = manifest_dir.join("codegen/message-signatures.json");
     let context = CodegenContext::automatic();
 
+    rerun_if_changed(&manifest_file);
     rerun_if_changed(&build_script);
     rerun_if_changed(&selection_file);
     rerun_if_changed(&network_schema_file);
     rerun_if_changed(&message_signatures_file);
 
     let input_hash = input_hash(
+        &manifest_file,
         &build_script,
         &selection_file,
         &network_schema_file,
@@ -198,6 +201,7 @@ fn stable_generated_root(out_dir: &Path, name: &str) -> Result<PathBuf> {
 }
 
 fn input_hash(
+    manifest_file: &Path,
     build_script: &Path,
     selection_file: &Path,
     network_schema_file: &Path,
@@ -206,6 +210,7 @@ fn input_hash(
     let mut hash = blake3::Hasher::new();
     hash.update(CODEGEN_VERSION.as_bytes());
     hash.update(NETWORK_RUST_EMITTER_VERSION.as_bytes());
+    hash_file("Cargo.toml", manifest_file, &mut hash)?;
     hash_file("build.rs", build_script, &mut hash)?;
     hash_resource("serialize.json", nw_resources::SERIALIZE_JSON, &mut hash);
     hash_file("codegen/selection.json", selection_file, &mut hash)?;

@@ -7,8 +7,11 @@ pub mod player_generic_invite;
 pub mod state;
 pub mod temporary_affiliation;
 
+pub use crate::generated::states::{
+    MagicComponentReplicatedState, OwnershipComponentReplicatedState,
+};
 pub use crate::types::{TemporaryAffiliationRelationship, TemporaryAffiliationType};
-pub use chat::{ChatMuteEntry, ChatMutes, ChatMutesReplicatedState, ChatReplicatedState};
+pub use chat::{ChatMuteEntry, ChatMutes, ChatReplicatedState};
 pub use groups::{
     GameInviteData, GroupFinderApplicationData, GroupInviteData, GroupMemberHouseId,
     GroupsComponentReplicatedState,
@@ -16,7 +19,7 @@ pub use groups::{
 pub use guilds::{
     EligibleTerritoryWar, GuildCrestColor, GuildCrestData, GuildInviteSenderData,
     GuildInviteStateData, GuildPlayerIdentification, GuildsComponentReplicatedState,
-    GuildsReplicatedState, ReplicatedGuildInfluence,
+    ReplicatedGuildInfluence,
 };
 pub use player_generic_invite::{
     PlayerGenericInviteParticipants, PlayerGenericInviteReplicatedState,

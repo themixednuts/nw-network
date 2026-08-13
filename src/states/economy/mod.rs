@@ -4,6 +4,9 @@ pub mod aggregate_contract_count;
 pub mod contribution;
 pub mod tipping_pool;
 
+pub use crate::generated::states::{
+    ProgressionPointReplicatedState, TradingPostComponentReplicatedState,
+};
 pub use aggregate_contract_count::AggregateContractCountComponentReplicatedState;
 pub use contribution::{
     ContributionComponentReplicatedState, ContributionXpEvent, MAX_CONTRIBUTION_XP_EVENT_CHANGES,

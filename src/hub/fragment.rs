@@ -445,8 +445,14 @@ static FRAGMENT_REGISTRATION_BY_UUID: LazyLock<HashMap<Uuid, &'static FragmentRe
     LazyLock::new(|| {
         let mut registrations = HashMap::new();
         for entry in inventory::iter::<FragmentRegistration> {
-            let previous = registrations.insert((entry.uuid)(), entry);
-            debug_assert!(previous.is_none(), "duplicate fragment UUID registration");
+            let uuid = (entry.uuid)();
+            let previous = registrations.insert(uuid, entry);
+            debug_assert!(
+                previous.is_none(),
+                "duplicate fragment UUID registration {uuid}: {} and {}",
+                previous.map_or("<missing>", |registration| (registration.name)()),
+                (entry.name)()
+            );
         }
         registrations
     });
@@ -459,7 +465,10 @@ static FRAGMENT_REGISTRATION_BY_TYPE_INDEX: LazyLock<
         let previous = registrations.insert(TypeIndex::new((entry.type_index)()), entry);
         debug_assert!(
             previous.is_none(),
-            "duplicate fragment type-index registration"
+            "duplicate fragment type-index registration {}: {} and {}",
+            (entry.type_index)(),
+            previous.map_or("<missing>", |registration| (registration.name)()),
+            (entry.name)()
         );
     }
     registrations
@@ -476,7 +485,10 @@ static FRAGMENT_REGISTRATION_BY_REGISTRY_INDEX: LazyLock<
         let previous = registrations.insert(registry_index, entry);
         debug_assert!(
             previous.is_none(),
-            "duplicate fragment registry-index registration"
+            "duplicate fragment registry-index registration {}: {} and {}",
+            registry_index.get(),
+            previous.map_or("<missing>", |registration| (registration.name)()),
+            (entry.name)()
         );
     }
     registrations

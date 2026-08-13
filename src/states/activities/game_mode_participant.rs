@@ -1,11 +1,8 @@
 //! Per-player game-mode participation, queue, raid, and mutation state.
 
-use crate::{az_rtti, replicated_state, type_registry};
-
 use uuid::Uuid;
 
 use crate::Marshaler;
-use crate::serialize::{IndexMap, ReplicatedContainer, ReplicatedFieldHandler};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Hash, Marshaler)]
 pub struct GameModeInstanceId {
@@ -38,30 +35,4 @@ pub struct GameModeMutationContext {
     pub field_08: u32,
     pub field_0c: u8,
 }
-
-#[replicated_state]
-#[derive(Debug, Clone, Default)]
-#[az_rtti("4C6684A9-6988-4A05-94BD-118CE991A7D9")]
-#[type_registry(3312)]
-pub struct GameModeParticipantReplicatedState {
-    pub active_game_modes: ReplicatedContainer<IndexMap<GameModeInstanceId, ActiveGameModeData>>,
-    pub flags: ReplicatedFieldHandler<[u8; 6]>,
-    pub queuing_for_game_modes: ReplicatedContainer<Vec<QueuedGameModeData>>,
-    pub queue_eligible_times_for_game_modes: ReplicatedContainer<IndexMap<u32, u64>>,
-    pub game_mode_mutation_context: ReplicatedFieldHandler<GameModeMutationContext>,
-    #[replicated_state(group = 1)]
-    pub matchmaking_service_activity: ReplicatedFieldHandler<u8>,
-    #[replicated_state(group = 1)]
-    pub matchmaking_service_status: ReplicatedFieldHandler<u32>,
-    #[replicated_state(group = 1)]
-    pub matchmaking_service_match_id: ReplicatedFieldHandler<String>,
-    #[replicated_state(group = 1)]
-    pub matchmaking_service_desired_players: ReplicatedFieldHandler<u8>,
-    #[replicated_state(group = 1)]
-    pub matchmaking_service_accepted_players: ReplicatedFieldHandler<u8>,
-    #[replicated_state(group = 1)]
-    pub is_replicating_group_activity: ReplicatedFieldHandler<bool>,
-    pub last_team_index: ReplicatedFieldHandler<u8>,
-    #[replicated_state(group = 2)]
-    pub group_activity_eligibility: ReplicatedFieldHandler<[u8; 16]>,
-}
+pub use crate::generated::states::GameModeParticipantReplicatedState;

@@ -1,15 +1,15 @@
 //! Game-mode instance replication for timers, participants, events, and map UI.
 
-use crate::{Marshal, Marshaler, Unmarshal, az_rtti, replicated_state, type_registry};
+use crate::{Marshal, Marshaler, Unmarshal};
 
 use glam::Vec2;
 
 use crate::serialize::{
-    Codec, DefaultMarshaler, IndexMap, MarshalerError, ReadBuffer, ReplicatedContainer,
-    ReplicatedFieldHandler, VlqU64, WIRE_VEC_CAP, WriteBuffer,
+    Codec, DefaultMarshaler, IndexMap, MarshalerError, ReadBuffer, ReplicatedContainer, VlqU64,
+    WIRE_VEC_CAP, WriteBuffer,
 };
 use crate::types::{
-    AfflictionData, Crc32, EntityId, EntityRef, GameModeParticipantStatus,
+    Crc32, EntityRef, GameModeParticipantStatus,
     RemoteServerFacetRefGameModeParticipantComponentServerFacet,
 };
 
@@ -68,44 +68,7 @@ pub struct GameModeMapIcon {
     pub icon_id: u32,
     pub position: Vec2,
 }
-
-#[replicated_state]
-#[derive(Debug, Clone, Default)]
-#[az_rtti("78EA6535-BB84-4D6A-A5A3-747AF2F5167C")]
-#[type_registry(2343)]
-pub struct GameModeReplicatedState {
-    pub cur_script_state_id: ReplicatedFieldHandler<i8>,
-    pub cur_script_id: ReplicatedFieldHandler<Crc32>,
-    pub spawned_entity_ids_by_spawner_id: ReplicatedContainer<IndexMap<Crc32, EntityId>>,
-    pub game_mode_id: ReplicatedFieldHandler<Crc32>,
-    pub game_mode_map_id: ReplicatedFieldHandler<Crc32>,
-    pub participant_facet_refs: GameModeParticipantFacetRefs,
-    pub participant_statuses: GameModeParticipantStatuses,
-    pub participant_team_indexes: GameModeIndexedByteMap,
-    pub participant_character_ids: GameModeParticipantCharacterIds,
-    pub raid_ids: GameModeRaidIds,
-    pub values: GameModeTimerMap,
-    pub synced_timers: GameModeTimerMap,
-    pub event1: ReplicatedFieldHandler<GameModeReplicatedEvent>,
-    pub event2: ReplicatedFieldHandler<GameModeReplicatedEvent>,
-    pub event3: ReplicatedFieldHandler<GameModeReplicatedEvent>,
-    pub event4: ReplicatedFieldHandler<GameModeReplicatedEvent>,
-    pub event5: ReplicatedFieldHandler<GameModeReplicatedEvent>,
-    pub event6: ReplicatedFieldHandler<GameModeReplicatedEvent>,
-    pub event7: ReplicatedFieldHandler<GameModeReplicatedEvent>,
-    pub event8: ReplicatedFieldHandler<GameModeReplicatedEvent>,
-    pub event9: ReplicatedFieldHandler<GameModeReplicatedEvent>,
-    pub event10: ReplicatedFieldHandler<GameModeReplicatedEvent>,
-    pub global_affliction_data: ReplicatedFieldHandler<AfflictionData>,
-    pub map_origin: ReplicatedFieldHandler<Crc32>,
-    pub tile_size_meters: ReplicatedFieldHandler<u8>,
-    pub map_size_in_tiles: ReplicatedFieldHandler<u16>,
-    pub tile_ui_filename_id_and_rotation: GameModeIndexedByteMap,
-    pub tile_visited: GameModeIndexedByteMap,
-    pub icons: ReplicatedContainer<IndexMap<VlqU64, GameModeMapIcon>>,
-    pub linked_mode: ReplicatedFieldHandler<bool>,
-}
-
+pub use crate::generated::states::GameModeReplicatedState;
 #[cfg(test)]
 mod tests {
     use super::*;

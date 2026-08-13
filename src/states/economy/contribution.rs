@@ -1,8 +1,7 @@
 //! Settlement or activity contribution progress and XP-event replication.
 
-use crate::{Marshaler, az_rtti, replicated_state, type_registry};
+use crate::Marshaler;
 
-use crate::serialize::{IndexMap, ReplicatedContainer, VlqU64};
 use crate::states::inventory::SimpleItemDescriptor;
 
 pub const MAX_CONTRIBUTION_XP_EVENT_CHANGES: usize = 0x3fff;
@@ -26,14 +25,4 @@ pub struct ContributionXpEvent {
     pub field_34: u32,
     pub field_64: u32,
 }
-
-#[replicated_state]
-#[derive(Debug, Clone, Default)]
-#[az_rtti("94DDD5E5-80E8-4538-B6C4-AD6747755DC1")]
-#[type_registry(1982)]
-pub struct ContributionComponentReplicatedState {
-    pub xp_events: ReplicatedContainer<
-        IndexMap<VlqU64, ContributionXpEvent>,
-        MAX_CONTRIBUTION_XP_EVENT_CHANGES,
-    >,
-}
+pub use crate::generated::states::ContributionComponentReplicatedState;

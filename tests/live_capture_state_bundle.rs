@@ -2,9 +2,9 @@ use nw_network::{
     hub::{FragmentTypeInfo, InterestId, ReplicatedStateBundleView, SequenceNumber},
     serialize::{CARRIER_ENDIAN, MarshalerError, ReadBuffer},
     states::{
-        ALCReplicatedState, AggregateContractCountComponentReplicatedState,
-        InstancedSlayerScriptReplicatedState, InteractReplicatedState,
+        ALCReplicatedState, InstancedSlayerScriptReplicatedState, InteractReplicatedState,
         ProgressionComponentReplicatedState, TemporaryAffiliationReplicatedState,
+        TradingPostComponentReplicatedState,
     },
     validate_state_fragment_type_indices,
 };
@@ -30,7 +30,7 @@ enum ExpectedState {
     Interact {
         has_interactors: u32,
     },
-    AggregateContractCount {
+    TradingPost {
         total_buy_contracts: u32,
         total_sell_contracts: u32,
     },
@@ -90,7 +90,7 @@ const MODEL_20260619_021014_2760: &[ExpectedFragment] = &[
         fragment_key: 4,
         type_index: 3791,
         body_len: 10,
-        state: ExpectedState::AggregateContractCount {
+        state: ExpectedState::TradingPost {
             total_buy_contracts: 3046,
             total_sell_contracts: 19_352,
         },
@@ -125,7 +125,7 @@ const MODEL_20260619_021014_2761: &[ExpectedFragment] = &[
         fragment_key: 4,
         type_index: 3791,
         body_len: 10,
-        state: ExpectedState::AggregateContractCount {
+        state: ExpectedState::TradingPost {
             total_buy_contracts: 3046,
             total_sell_contracts: 19_352,
         },
@@ -547,13 +547,13 @@ fn assert_expected_state(
             );
             assert!(interact.cooldown_updates.values().is_empty(), "{name}");
         }
-        ExpectedState::AggregateContractCount {
+        ExpectedState::TradingPost {
             total_buy_contracts,
             total_sell_contracts,
         } => {
             let aggregate = fragment
-                .downcast_ref::<AggregateContractCountComponentReplicatedState>()
-                .unwrap_or_else(|| panic!("{name}: aggregate contract-count body type"));
+                .downcast_ref::<TradingPostComponentReplicatedState>()
+                .unwrap_or_else(|| panic!("{name}: trading-post body type"));
             assert_eq!(
                 aggregate.total_buy_contracts.value().copied(),
                 Some(total_buy_contracts),

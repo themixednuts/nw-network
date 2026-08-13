@@ -3,9 +3,11 @@
 use crate::{az_rtti, replicated_state, type_registry};
 
 use crate::Marshaler;
-use crate::serialize::{IndexMap, ReplicatedContainer, ReplicatedFieldHandler};
+use crate::serialize::{Change, IndexMap, ReplicatedContainer};
 
-type ItemManagementItemDescriptor = super::item_transform::ItemTransformItemDescriptor;
+use super::item_transform::{ItemTransformItemDescriptor, ItemTransformSnapshot};
+
+type ItemManagementItemDescriptor = ItemTransformItemDescriptor;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Marshaler)]
 pub struct ItemManagementStorageKey {
@@ -33,18 +35,43 @@ pub struct ItemManagementSnapshot {
 
 #[replicated_state]
 #[derive(Debug, Clone, Default)]
-#[az_rtti("37F7555D-8476-410A-9753-850945075374")]
-#[type_registry(2938)]
+#[az_rtti("A7933D94-4E0B-4711-BE2D-EA22000CCF06")]
+#[type_registry(5437)]
 pub struct ItemManagementComponentReplicatedState {
-    pub global_item_map: ReplicatedContainer<IndexMap<ItemManagementStorageKey, ItemStorageItems>>,
-    pub overflow_item_count: ReplicatedFieldHandler<u32>,
-    pub weight_map: ReplicatedContainer<IndexMap<ItemManagementStorageKey, u32>>,
-    pub slot_count_map: ReplicatedContainer<IndexMap<ItemManagementStorageKey, u32>>,
+    #[replicated_state(group = 1)]
+    pub owned_items: ReplicatedContainer<IndexMap<u16, ItemTransformItemDescriptor>>,
 }
 
 impl ItemManagementComponentReplicatedState {
-    pub fn apply_snapshot(&mut self, snapshot: ItemManagementSnapshot) {
-        self.weight_map = snapshot.weight_map;
-        self.slot_count_map = snapshot.slot_count_map;
+    pub fn apply_item_transform_snapshot(&mut self, snapshot: ItemTransformSnapshot) {
+        self.owned_items = ReplicatedContainer::new(
+            snapshot.owned_items_sequence,
+            snapshot
+                .owned_items
+                .into_iter()
+                .map(|entry| (entry.paperdoll_slot, entry.item))
+                .collect(),
+        );
+    }
+
+    #[must_use]
+    pub fn owned_item_delta(&self, preferred_slot: u16) -> Self {
+        let mut state = Self::default();
+        let items = &self.owned_items;
+        if !items.has_value() {
+            return state;
+        }
+
+        let entry = items
+            .values()
+            .iter()
+            .find(|(slot, _)| **slot == preferred_slot)
+            .or_else(|| items.values().iter().next())
+            .map(|(slot, item)| Change::update(*slot, item.clone(), items.last_modified()));
+
+        if let Some(entry) = entry {
+            state.owned_items = ReplicatedContainer::delta(vec![entry]);
+        }
+        state
     }
 }

@@ -1,12 +1,10 @@
 //! War declaration, schedule, participant, and influence-race replication.
 
-use crate::{az_rtti, replicated_state, type_registry};
-
 use arrayvec::ArrayVec;
 use uuid::Uuid;
 
 use crate::Marshaler;
-use crate::serialize::{IndexMap, ReplicatedContainer};
+use crate::serialize::IndexMap;
 
 /// Fixed-cap list used by war-data participant blocks.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Marshaler)]
@@ -89,27 +87,4 @@ pub struct WarDataSnapshot {
 }
 
 /// Replicated war-data state.
-#[replicated_state]
-#[derive(Debug, Clone, Default)]
-#[az_rtti("87072E57-BD7A-43DE-B221-382343AC0B43")]
-#[type_registry(1739)]
-pub struct WarDataComponentReplicatedState {
-    pub war_data: ReplicatedContainer<Vec<WarDataValue>>,
-    pub war_schedule_adjustments:
-        ReplicatedContainer<IndexMap<u16, WarScheduleAdjustmentReplicatedState>>,
-    pub influence_race_data: ReplicatedContainer<IndexMap<u16, InfluenceRaceData>>,
-}
-
-impl WarDataComponentReplicatedState {
-    pub fn apply_snapshot(&mut self, snapshot: WarDataSnapshot) {
-        self.war_data = ReplicatedContainer::new(snapshot.war_data_sequence, snapshot.war_data);
-        self.war_schedule_adjustments = ReplicatedContainer::new(
-            snapshot.schedule_adjustments_sequence,
-            snapshot.schedule_adjustments,
-        );
-        self.influence_race_data = ReplicatedContainer::new(
-            snapshot.influence_race_data_sequence,
-            snapshot.influence_race_data,
-        );
-    }
-}
+pub use crate::generated::states::WarDataComponentReplicatedState;

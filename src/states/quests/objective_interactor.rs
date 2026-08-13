@@ -1,9 +1,9 @@
 //! Objective interactor response and mission-parameter replication.
 
-use crate::{az_rtti, replicated_state, type_registry};
-
 use arrayvec::ArrayVec;
 use uuid::Uuid;
+
+use crate::{az_rtti, replicated_state, type_registry};
 
 use crate::Marshaler;
 use crate::serialize::{ReplicatedContainer, ReplicatedFieldHandler};

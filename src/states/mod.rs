@@ -30,7 +30,7 @@ pub use activities::{
     QueuedGameModeData,
 };
 pub use alc::ALCReplicatedState;
-pub use base::HubIFragmentReplicatedState;
+pub use base::PlayerNameTagComponentReplicatedState;
 pub use character::{
     DebugAccountProbationOverride, FreePlayerCountdown, MountComponentReplicatedState,
     MountDyeData, PersistentMountDataValue, PlayerAppearanceComponentReplicatedState,
@@ -39,7 +39,7 @@ pub use character::{
 };
 pub use combat::{
     AbilityComponentReplicatedState, AbilityInstanceTrackingComponentReplicatedState,
-    AbilitySnapshot, AbilityU32Pair, ActiveTrayIconData, AttributeBonus,
+    AbilitySnapshot, AbilityU32Pair, ActiveTrayIconData, ArenaReplicatedState, AttributeBonus,
     AttributeComponentReplicatedState, AttributeSnapshot, BossPhaseComponentReplicatedState,
     CharacterAttributeValue, CharacterAttributes, ChargeComponentReplicatedState,
     ColdAfflictionData, CombatStatusComponentReplicatedState, ConditionalCooldownData,
@@ -56,8 +56,9 @@ pub use combat::{
 };
 pub use economy::{
     AggregateContractCountComponentReplicatedState, ContributionComponentReplicatedState,
-    ContributionXpEvent, MAX_CONTRIBUTION_XP_EVENT_CHANGES, TippingPoolComponentReplicatedState,
-    TippingPoolPointEntry, TippingPoolSnapshot,
+    ContributionXpEvent, MAX_CONTRIBUTION_XP_EVENT_CHANGES, ProgressionPointReplicatedState,
+    TippingPoolComponentReplicatedState, TippingPoolPointEntry, TippingPoolSnapshot,
+    TradingPostComponentReplicatedState,
 };
 pub use ftue::{FtueDetectionVolumeTeleportReplicatedState, FtueIslandComponentReplicatedState};
 pub use gathering::{
@@ -77,19 +78,18 @@ pub use interaction::{
     DelayedEventComponentReplicatedState, DetectionVolumeEventReplicatedState,
     DoorComponentReplicatedState, DoorState, EventTimelineComponentReplicatedState,
     InteractReplicatedState, InteractorComponentReplicatedState,
-    TriggerAreaEntityEventTimingsReplicatedState,
 };
 pub use inventory::{
     ContainerComponentReplicatedState, ContainerInventorySettings, ContainerItemClasses,
     ContainerItemDescriptor, ContainerSnapshot, CraftingComponentReplicatedState,
-    CurrencyComponentReplicatedState, ItemGenerationComponentReplicatedState,
-    ItemManagementComponentReplicatedState, ItemManagementSnapshot, ItemManagementStorageKey,
-    ItemSkinDyeData, ItemSkinningComponentReplicatedState, ItemSkinningSnapshot, ItemStorageItems,
-    ItemTransformComponentReplicatedState, ItemTransformItemDescriptor, ItemTransformSnapshot,
-    ItemVisualData, LinkedLoadoutItem, LoadedAmmoData, LoadoutAttribute, LootDivertEntry,
-    LootDivertMapValue, LootDropReplicatedState, LootLimitStateData, LootRollData,
-    LootTrackerComponentReplicatedState, LootTrackerKey, LootTrackerSnapshot,
-    MAX_CRAFTING_GS_BONUSES, MAX_CRAFTING_RECIPE_COOLDOWNS, OwnedItemEntry,
+    CurrencyComponentReplicatedState, GlobalStorageComponentReplicatedState,
+    ItemGenerationComponentReplicatedState, ItemManagementComponentReplicatedState,
+    ItemManagementSnapshot, ItemManagementStorageKey, ItemSkinDyeData,
+    ItemSkinningComponentReplicatedState, ItemSkinningSnapshot, ItemStorageItems,
+    ItemTransformItemDescriptor, ItemTransformSnapshot, ItemVisualData, LinkedLoadoutItem,
+    LoadedAmmoData, LoadoutAttribute, LootDivertEntry, LootDivertMapValue, LootDropReplicatedState,
+    LootLimitStateData, LootRollData, LootTrackerComponentReplicatedState, LootTrackerKey,
+    LootTrackerSnapshot, MAX_CRAFTING_GS_BONUSES, MAX_CRAFTING_RECIPE_COOLDOWNS, OwnedItemEntry,
     PaperdollComponentReplicatedState, PaperdollItemDescriptor, PaperdollLoadout,
     PaperdollSlotFlags, PaperdollSnapshot, RecipeCooldownData, ReplicatedItemDescriptor,
     SimpleItemDescriptor, SkinDyeEntry, SlayerScriptLootData, TransmogComponentReplicatedState,
@@ -106,37 +106,37 @@ pub use presentation::{
 };
 pub use quests::{
     AchievementComponentReplicatedState, CategoricalProgressionReplicatedState,
-    CategoricalProgressionSnapshot, CommunityGoalParams, DailyBonusUsed,
-    EncounterEventObjectiveReplicatedState, EncounterObjectiveStatus,
+    CategoricalProgressionSnapshot, CommunityGoalParams, DailyBonusUsed, EncounterObjectiveStatus,
     EncounterObjectiveStatusEntry, GameEventComponentReplicatedState, GameEventData,
     GameEventSnapshot, GameEventSubEntry, MissionParam,
     ObjectiveInteractorComponentReplicatedState, ObjectiveInteractorSnapshot,
     ObjectiveReplicationData, ObjectiveResponseParametersReplicatedState, ObjectiveTaskKey,
     ObjectiveTaskState, ObjectivesComponentReplicatedState, ObjectivesSnapshot,
-    PointsAccumulatorComponentReplicatedState, ProgressionComponentReplicatedState,
-    RewardTrackComponentReplicatedState, RewardTrackSnapshot, RolledReward,
-    SeasonsRewardsReplicatedState, SeasonsRewardsSnapshot,
-    SeasonsRewardsStatsUpdateReplicatedState, SeasonsRewardsStatsUpdateSnapshot,
-    SeasonsRewardsTaskIds, SeasonsRewardsTrackedStatReplicatedState,
+    PlayerTimeComponentReplicatedState, PointsAccumulatorComponentReplicatedState,
+    ProgressionComponentReplicatedState, RewardTrackComponentReplicatedState, RewardTrackSnapshot,
+    RolledReward, SeasonsRewardsReplicatedState, SeasonsRewardsSnapshot,
+    SeasonsRewardsStatsUpdateSnapshot, SeasonsRewardsTaskIds,
+    SeasonsRewardsTrackedStatReplicatedState,
 };
 pub use scripting::{
     InstancedSlayerScriptReplicatedState, InstancedSlayerScriptSnapshot,
     SlayerScriptReplicatedState,
 };
 pub use social::{
-    ChatMuteEntry, ChatMutes, ChatMutesReplicatedState, ChatReplicatedState, EligibleTerritoryWar,
-    GameInviteData, GroupFinderApplicationData, GroupInviteData, GroupMemberHouseId,
+    ChatMuteEntry, ChatMutes, ChatReplicatedState, EligibleTerritoryWar, GameInviteData,
+    GroupFinderApplicationData, GroupInviteData, GroupMemberHouseId,
     GroupsComponentReplicatedState, GuildCrestColor, GuildCrestData, GuildInviteSenderData,
     GuildInviteStateData, GuildPlayerIdentification, GuildsComponentReplicatedState,
-    GuildsReplicatedState, MAX_TEMPORARY_AFFILIATION_CHANGES, PlayerGenericInviteParticipants,
+    MAX_TEMPORARY_AFFILIATION_CHANGES, MagicComponentReplicatedState,
+    OwnershipComponentReplicatedState, PlayerGenericInviteParticipants,
     PlayerGenericInviteReplicatedState, ReplicatedGuildInfluence, SocialCollectionsSnapshot,
     SocialReplicatedState, TemporaryAffiliation, TemporaryAffiliationRelationship,
     TemporaryAffiliationReplicatedState, TemporaryAffiliationType,
 };
 pub use spawning::{
-    ClearEncounterZonesReplicatedState, EncounterComponentReplicatedState,
-    EncounterManagerComponentReplicatedState, EncounterStatusEntry, MAX_ENCOUNTER_STATUS_ENTRIES,
-    SpawnerComponentReplicatedState, VariationComponentReplicatedState,
+    EncounterComponentReplicatedState, EncounterManagerComponentReplicatedState,
+    EncounterStatusEntry, MAX_ENCOUNTER_STATUS_ENTRIES, SpawnerComponentReplicatedState,
+    VariationComponentReplicatedState,
 };
 pub use territory::{
     FactionComponentReplicatedState, InfluenceRaceData, LandClaimComponentReplicatedState,

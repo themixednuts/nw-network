@@ -1,7 +1,5 @@
 //! Global map entry replication.
 
-use crate::{az_rtti, replicated_state, type_registry};
-
 use std::ops::{Deref, DerefMut};
 
 use glam::Vec2;
@@ -9,7 +7,7 @@ use indexmap::IndexMap;
 
 use crate::Marshaler;
 use crate::hub::SequenceNumber;
-use crate::serialize::{ReplicatedContainer, ReplicatedFieldHandler};
+use crate::serialize::ReplicatedContainer;
 
 /// Global-map entry payload.
 #[derive(Debug, Clone, Default, PartialEq, Marshaler)]
@@ -47,10 +45,4 @@ impl DerefMut for GlobalMapDataMap {
 }
 
 /// Replicated global-map state.
-#[replicated_state]
-#[derive(Debug, Clone, Default)]
-#[az_rtti("111AEBB0-4F23-4914-B732-A349CCBD82D4")]
-#[type_registry(3780)]
-pub struct GlobalMapDataManagerComponentReplicatedState {
-    pub global_map_data: ReplicatedFieldHandler<GlobalMapDataMap>,
-}
+pub use crate::generated::states::GlobalMapDataManagerComponentReplicatedState;

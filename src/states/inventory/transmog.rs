@@ -1,9 +1,5 @@
 //! Transmog item and station interaction replication.
 
-use crate::{az_rtti, replicated_state, type_registry};
-
-use crate::serialize::{ReplicatedContainer, ReplicatedFieldHandler};
-
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct TransmogSnapshot {
     pub captured_armor_sequence: u64,
@@ -16,30 +12,4 @@ pub struct TransmogSnapshot {
     pub owned_weapon: Vec<u64>,
     pub inventory_services_ready: bool,
 }
-
-#[replicated_state]
-#[derive(Debug, Clone, Default)]
-#[az_rtti("DEE6E179-3D80-4160-9BAD-CC5DA6B60C46")]
-#[type_registry(5691)]
-pub struct TransmogComponentReplicatedState {
-    pub captured_armor_appearances: ReplicatedContainer<Vec<u64>>,
-    pub captured_weapon_appearances: ReplicatedContainer<Vec<u64>>,
-    pub owned_armor_appearances: ReplicatedContainer<Vec<u64>>,
-    pub owned_weapon_appearances: ReplicatedContainer<Vec<u64>>,
-    pub inventory_services_ready: ReplicatedFieldHandler<bool>,
-}
-
-impl TransmogComponentReplicatedState {
-    pub fn apply_snapshot(&mut self, snapshot: TransmogSnapshot) {
-        self.captured_armor_appearances =
-            ReplicatedContainer::new(snapshot.captured_armor_sequence, snapshot.captured_armor);
-        self.captured_weapon_appearances =
-            ReplicatedContainer::new(snapshot.captured_weapon_sequence, snapshot.captured_weapon);
-        self.owned_armor_appearances =
-            ReplicatedContainer::new(snapshot.owned_armor_sequence, snapshot.owned_armor);
-        self.owned_weapon_appearances =
-            ReplicatedContainer::new(snapshot.owned_weapon_sequence, snapshot.owned_weapon);
-        self.inventory_services_ready
-            .set_value(snapshot.inventory_services_ready);
-    }
-}
+pub use crate::generated::states::TransmogComponentReplicatedState;

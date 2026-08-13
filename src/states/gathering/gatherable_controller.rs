@@ -1,9 +1,6 @@
 //! Gatherable resource controller state replication.
 
-use crate::{az_rtti, replicated_state, type_registry};
-
 use crate::Marshaler;
-use crate::serialize::ReplicatedFieldHandler;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Marshaler)]
 #[repr(transparent)]
@@ -20,24 +17,4 @@ impl ReplicatedGatherableState {
         self.0
     }
 }
-
-#[replicated_state]
-#[derive(Debug, Clone, Default)]
-#[az_rtti("CF2B3E22-7FDB-4F06-BC1F-7A4B8912CA73")]
-#[type_registry(12)]
-pub struct GatherableControllerReplicatedState {
-    pub gatherable_state: ReplicatedFieldHandler<ReplicatedGatherableState>,
-    pub replenish_time: ReplicatedFieldHandler<u64>,
-}
-
-impl GatherableControllerReplicatedState {
-    #[must_use]
-    pub fn new(gatherable_state: u8, replenish_time: u64) -> Self {
-        let mut state = Self::default();
-        state
-            .gatherable_state
-            .set_value(ReplicatedGatherableState::new(gatherable_state));
-        state.replenish_time.set_value(replenish_time);
-        state
-    }
-}
+pub use crate::generated::states::GatherableControllerReplicatedState;

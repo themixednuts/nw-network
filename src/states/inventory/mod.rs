@@ -11,7 +11,10 @@ pub mod loot_tracker;
 pub mod paperdoll;
 pub mod transmog;
 
-pub use crate::generated::states::{CurrencyComponentReplicatedState, LootDropReplicatedState};
+pub use crate::generated::states::{
+    CurrencyComponentReplicatedState, GlobalStorageComponentReplicatedState,
+    LootDropReplicatedState,
+};
 pub use crate::types::RecipeCooldownData;
 pub use container::{
     ContainerComponentReplicatedState, ContainerInventorySettings, ContainerItemClasses,
@@ -29,10 +32,7 @@ pub use item_management::{
 pub use item_skinning::{
     ItemSkinDyeData, ItemSkinningComponentReplicatedState, ItemSkinningSnapshot, SkinDyeEntry,
 };
-pub use item_transform::{
-    ItemTransformComponentReplicatedState, ItemTransformItemDescriptor, ItemTransformSnapshot,
-    OwnedItemEntry,
-};
+pub use item_transform::{ItemTransformItemDescriptor, ItemTransformSnapshot, OwnedItemEntry};
 pub use loot_tracker::{
     LootDivertEntry, LootDivertMapValue, LootLimitStateData, LootRollData,
     LootTrackerComponentReplicatedState, LootTrackerKey, LootTrackerSnapshot, SlayerScriptLootData,

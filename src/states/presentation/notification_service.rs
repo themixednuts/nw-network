@@ -1,8 +1,6 @@
 //! Notification queue replication.
 
-use crate::{Marshaler, az_rtti, replicated_state, type_registry};
-
-use crate::serialize::{IndexMap, ReplicatedContainer, VlqU64};
+use crate::Marshaler;
 
 pub const MAX_NOTIFICATION_CHANGES: usize = 0x3fff;
 
@@ -12,12 +10,4 @@ pub struct NotificationEntry {
     pub field_08: String,
     pub field_30: String,
 }
-
-#[replicated_state]
-#[derive(Debug, Clone, Default)]
-#[az_rtti("243A5629-72DB-4229-BBFA-ED6F09FDEFCA")]
-#[type_registry(3340)]
-pub struct NotificationServiceComponentReplicatedState {
-    pub notifications:
-        ReplicatedContainer<IndexMap<VlqU64, NotificationEntry>, MAX_NOTIFICATION_CHANGES>,
-}
+pub use crate::generated::states::NotificationServiceComponentReplicatedState;

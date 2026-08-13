@@ -1,11 +1,6 @@
 //! Guild roster, invite, crest, and territory influence replication.
 
-use crate::{az_rtti, replicated_state, type_registry};
-
-use uuid::Uuid;
-
-use crate::serialize::{IndexMap, ReplicatedContainer, ReplicatedFieldHandler};
-use crate::{EntityRef, Marshaler};
+use crate::Marshaler;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Marshaler)]
 pub struct GuildCrestColor {
@@ -56,77 +51,4 @@ pub struct GuildInviteStateData {
     pub sent_time: u64,
 }
 
-#[replicated_state]
-#[derive(Debug, Clone, Default)]
-#[az_rtti("704F90BD-BA5A-4DED-A3DF-DA1827A45E93")]
-#[type_registry(3217)]
-pub struct GuildsReplicatedState {
-    pub guild_id: ReplicatedFieldHandler<Uuid>,
-    pub guild_owner: ReplicatedFieldHandler<String>,
-    pub guild_crest_data: ReplicatedFieldHandler<GuildCrestData>,
-    pub owner_player_identification: ReplicatedFieldHandler<GuildPlayerIdentification>,
-    pub current_permission_rule: ReplicatedFieldHandler<u8>,
-    pub guild_structure_name: ReplicatedFieldHandler<String>,
-    pub raid_id: ReplicatedFieldHandler<u64>,
-    pub faction_type: ReplicatedFieldHandler<u8>,
-    pub owner_pvp_flag: ReplicatedFieldHandler<bool>,
-    pub owner_ffa_flag: ReplicatedFieldHandler<bool>,
-    pub permission_options: ReplicatedFieldHandler<u8>,
-}
-
-#[replicated_state]
-#[derive(Debug, Clone, Default)]
-#[az_rtti("F5398BCB-8AF9-47C7-84C6-B8AFBF249F34")]
-#[type_registry(3147)]
-pub struct GuildsComponentReplicatedState {
-    pub guild_id: ReplicatedFieldHandler<Uuid>,
-    pub guild_rank: ReplicatedFieldHandler<u16>,
-    #[replicated_state(group = 1)]
-    pub using_gm_commands: ReplicatedFieldHandler<bool>,
-    #[replicated_state(group = 1)]
-    pub guild_forced_rename: ReplicatedFieldHandler<bool>,
-    #[replicated_state(group = 1)]
-    pub guild_message_of_the_day: ReplicatedFieldHandler<String>,
-    #[replicated_state(group = 1)]
-    pub guild_message_of_the_day_author: ReplicatedFieldHandler<EntityRef>,
-    #[replicated_state(group = 1)]
-    pub guild_message_of_the_day_time: ReplicatedFieldHandler<u64>,
-    #[replicated_state(group = 1)]
-    pub guild_siege_window: ReplicatedFieldHandler<f32>,
-    #[replicated_state(group = 1)]
-    pub guild_last_siege_window_set: ReplicatedFieldHandler<u64>,
-    #[replicated_state(group = 1)]
-    pub guild_treasury_current_funds: ReplicatedFieldHandler<u64>,
-    #[replicated_state(group = 1)]
-    pub guild_treasury_daily_withdrawal_limit: ReplicatedFieldHandler<u64>,
-    #[replicated_state(group = 1)]
-    pub last_guild_leave_time: ReplicatedFieldHandler<u64>,
-    #[replicated_state(group = 1)]
-    pub guild_treasury_withdrawn_today: ReplicatedFieldHandler<u64>,
-    #[replicated_state(group = 1)]
-    pub is_guild_master_seat_overthrowable: ReplicatedFieldHandler<bool>,
-    #[replicated_state(group = 1)]
-    pub is_guild_master_seat_vacant: ReplicatedFieldHandler<bool>,
-    #[replicated_state(group = 1)]
-    pub governor_leave_guild_time: ReplicatedFieldHandler<u64>,
-    #[replicated_state(group = 1)]
-    pub guild_members_character_id_string: ReplicatedContainer<Vec<String>>,
-    #[replicated_state(group = 1)]
-    pub guild_members_rank: ReplicatedContainer<Vec<u16>>,
-    #[replicated_state(group = 1)]
-    pub guild_members_online_status: ReplicatedContainer<Vec<u8>>,
-    #[replicated_state(group = 1)]
-    pub guild_members_last_online_time: ReplicatedContainer<Vec<u64>>,
-    #[replicated_state(group = 1)]
-    pub guild_member_was_kicked: ReplicatedFieldHandler<bool>,
-    #[replicated_state(group = 1)]
-    pub guild_influence_data: ReplicatedContainer<Vec<ReplicatedGuildInfluence>>,
-    #[replicated_state(group = 1)]
-    pub eligible_territory_wars: ReplicatedContainer<Vec<EligibleTerritoryWar>>,
-    #[replicated_state(group = 1)]
-    pub guild_war_lottery_deadline: ReplicatedFieldHandler<u64>,
-    #[replicated_state(group = 1)]
-    pub guild_invites: ReplicatedContainer<IndexMap<Uuid, GuildInviteStateData>>,
-    #[replicated_state(group = 1)]
-    pub number_of_outstanding_invites: ReplicatedFieldHandler<u64>,
-}
+pub use crate::generated::states::GuildsComponentReplicatedState;

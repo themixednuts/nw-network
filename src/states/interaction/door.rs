@@ -1,9 +1,6 @@
 //! Door state, lock, and visibility replication.
 
-use crate::{az_rtti, replicated_state, type_registry};
-
 use crate::Marshaler;
-use crate::serialize::ReplicatedFieldHandler;
 
 /// Generated door-state value carried as one byte in replicated state.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Marshaler)]
@@ -46,11 +43,4 @@ impl From<DoorState> for u8 {
         value.value()
     }
 }
-
-#[replicated_state]
-#[derive(Debug, Clone, Default)]
-#[az_rtti("8D68FB93-B087-474F-9B5B-3FE33A8434AE")]
-#[type_registry(2330)]
-pub struct DoorComponentReplicatedState {
-    pub door_state: ReplicatedFieldHandler<DoorState>,
-}
+pub use crate::generated::states::DoorComponentReplicatedState;
