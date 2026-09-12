@@ -358,7 +358,11 @@ impl VlqU64Marshaler {
             data[2] = Self::byte_after_bits(v, 12);
             data[3] = Self::byte_after_bits(v, 20);
             wb.write_bytes(&data[..4]);
-        } else if v < 0x0000_0000_0800_0000 {
+        // The 5-byte form carries 3 + 4 * 8 = 35 bits; the previous ceiling of
+        // 0x0800_0000 sat below the 4-byte branch above, so the form was never
+        // emitted and 35-bit values took 6 bytes. `VlqU32Marshaler` and live
+        // type-839 bodies both use the 5-byte form for this range.
+        } else if v < 0x0000_0008_0000_0000 {
             data[0] = 0xf0 | byte(v & 0x07);
             data[1] = Self::byte_after_bits(v, 3);
             data[2] = Self::byte_after_bits(v, 11);
@@ -730,6 +734,38 @@ mod wrapper_tests {
             let decoded = VlqU64::unmarshal(&mut rb).unwrap();
             assert_eq!(decoded.get(), v);
             assert_eq!(rb.left(), 0);
+        }
+    }
+
+    /// The two codecs encode the same VLQ format, so for every value that fits
+    /// in a `u32` they must agree byte for byte. Pins the 5-byte form, which
+    /// the `u64` encoder used to skip.
+    #[test]
+    fn vlq_u64_matches_vlq_u32_over_the_u32_range() {
+        for &v in &[
+            0u32,
+            0x7f,
+            0x80,
+            0x3fff,
+            0x4000,
+            0x001f_ffff,
+            0x0020_0000,
+            0x0fff_ffff,
+            0x1000_0000,
+            0x3200_0300,
+            u32::MAX,
+        ] {
+            let mut wb_u32 = WriteBuffer::new(CARRIER_ENDIAN);
+            VlqU32Marshaler.marshal(&mut wb_u32, v);
+
+            let mut wb_u64 = WriteBuffer::new(CARRIER_ENDIAN);
+            VlqU64Marshaler.marshal(&mut wb_u64, u64::from(v));
+
+            assert_eq!(
+                wb_u32.into_vec(),
+                wb_u64.into_vec(),
+                "u32 and u64 codecs must agree for {v:#x}"
+            );
         }
     }
 
