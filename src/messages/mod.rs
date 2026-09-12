@@ -4,9 +4,11 @@ pub mod actor_mover;
 pub mod registration;
 #[cfg(test)]
 mod server_context;
+pub mod warboard;
 
 pub use crate::generated_messages::CheckMovementStatusMsg;
 pub use registration::{
     AuthToken, ClientVersionTokenMap, ConnTicket, EntityId, ImpersonatedValues, LoginToken,
     RegistrationRequestV3Msg, TypeIndexCrc,
 };
+pub use warboard::{WarboardPlayerStats, WarboardStatBlock, WarboardStatRow, WarboardStats};

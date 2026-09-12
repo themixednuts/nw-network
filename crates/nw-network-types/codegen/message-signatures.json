@@ -699,6 +699,27 @@
       ]
     },
     {
+      "typeId": "E9B0901A-D409-41C8-86CC-3E28291FAF28",
+      "typeIndex": 839,
+      "name": "Javelin::ClientMessages::WarboardComponentClientFacet_OnUpdateWarboardStats",
+      "rustName": "WarboardComponentClientFacetOnUpdateWarboardStats",
+      "source": "live-capture-wire-layout",
+      "fields": [
+        {
+          "index": 0,
+          "name": "Header",
+          "nativeType": "Javelin::ClientMessages::ActorRequestId",
+          "rustType": "::nw_network::ActorRequestId",
+          "wireShape": "composite<u64,u64>"
+        },
+        {
+          "index": 1,
+          "name": "Stats",
+          "rustType": "::nw_network::WarboardStats"
+        }
+      ]
+    },
+    {
       "typeId": "AADFF090-E7A9-46F4-86EB-CBAC0884480E",
       "typeIndex": 7010,
       "name": "Javelin::ClientMessages::GraphBasedSpawnNodeComponentClientFacet_SyncDebugData",

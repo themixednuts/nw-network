@@ -86,7 +86,7 @@ fn vlq_u64_len(value: u64) -> usize {
         3
     } else if value < 0x1000_0000 {
         4
-    } else if value < 0x0000_0000_0800_0000 {
+    } else if value < 0x0000_0008_0000_0000 {
         5
     } else if value < 0x0000_0400_0000_0000 {
         6
@@ -1430,7 +1430,22 @@ impl StateRecordWriter<'_> {
 mod tests {
     use super::*;
     use crate::hub::{DynFragment, FragmentBase};
+    use crate::serialize::VlqU64Marshaler;
     use crate::{Fragment, Marshaler, az_rtti, type_registry};
+
+    /// `vlq_u64_len` sizes what `VlqU64Marshaler` writes, so the two ladders
+    /// must agree; they disagreed for `[2^28, 2^35)` while the encoder skipped
+    /// its own 5-byte form.
+    #[test]
+    fn vlq_u64_len_matches_the_encoder() {
+        for exponent in 0..64u32 {
+            for value in [1u64 << exponent, (1u64 << exponent) - 1] {
+                let mut wb = WriteBuffer::new(CARRIER_ENDIAN);
+                VlqU64Marshaler.marshal(&mut wb, value);
+                assert_eq!(wb.into_vec().len(), vlq_u64_len(value), "value {value:#x}");
+            }
+        }
+    }
 
     #[derive(Marshaler, Debug, Default)]
     #[az_rtti("11111111-1111-4111-8111-111111111111")]

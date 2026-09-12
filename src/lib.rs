@@ -50,7 +50,8 @@ pub use hub::{
 };
 pub use messages::{
     AuthToken, CheckMovementStatusMsg, ClientVersionTokenMap, ConnTicket, ImpersonatedValues,
-    LoginToken, RegistrationRequestV3Msg, TypeIndexCrc,
+    LoginToken, RegistrationRequestV3Msg, TypeIndexCrc, WarboardPlayerStats, WarboardStatBlock,
+    WarboardStatRow, WarboardStats,
 };
 pub use network_schema::{
     NetworkFieldConfidence, NetworkFieldDescriptor, NetworkRegistryEntry,
